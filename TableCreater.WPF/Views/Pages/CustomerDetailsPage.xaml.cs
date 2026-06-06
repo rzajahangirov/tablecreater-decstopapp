@@ -1,0 +1,83 @@
+using System.Windows;
+using System.Windows.Controls;
+using TableCreater.WPF.ViewModels;
+
+namespace TableCreater.WPF.Views.Pages;
+
+/// <summary>
+/// Code-behind for CustomerDetailsPage.
+/// Handles per-row Edit/Delete actions and document preview.
+/// </summary>
+public partial class CustomerDetailsPage : UserControl
+{
+    public CustomerDetailsPage()
+    {
+        InitializeComponent();
+    }
+
+    private CustomerDetailsViewModel? ViewModel => DataContext as CustomerDetailsViewModel;
+
+    /// <summary>
+    /// Navigate back to the Customer List.
+    /// </summary>
+    private void BtnBack_Click(object sender, RoutedEventArgs e)
+    {
+        var mainWindow = Window.GetWindow(this) as MainWindow;
+        mainWindow?.NavigateToCustomers();
+    }
+
+    /// <summary>
+    /// Navigate to TransactionEntryPage with current customer pre-selected.
+    /// </summary>
+    private void BtnNewTransaction_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel != null)
+        {
+            var mainWindow = Window.GetWindow(this) as MainWindow;
+            mainWindow?.NavigateToNewTransaction(ViewModel.CustomerId);
+        }
+    }
+
+    /// <summary>
+    /// Navigate to TransactionEntryPage in Edit mode with data prepopulated.
+    /// </summary>
+    private void BtnEditTransaction_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is long transactionId)
+        {
+            var mainWindow = Window.GetWindow(this) as MainWindow;
+            mainWindow?.NavigateToEditTransaction(transactionId, ViewModel?.CustomerId ?? 0);
+        }
+    }
+
+    /// <summary>
+    /// Delete a transaction with confirmation dialog.
+    /// </summary>
+    private void BtnDeleteTransaction_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is long transactionId)
+        {
+            var result = MessageBox.Show(
+                "Bu tranzaksiyanı silməyə əminsiniz?\nBu əməliyyat geri qaytarıla bilməz.",
+                "Silməni Təsdiqlə",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                ViewModel?.DeleteTransactionCommand.Execute(transactionId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Open attached document file using the system default app.
+    /// </summary>
+    private void BtnOpenDocument_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string documentPath)
+        {
+            ViewModel?.OpenDocumentCommand.Execute(documentPath);
+        }
+    }
+}

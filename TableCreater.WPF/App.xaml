@@ -1,0 +1,52 @@
+<Application x:Class="TableCreater.WPF.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.modernwpf.com/2019"
+             xmlns:converters="clr-namespace:TableCreater.WPF.Converters"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- ModernWpf Theme Resources — Windows 11 style -->
+                <ui:ThemeResources RequestedTheme="Light" />
+                <ui:XamlControlsResources />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Global Value Converters -->
+            <converters:BoolToVisibilityConverter x:Key="BoolToVisConverter"/>
+            <converters:NullToBoolConverter x:Key="NullToBoolConverter"/>
+            <converters:NullToVisibilityConverter x:Key="NullToVisConverter"/>
+            <converters:EnumToUpperConverter x:Key="EnumToUpperConverter"/>
+
+            <!-- Remove focus rectangles globally + modern selection styles -->
+            <Style TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            </Style>
+            <Style TargetType="DataGridRow">
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Style.Triggers>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter Property="Background" Value="#E3F2FD"/>
+                        <Setter Property="Foreground" Value="#000000"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            <Style TargetType="DataGridCell">
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Style.Triggers>
+                    <Trigger Property="IsSelected" Value="True">
+                        <Setter Property="Background" Value="#E3F2FD"/>
+                        <Setter Property="Foreground" Value="#000000"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+            <Style TargetType="ListBoxItem">
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            </Style>
+            <Style TargetType="ComboBox" BasedOn="{StaticResource DefaultComboBoxStyle}">
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

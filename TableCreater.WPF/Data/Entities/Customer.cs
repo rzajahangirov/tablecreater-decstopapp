@@ -1,0 +1,37 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using TableCreater.WPF.Enums;
+
+namespace TableCreater.WPF.Data.Entities;
+
+/// <summary>
+/// Represents a customer in the system.
+/// One-to-Many relationship with Transaction (CASCADE DELETE).
+/// Mapped from Java Customer entity.
+/// </summary>
+[Table("Customers")]
+public class Customer
+{
+    [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    public long Id { get; set; }
+
+    [Required]
+    [MaxLength(255)]
+    public string Name { get; set; } = string.Empty;
+
+    [MaxLength(50)]
+    public string? Phone { get; set; }
+
+    /// <summary>
+    /// Customer status: Active or Inactive. Default is Active.
+    /// Stored as string in SQLite.
+    /// </summary>
+    public CustomerType Type { get; set; } = CustomerType.Active;
+
+    /// <summary>
+    /// Navigation property: all transactions belonging to this customer.
+    /// Configured with CASCADE DELETE in DbContext.
+    /// </summary>
+    public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+}

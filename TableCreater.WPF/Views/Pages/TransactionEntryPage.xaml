@@ -1,0 +1,389 @@
+<UserControl x:Class="TableCreater.WPF.Views.Pages.TransactionEntryPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.modernwpf.com/2019">
+
+    <Grid Background="White">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24,16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <!-- Form Fields -->
+                    <ColumnDefinition Width="*" MinWidth="450"/>
+                    <!-- Live Summary Panel -->
+                    <ColumnDefinition Width="360"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- LEFT: TRANSACTION FORM -->
+                <StackPanel Grid.Column="0" Margin="0,0,32,0">
+
+                    <!-- Back Button -->
+                    <Button Click="BtnBack_Click" Padding="10,6" Margin="0,0,0,16"
+                            Background="Transparent" BorderThickness="0" HorizontalAlignment="Left" Cursor="Hand">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE72B;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                       VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#005FB8"/>
+                            <TextBlock Text="Geri qayıt" FontSize="13" Foreground="#005FB8" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- Success Message -->
+                    <Border Visibility="{Binding SuccessMessage, Converter={StaticResource NullToVisConverter}}"
+                            Background="#E8F5E9" BorderBrush="#2E7D32" BorderThickness="1"
+                            CornerRadius="4" Padding="16,12" Margin="0,0,0,20">
+                        <TextBlock Text="{Binding SuccessMessage}" Foreground="#2E7D32" FontSize="14" FontWeight="SemiBold"/>
+                    </Border>
+
+                    <!-- Error Message -->
+                    <Border Visibility="{Binding ErrorMessage, Converter={StaticResource NullToVisConverter}}"
+                            Background="#FFEBEE" BorderBrush="#C62828" BorderThickness="1"
+                            CornerRadius="4" Padding="16,12" Margin="0,0,0,20">
+                        <TextBlock Text="{Binding ErrorMessage}" Foreground="#C62828" FontSize="14" FontWeight="SemiBold"/>
+                    </Border>
+
+                    <!-- Section: Müştəri və Tarix -->
+                    <TextBlock Text="Müştəri və Tarix" FontSize="18" FontWeight="Bold" Margin="0,0,0,16" Foreground="#222"/>
+
+                    <Grid Margin="0,0,0,20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="200"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,16,0">
+                            <TextBlock Text="Müştəri Seçimi *" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                            <ComboBox ItemsSource="{Binding Customers}"
+                                      SelectedItem="{Binding SelectedCustomer, Mode=TwoWay}"
+                                      DisplayMemberPath="Name"
+                                      IsEditable="True"
+                                      Text="{Binding CustomerSearchText, UpdateSourceTrigger=PropertyChanged}"
+                                      HorizontalAlignment="Stretch"
+                                      FontSize="14" Padding="12,10"
+                                      BorderBrush="#D1D1D1"
+                                      ui:ControlHelper.PlaceholderText="Müştəri axtar və ya seç..."/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="Tranzaksiya Tarixi *" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                            <DatePicker SelectedDate="{Binding TransactionDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                        HorizontalAlignment="Stretch"
+                                        Padding="8,6"
+                                        BorderBrush="#D1D1D1"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Section: Məhsul Məlumatları -->
+                    <TextBlock Text="Məhsul Məlumatları" FontSize="18" FontWeight="Bold" Margin="0,12,0,16" Foreground="#222"/>
+
+                    <Grid Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                            <TextBlock Text="Məhsulun Adı *" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                            <TextBox Text="{Binding ProductName, UpdateSourceTrigger=PropertyChanged}"
+                                     FontSize="14" Padding="12,10" BorderBrush="#D1D1D1"
+                                     ui:ControlHelper.PlaceholderText="Məs: Dəmir Filizi"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                            <TextBlock Text="Qəbul Edən Firma *" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                            <TextBox Text="{Binding ReceivingCompany, UpdateSourceTrigger=PropertyChanged}"
+                                     FontSize="14" Padding="12,10" BorderBrush="#D1D1D1"
+                                     ui:ControlHelper.PlaceholderText="Məs: ABC MMC"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,24">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                            <TextBlock Text="Çəki (Ton) *" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                            <ui:NumberBox Value="{Binding WeightTon, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          SpinButtonPlacementMode="Compact"
+                                          Minimum="0" SmallChange="0.1"
+                                          HorizontalAlignment="Stretch" Padding="8,6"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Margin="10,0,10,0">
+                            <TextBlock Text="Qiymət/Ton (RUB) *" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                            <ui:NumberBox Value="{Binding PricePerTonRub, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          SpinButtonPlacementMode="Compact"
+                                          Minimum="0" SmallChange="10"
+                                          HorizontalAlignment="Stretch" Padding="8,6"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" Margin="10,0,0,0">
+                            <TextBlock Text="Məzənnə (RUB→USD) *" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                            <ui:NumberBox Value="{Binding HistoricalExchangeRate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          SpinButtonPlacementMode="Compact"
+                                          Minimum="0.0001" SmallChange="0.001"
+                                          HorizontalAlignment="Stretch" Padding="8,6"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Section: Nəqliyyat -->
+                    <TextBlock Text="Nəqliyyat" FontSize="18" FontWeight="Bold" Margin="0,12,0,16" Foreground="#222"/>
+
+                    <Grid Margin="0,0,0,24">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                            <TextBlock Text="Nəqliyyat Növü *" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                            <ComboBox ItemsSource="{Binding TransportTypes}"
+                                      SelectedItem="{Binding TransportType, Mode=TwoWay}"
+                                      HorizontalAlignment="Stretch"
+                                      FontSize="14" Padding="12,10"
+                                      BorderBrush="#D1D1D1">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Converter={StaticResource EnumToUpperConverter}}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Margin="10,0,10,0">
+                            <TextBlock Text="Vasitə Sayı" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                            <ui:NumberBox Value="{Binding VehicleCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          SpinButtonPlacementMode="Compact"
+                                          Minimum="1"
+                                          HorizontalAlignment="Stretch" Padding="8,6"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" Margin="10,0,0,0">
+                            <TextBlock FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="Qiymət/Vasitə (USD)"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding TransportType}" Value="Ship">
+                                                <Setter Property="Text" Value="Qiymət/Vasitə (RUB)"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <ui:NumberBox Value="{Binding PricePerVehicle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          SpinButtonPlacementMode="Compact"
+                                          Minimum="0"
+                                          HorizontalAlignment="Stretch" Padding="8,6"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Section: Ödəniş -->
+                    <TextBlock Text="Ödəniş" FontSize="18" FontWeight="Bold" Margin="0,12,0,16" Foreground="#222"/>
+
+                    <Grid Margin="0,0,0,24">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                            <TextBlock Text="Ödəniş Valyutası" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                            <ComboBox ItemsSource="{Binding PaymentCurrencies}"
+                                      SelectedItem="{Binding PaidCurrency, Mode=TwoWay}"
+                                      HorizontalAlignment="Stretch"
+                                      FontSize="14" Padding="12,10"
+                                      BorderBrush="#D1D1D1">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Converter={StaticResource EnumToUpperConverter}}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                            <TextBlock Text="Ödənilən Məbləğ" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                            <ui:NumberBox Value="{Binding PaidAmount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          SpinButtonPlacementMode="Compact"
+                                          Minimum="0"
+                                          HorizontalAlignment="Stretch" Padding="8,6"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Section: Sənəd Yükləmə -->
+                    <TextBlock Text="Sənəd" FontSize="18" FontWeight="Bold" Margin="0,12,0,16" Foreground="#222"/>
+
+                    <Border Background="#F9F9F9" CornerRadius="8" Padding="20" Margin="0,0,0,32"
+                            BorderBrush="#E0E0E0" BorderThickness="1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- File info -->
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock FontSize="13" Foreground="#555" Margin="0,0,0,4">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="Heç bir sənəd seçilməyib"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasDocument}" Value="True">
+                                                    <Setter Property="Text" Value="{Binding DocumentFileName}"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock Text="PDF, JPG, PNG formatlarını dəstəkləyir" FontSize="11" Foreground="#999"
+                                           Visibility="{Binding HasDocument, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}"/>
+                            </StackPanel>
+
+                            <!-- Upload / Clear buttons -->
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button Click="BtnUpload_Click" Padding="14,8" Margin="0,0,8,0"
+                                        Background="#005FB8" Foreground="White" BorderThickness="0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE898;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                        <TextBlock Text="Sənəd yüklə" FontSize="13" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button Click="BtnClearFile_Click" Padding="10,8"
+                                        Background="#FFEBEE" Foreground="#C62828" BorderThickness="0"
+                                        Visibility="{Binding HasDocument, Converter={StaticResource BoolToVisConverter}}"
+                                        ToolTip="Sənədi sil">
+                                    <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="14"/>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Action Buttons -->
+                    <Grid Margin="0,0,0,40">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0" Click="BtnSave_Click"
+                                Padding="32,14" Margin="0,0,12,0"
+                                Background="#005FB8" Foreground="White" BorderThickness="0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="16" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBlock FontSize="15" FontWeight="SemiBold">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="Yadda Saxla"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsEditMode}" Value="True">
+                                                    <Setter Property="Text" Value="Yenilə"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Grid.Column="1" Content="Formu Sıfırla" Click="BtnReset_Click"
+                                Padding="24,14" Background="Transparent" Foreground="#666" BorderBrush="#D1D1D1"/>
+                    </Grid>
+                </StackPanel>
+
+                <!-- RIGHT: LIVE SUMMARY PANEL -->
+                <Border Grid.Column="1"
+                        Background="#F8F9FA"
+                        BorderBrush="#E0E0E0"
+                        BorderThickness="1" CornerRadius="12"
+                        Padding="24" VerticalAlignment="Top">
+                    <StackPanel>
+                        <TextBlock Text="💰 Canlı Hesablama" FontSize="20" FontWeight="Bold" Margin="0,0,0,24" Foreground="#005FB8"/>
+
+                        <!-- Məhsul Xərci -->
+                        <TextBlock Text="MƏHSUL XƏRCİ" FontSize="11" Foreground="#888" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <Grid Margin="0,0,0,6">
+                            <TextBlock Text="Qiymət (RUB)" FontSize="14" Foreground="#444"/>
+                            <TextBlock HorizontalAlignment="Right" FontSize="14" FontWeight="SemiBold" Foreground="#222"
+                                       Text="{Binding LiveGoodsCostRub, StringFormat='{}{0:N2} ₽'}"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,20">
+                            <TextBlock Text="Qiymət (USD)" FontSize="14" Foreground="#444"/>
+                            <TextBlock HorizontalAlignment="Right" FontSize="14" FontWeight="Bold" Foreground="#005FB8"
+                                       Text="{Binding LiveGoodsCostUsd, StringFormat='{}{0:N2} $'}"/>
+                        </Grid>
+
+                        <Separator Margin="0,0,0,20" Background="#E0E0E0"/>
+
+                        <!-- Nəqliyyat Xərci -->
+                        <TextBlock Text="NƏQLİYYAT XƏRCİ" FontSize="11" Foreground="#888" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <Grid Margin="0,0,0,20">
+                            <TextBlock Text="Qiymət (USD)" FontSize="14" Foreground="#444"/>
+                            <TextBlock HorizontalAlignment="Right" FontSize="14" FontWeight="Bold" Foreground="#005FB8"
+                                       Text="{Binding LiveTransportCostUsd, StringFormat='{}{0:N2} $'}"/>
+                        </Grid>
+
+                        <Separator Margin="0,0,0,20" Background="#E0E0E0"/>
+
+                        <!-- Ümumi Xərc -->
+                        <Grid Margin="0,0,0,20">
+                            <TextBlock Text="ÜMUMİ XƏRC" FontSize="15" FontWeight="Bold" Foreground="#222"/>
+                            <TextBlock HorizontalAlignment="Right" FontSize="18" FontWeight="ExtraBold" Foreground="#E67E22"
+                                       Text="{Binding LiveTotalExpenseUsd, StringFormat='{}{0:N2} $'}"/>
+                        </Grid>
+
+                        <Separator Margin="0,0,0,20" Background="#E0E0E0"/>
+
+                        <!-- Ödəniş -->
+                        <TextBlock Text="ÖDƏNİŞ" FontSize="11" Foreground="#888" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <Grid Margin="0,0,0,24">
+                            <TextBlock Text="Ödənilib (USD)" FontSize="14" Foreground="#444"/>
+                            <TextBlock HorizontalAlignment="Right" FontSize="14" FontWeight="Bold" Foreground="#2E7D32"
+                                       Text="{Binding LivePaidInUsd, StringFormat='{}{0:N2} $'}"/>
+                        </Grid>
+
+                        <!-- Qalıq Borc Card -->
+                        <Border CornerRadius="8" Padding="20,16" Background="#FFFFFF" BorderBrush="#E0E0E0" BorderThickness="1">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding DebtStatusText}"
+                                           FontSize="12" FontWeight="Bold"
+                                           HorizontalAlignment="Center" Margin="0,0,0,6"
+                                           Opacity="0.7"/>
+                                <TextBlock FontSize="32" FontWeight="ExtraBold"
+                                           HorizontalAlignment="Center"
+                                           Text="{Binding LiveRemainingDebtUsd, StringFormat='{}{0:N2} $'}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="#888888"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding DebtStatusText}" Value="Supplier-ə Borc">
+                                                    <Setter Property="Foreground" Value="#C62828"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding DebtStatusText}" Value="Artıq Ödəniş">
+                                                    <Setter Property="Foreground" Value="#2E7D32"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </ScrollViewer>
+
+        <!-- Loading Overlay -->
+        <Border Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisConverter}}"
+                Background="#AAFFFFFF">
+            <ui:ProgressRing IsActive="{Binding IsLoading}"
+                             Width="48" Height="48"
+                             HorizontalAlignment="Center"
+                             VerticalAlignment="Center"
+                             Foreground="#005FB8"/>
+        </Border>
+    </Grid>
+</UserControl>

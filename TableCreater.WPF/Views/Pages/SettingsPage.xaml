@@ -1,0 +1,78 @@
+<UserControl x:Class="TableCreater.WPF.Views.Pages.SettingsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.modernwpf.com/2019">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24,16" Background="White">
+        <StackPanel MaxWidth="600">
+
+            <!-- About Card -->
+            <Border Background="#F9F9F9"
+                    CornerRadius="8" Padding="32" Margin="0,0,0,24"
+                    BorderBrush="#E0E0E0" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="Proqram Haqqında" FontSize="22" FontWeight="Bold" Margin="0,0,0,24" Foreground="#222"/>
+
+                    <StackPanel HorizontalAlignment="Center" Margin="0,0,0,32">
+                        <TextBlock Text="TableCreater" FontSize="32" FontWeight="Bold"
+                                   HorizontalAlignment="Center" Foreground="#005FB8"/>
+                        <TextBlock Text="Mühasibatlıq Sistemi" FontSize="14" Foreground="#666"
+                                   HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                    </StackPanel>
+
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/><ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Versiya:" FontSize="14" Foreground="#666" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1" Text="v1.0.0" FontSize="14" Foreground="#333"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/><ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Tərtibatçı:" FontSize="14" Foreground="#666" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1" Text="TableCreater Komandası" FontSize="14" Foreground="#333"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/><ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Platforma:" FontSize="14" Foreground="#666" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1" Text=".NET 9 WPF + EF Core" FontSize="14" Foreground="#333"/>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140"/><ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Məlumat Bazası:" FontSize="14" Foreground="#666" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1" Text="SQLite (Yerli)" FontSize="14" Foreground="#333"/>
+                    </Grid>
+
+                    <Separator Margin="0,24,0,24" Background="#E0E0E0"/>
+
+                    <TextBlock Text="Java Spring Boot / JavaFX proqramından native C# WPF-ə miqrasiya edilib."
+                               FontSize="12" Foreground="#888" TextWrapping="Wrap" HorizontalAlignment="Center" TextAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Database Info Card -->
+            <Border Background="#F9F9F9"
+                    CornerRadius="8" Padding="32"
+                    BorderBrush="#E0E0E0" BorderThickness="1">
+                <StackPanel>
+                    <TextBlock Text="Məlumat Bazası" FontSize="22" FontWeight="Bold" Margin="0,0,0,16" Foreground="#222"/>
+                    <TextBlock TextWrapping="Wrap" FontSize="14" Foreground="#555" Margin="0,0,0,16" LineHeight="20">
+                        Proqram bütün məlumatları kompüterinizdə yerləşən yerli SQLite bazasında saxlayır. 
+                        Məlumatlar heç bir kənar serverə ötürülmür — tam məxfilik təmin edilir.
+                    </TextBlock>
+                    <Border Background="#EAEAEA" Padding="12,8" CornerRadius="4" HorizontalAlignment="Left">
+                        <TextBlock Text="Fayl: tablecreater.db" FontSize="13" FontFamily="Consolas" Foreground="#444"/>
+                    </Border>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

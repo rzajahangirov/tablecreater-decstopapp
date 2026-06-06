@@ -1,0 +1,145 @@
+<UserControl x:Class="TableCreater.WPF.Views.Pages.ReportsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.modernwpf.com/2019">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="24,16" Background="White">
+        <StackPanel MaxWidth="1000">
+
+            <!-- Header -->
+            <TextBlock Text="Maliyyə Hesabatları" FontSize="26" FontWeight="Bold" Margin="0,0,0,24" Foreground="#222"/>
+
+            <!-- Messages -->
+            <Border Visibility="{Binding SuccessMessage, Converter={StaticResource NullToVisConverter}}"
+                    Background="#E8F5E9" BorderBrush="#2E7D32" BorderThickness="1"
+                    CornerRadius="4" Padding="16,12" Margin="0,0,0,20">
+                <TextBlock Text="{Binding SuccessMessage}" Foreground="#2E7D32" FontSize="14" FontWeight="SemiBold"/>
+            </Border>
+            <Border Visibility="{Binding ErrorMessage, Converter={StaticResource NullToVisConverter}}"
+                    Background="#FFEBEE" BorderBrush="#C62828" BorderThickness="1"
+                    CornerRadius="4" Padding="16,12" Margin="0,0,0,20">
+                <TextBlock Text="{Binding ErrorMessage}" Foreground="#C62828" FontSize="14" FontWeight="SemiBold"/>
+            </Border>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Date Range Report -->
+                <Border Grid.Column="0" Background="#F9F9F9" CornerRadius="8" Padding="24" Margin="0,0,12,24" BorderBrush="#E0E0E0" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="📅 Tarix Aralığı üzrə Hesabat" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="#005FB8"/>
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                <TextBlock Text="Başlanğıc" FontSize="13" FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,6"/>
+                                <DatePicker SelectedDate="{Binding FromDate, Mode=TwoWay}" HorizontalAlignment="Stretch" BorderBrush="#D1D1D1"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Son Tarix" FontSize="13" FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,6"/>
+                                <DatePicker SelectedDate="{Binding ToDate, Mode=TwoWay}" HorizontalAlignment="Stretch" BorderBrush="#D1D1D1"/>
+                            </StackPanel>
+                        </Grid>
+                        <Button Content="Hesabat Yarat" Click="BtnDateRangeReport_Click"
+                                Margin="0,16,0,0" Padding="0,12" Background="#005FB8" Foreground="White" BorderThickness="0"
+                                HorizontalAlignment="Stretch" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Customer Report + Export -->
+                <Border Grid.Column="1" Background="#F9F9F9" CornerRadius="8" Padding="24" Margin="12,0,0,24" BorderBrush="#E0E0E0" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="👤 Müştəri üzrə Hesabat" FontSize="18" FontWeight="Bold" Margin="0,0,0,20" Foreground="#005FB8"/>
+                        <StackPanel Margin="0,0,0,16">
+                            <TextBlock Text="Müştəri Seç" FontSize="13" FontWeight="SemiBold" Opacity="0.7" Margin="0,0,0,6"/>
+                            <ComboBox ItemsSource="{Binding Customers}"
+                                      SelectedItem="{Binding SelectedCustomer, Mode=TwoWay}"
+                                      DisplayMemberPath="Name" IsEditable="True"
+                                      HorizontalAlignment="Stretch" FontSize="14" Padding="12,10"
+                                      BorderBrush="#D1D1D1"
+                                      ui:ControlHelper.PlaceholderText="Müştəri seçin..."/>
+                        </StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button Grid.Column="0" Content="Hesabat" Click="BtnCustomerReport_Click"
+                                    Margin="0,0,6,0" Padding="0,12" Background="#EAEAEA" Foreground="#333" BorderThickness="0"
+                                    FontWeight="SemiBold"/>
+                            <Button Grid.Column="1" Content="Excel Export" Click="BtnExportExcel_Click"
+                                    Margin="6,0,0,0" Padding="0,12" Background="#005FB8" Foreground="White" BorderThickness="0"
+                                    FontWeight="SemiBold"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Results Dashboard -->
+            <Border Visibility="{Binding HasReport, Converter={StaticResource BoolToVisConverter}}" Margin="0,8,0,24">
+                <StackPanel>
+                    <TextBlock Text="Hesabat Nəticələri" FontSize="20" FontWeight="Bold" Margin="0,0,0,16" Foreground="#222"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Card 1 -->
+                        <Border Grid.Column="0" CornerRadius="8" Padding="20" Margin="0,0,8,0" Background="White" BorderBrush="#E0E0E0" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="Tranzaksiyalar" FontSize="12" Foreground="#888" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <TextBlock Text="{Binding TransactionCount}" FontSize="28" FontWeight="Bold" Foreground="#005FB8"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Card 2 -->
+                        <Border Grid.Column="1" CornerRadius="8" Padding="20" Margin="4,0" Background="White" BorderBrush="#E0E0E0" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="Ümumi Xərc" FontSize="12" Foreground="#888" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <TextBlock Text="{Binding TotalExpenseUsd, StringFormat='${0:N2}'}" FontSize="22" FontWeight="Bold" Foreground="#E67E22"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Card 3 -->
+                        <Border Grid.Column="2" CornerRadius="8" Padding="20" Margin="4,0" Background="White" BorderBrush="#E0E0E0" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="Ümumi Ödəniş" FontSize="12" Foreground="#888" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <TextBlock Text="{Binding TotalPaidUsd, StringFormat='${0:N2}'}" FontSize="22" FontWeight="Bold" Foreground="#2E7D32"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Card 4 -->
+                        <Border Grid.Column="3" CornerRadius="8" Padding="20" Margin="8,0,0,0" Background="#F0F7FF" BorderBrush="#005FB8" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="{Binding BenefitStatusText}" FontSize="12" Foreground="#005FB8" FontWeight="Bold" Margin="0,0,0,8"/>
+                                <TextBlock FontSize="22" FontWeight="ExtraBold"
+                                           Text="{Binding TotalBenefitUsd, StringFormat='${0:N2}'}">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="#888888"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding BenefitStatusText}" Value="Xalis Mənfəət">
+                                                    <Setter Property="Foreground" Value="#2E7D32"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding BenefitStatusText}" Value="Xalis Zərər">
+                                                    <Setter Property="Foreground" Value="#C62828"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <ui:ProgressRing IsActive="{Binding IsLoading}" Width="48" Height="48"
+                             HorizontalAlignment="Center" Margin="0,20" Foreground="#005FB8"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
