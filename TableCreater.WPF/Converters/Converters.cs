@@ -227,3 +227,43 @@ public class ShipmentStatusToGlyphConverter : IValueConverter
         throw new NotImplementedException();
     }
 }
+
+/// <summary>
+/// Compares value against converter parameter string; returns Visible if equal, Collapsed if not.
+/// </summary>
+public class EnumEqualsToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value == null || parameter == null) return Visibility.Collapsed;
+        return string.Equals(value.ToString(), parameter.ToString(), StringComparison.OrdinalIgnoreCase)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Compares value against converter parameter string for RadioButton two-way binding.
+/// </summary>
+public class EnumEqualsToBoolConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value == null || parameter == null) return false;
+        return string.Equals(value.ToString(), parameter.ToString(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is true && parameter is string str && targetType.IsEnum)
+        {
+            return Enum.Parse(targetType, str, true);
+        }
+        return System.Windows.Data.Binding.DoNothing;
+    }
+}

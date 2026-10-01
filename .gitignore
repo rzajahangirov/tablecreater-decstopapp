@@ -2,8 +2,12 @@
 *.db-shm
 *.db-wal
 
+# Build and output directories
+[Bb]in/
+[Oo]bj/
+
 # WPF temporary compile files
 *_wpftmp*
 
 # Large publish output binaries (>100MB blocked by GitHub)
-**/publish/*.exe
+**/publish/

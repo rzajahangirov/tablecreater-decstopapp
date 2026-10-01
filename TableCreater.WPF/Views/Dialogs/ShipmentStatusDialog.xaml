@@ -60,48 +60,43 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Pending Card -->
-                    <Border Grid.Row="0" Grid.Column="0" x:Name="CardPending"
-                            Margin="0,0,6,8" Padding="14,12" Background="White" BorderBrush="#DDD" BorderThickness="1.5"
-                            CornerRadius="8" Cursor="Hand" MouseLeftButtonDown="CardPending_Click">
-                        <RadioButton x:Name="RbPending" GroupName="StatusGroup" Content="⏳ Gözləmədə"
-                                     FontWeight="Bold" FontSize="14" Checked="StatusRadioButton_Checked"/>
-                    </Border>
+                    <RadioButton Grid.Row="0" Grid.Column="0" x:Name="RbPending"
+                                 Style="{StaticResource StatusCardRadioButtonStyle}"
+                                 GroupName="StatusGroup" Content="⏳ Gözləmədə"
+                                 Margin="0,0,6,8" Checked="StatusRadioButton_Checked"/>
 
                     <!-- Loaded Card -->
-                    <Border Grid.Row="0" Grid.Column="1" x:Name="CardLoaded"
-                            Margin="6,0,0,8" Padding="14,12" Background="White" BorderBrush="#DDD" BorderThickness="1.5"
-                            CornerRadius="8" Cursor="Hand" MouseLeftButtonDown="CardLoaded_Click">
-                        <RadioButton x:Name="RbLoaded" GroupName="StatusGroup" Content="📦 Yükləndi"
-                                     FontWeight="Bold" FontSize="14" Checked="StatusRadioButton_Checked"/>
-                    </Border>
+                    <RadioButton Grid.Row="0" Grid.Column="1" x:Name="RbLoaded"
+                                 Style="{StaticResource StatusCardRadioButtonStyle}"
+                                 GroupName="StatusGroup" Content="📦 Yükləndi"
+                                 Margin="6,0,0,8" Checked="StatusRadioButton_Checked"/>
 
                     <!-- InTransit Card -->
-                    <Border Grid.Row="1" Grid.Column="0" x:Name="CardInTransit"
-                            Margin="0,4,6,0" Padding="14,12" Background="White" BorderBrush="#DDD" BorderThickness="1.5"
-                            CornerRadius="8" Cursor="Hand" MouseLeftButtonDown="CardInTransit_Click">
-                        <RadioButton x:Name="RbInTransit" GroupName="StatusGroup" Content="🚚 Yoldadır"
-                                     FontWeight="Bold" FontSize="14" Checked="StatusRadioButton_Checked"/>
-                    </Border>
+                    <RadioButton Grid.Row="1" Grid.Column="0" x:Name="RbInTransit"
+                                 Style="{StaticResource StatusCardRadioButtonStyle}"
+                                 GroupName="StatusGroup" Content="🚚 Yoldadır"
+                                 Margin="0,4,6,0" Checked="StatusRadioButton_Checked"/>
 
                     <!-- Delivered Card -->
-                    <Border Grid.Row="1" Grid.Column="1" x:Name="CardDelivered"
-                            Margin="6,4,0,0" Padding="14,12" Background="White" BorderBrush="#DDD" BorderThickness="1.5"
-                            CornerRadius="8" Cursor="Hand" MouseLeftButtonDown="CardDelivered_Click">
-                        <RadioButton x:Name="RbDelivered" GroupName="StatusGroup" Content="🏁 Çatdı"
-                                     FontWeight="Bold" FontSize="14" Checked="StatusRadioButton_Checked"/>
-                    </Border>
+                    <RadioButton Grid.Row="1" Grid.Column="1" x:Name="RbDelivered"
+                                 Style="{StaticResource StatusCardRadioButtonStyle}"
+                                 GroupName="StatusGroup" Content="🏁 Çatdı"
+                                 Margin="6,4,0,0" Checked="StatusRadioButton_Checked"/>
                 </Grid>
 
                 <Separator Margin="0,0,0,20" Background="#E0E0E0"/>
 
                 <!-- 1. PENDING PANEL (No dates) -->
-                <Grid x:Name="PanelPending" Visibility="Collapsed"/>
+                <Border x:Name="PanelPending" Background="#F8F9FA" BorderBrush="#E0E0E0" BorderThickness="1"
+                        CornerRadius="8" Padding="18" Margin="0,0,0,16" Visibility="Collapsed">
+                    <TextBlock Text="Gözləmədə statusu üçün heç bir tarix tələb olunmur." Foreground="#777" FontSize="13"/>
+                </Border>
 
                 <!-- 2. LOADED PANEL (Stage 1) -->
                 <Border x:Name="PanelLoaded" Background="#F0F7FF" BorderBrush="#BBDEFB" BorderThickness="1"
                         CornerRadius="8" Padding="18" Margin="0,0,0,16" Visibility="Collapsed">
                     <StackPanel>
-                        <TextBlock Text="Yüklənmə Tarixi *" FontWeight="SemiBold" FontSize="13" Foreground="#1A237E" Margin="0,0,0,8"/>
+                        <TextBlock Text="Yüklənmə Tarixi" FontWeight="SemiBold" FontSize="13" Foreground="#1A237E" Margin="0,0,0,8"/>
                         <DatePicker x:Name="DpLoadedDate" HorizontalAlignment="Stretch" Padding="8,6" BorderBrush="#D1D1D1"/>
                     </StackPanel>
                 </Border>
@@ -110,10 +105,10 @@
                 <Border x:Name="PanelInTransit" Background="#F6F4FB" BorderBrush="#D1C4E9" BorderThickness="1"
                         CornerRadius="8" Padding="18" Margin="0,0,0,16" Visibility="Collapsed">
                     <StackPanel>
-                        <TextBlock Text="Yola Çıxma Tarixi *" FontWeight="SemiBold" FontSize="13" Foreground="#4A148C" Margin="0,0,0,8"/>
+                        <TextBlock Text="Yola Çıxma Tarixi" FontWeight="SemiBold" FontSize="13" Foreground="#4A148C" Margin="0,0,0,8"/>
                         <DatePicker x:Name="DpInTransitStart" HorizontalAlignment="Stretch" Padding="8,6" Margin="0,0,0,14"/>
 
-                        <TextBlock Text="Yüklənmə Tarixi (İstəyə bağlı)" FontWeight="SemiBold" FontSize="13" Foreground="#555" Margin="0,0,0,8"/>
+                        <TextBlock Text="Yüklənmə Tarixi" FontWeight="SemiBold" FontSize="13" Foreground="#555" Margin="0,0,0,8"/>
                         <DatePicker x:Name="DpInTransitLoadedDate" HorizontalAlignment="Stretch" Padding="8,6"/>
                     </StackPanel>
                 </Border>
@@ -122,13 +117,13 @@
                 <Border x:Name="PanelDelivered" Background="#E8F5E9" BorderBrush="#A5D6A7" BorderThickness="1"
                         CornerRadius="8" Padding="18" Margin="0,0,0,16" Visibility="Collapsed">
                     <StackPanel>
-                        <TextBlock Text="Çatdırılma Tarixi *" FontWeight="SemiBold" FontSize="13" Foreground="#1B5E20" Margin="0,0,0,8"/>
+                        <TextBlock Text="Çatdırılma Tarixi" FontWeight="SemiBold" FontSize="13" Foreground="#1B5E20" Margin="0,0,0,8"/>
                         <DatePicker x:Name="DpDeliveredDate" HorizontalAlignment="Stretch" Padding="8,6" Margin="0,0,0,14"/>
 
                         <TextBlock Text="Yola Çıxma Tarixi" FontWeight="SemiBold" FontSize="13" Foreground="#555" Margin="0,0,0,8"/>
                         <DatePicker x:Name="DpDeliveredTransitStart" HorizontalAlignment="Stretch" Padding="8,6" Margin="0,0,0,14"/>
 
-                        <TextBlock Text="Yüklənmə Tarixi (İstəyə bağlı)" FontWeight="SemiBold" FontSize="13" Foreground="#555" Margin="0,0,0,8"/>
+                        <TextBlock Text="Yüklənmə Tarixi" FontWeight="SemiBold" FontSize="13" Foreground="#555" Margin="0,0,0,8"/>
                         <DatePicker x:Name="DpDeliveredLoadedDate" HorizontalAlignment="Stretch" Padding="8,6"/>
                     </StackPanel>
                 </Border>
@@ -152,7 +147,7 @@
                         Padding="26,10" Background="#005FB8" Foreground="White" BorderThickness="0">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="Statusu Yenilə" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="TxtSaveButton" Text="Statusu Yenilə" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
             </Grid>

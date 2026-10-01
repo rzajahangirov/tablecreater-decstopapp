@@ -284,57 +284,116 @@
                     </Border>
 
                     <!-- Section: Göndərmə Statusu -->
-                    <TextBlock Text="Göndərmə Statusu" FontSize="18" FontWeight="Bold" Margin="0,12,0,16" Foreground="#222"/>
+                    <Grid Margin="0,12,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Göndərmə Statusu" FontSize="18" FontWeight="Bold" Foreground="#222" VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" Click="BtnOpenStatusDialog_Click"
+                                Padding="12,6" Background="#F0F7FF" BorderBrush="#005FB8" BorderThickness="1"
+                                Cursor="Hand" ToolTip="Status və tarixləri ayrıca pəncərədə tənzimlə">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE7EC;" FontFamily="Segoe MDL2 Assets" FontSize="13" Foreground="#005FB8" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Pəncərədə Aç" FontSize="13" Foreground="#005FB8" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
 
                     <Border Background="#F9FAFB" CornerRadius="8" Padding="20" Margin="0,0,0,24"
                             BorderBrush="#E5E7EB" BorderThickness="1">
                         <StackPanel>
-                            <Grid Margin="0,0,0,12">
+                            <!-- STATUS CARDS (4 options - identical to update dialog) -->
+                            <Grid Margin="0,0,0,16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
-                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                                    <TextBlock Text="Cari Status *" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
-                                    <ComboBox ItemsSource="{Binding ShipmentStatuses}"
-                                              SelectedItem="{Binding ShipmentStatus, Mode=TwoWay}"
-                                              HorizontalAlignment="Stretch"
-                                              FontSize="14" Padding="12,10"
-                                              BorderBrush="#D1D1D1">
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding Converter={StaticResource ShipmentStatusToTextConverter}}"/>
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
-                                </StackPanel>
+                                <!-- Pending Card -->
+                                <RadioButton Grid.Row="0" Grid.Column="0"
+                                             Style="{StaticResource StatusCardRadioButtonStyle}"
+                                             GroupName="EntryStatusGroup" Content="⏳ Gözləmədə"
+                                             Margin="0,0,6,8"
+                                             IsChecked="{Binding ShipmentStatus, Converter={StaticResource EnumEqualsToBoolConverter}, ConverterParameter=Pending, Mode=TwoWay}"/>
 
-                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                                    <TextBlock Text="Yüklənmə Tarixi" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                                <!-- Loaded Card -->
+                                <RadioButton Grid.Row="0" Grid.Column="1"
+                                             Style="{StaticResource StatusCardRadioButtonStyle}"
+                                             GroupName="EntryStatusGroup" Content="📦 Yükləndi"
+                                             Margin="6,0,0,8"
+                                             IsChecked="{Binding ShipmentStatus, Converter={StaticResource EnumEqualsToBoolConverter}, ConverterParameter=Loaded, Mode=TwoWay}"/>
+
+                                <!-- InTransit Card -->
+                                <RadioButton Grid.Row="1" Grid.Column="0"
+                                             Style="{StaticResource StatusCardRadioButtonStyle}"
+                                             GroupName="EntryStatusGroup" Content="🚚 Yoldadır"
+                                             Margin="0,4,6,0"
+                                             IsChecked="{Binding ShipmentStatus, Converter={StaticResource EnumEqualsToBoolConverter}, ConverterParameter=InTransit, Mode=TwoWay}"/>
+
+                                <!-- Delivered Card -->
+                                <RadioButton Grid.Row="1" Grid.Column="1"
+                                             Style="{StaticResource StatusCardRadioButtonStyle}"
+                                             GroupName="EntryStatusGroup" Content="🏁 Çatdı"
+                                             Margin="6,4,0,0"
+                                             IsChecked="{Binding ShipmentStatus, Converter={StaticResource EnumEqualsToBoolConverter}, ConverterParameter=Delivered, Mode=TwoWay}"/>
+                            </Grid>
+
+                            <!-- 1. PENDING PANEL (No dates required) -->
+                            <Border Background="#F8F9FA" BorderBrush="#E0E0E0" BorderThickness="1"
+                                    CornerRadius="8" Padding="16,14"
+                                    Visibility="{Binding ShipmentStatus, Converter={StaticResource EnumEqualsToVisConverter}, ConverterParameter=Pending}">
+                                <TextBlock Text="Gözləmədə statusu üçün heç bir tarix tələb olunmur." Foreground="#777" FontSize="13"/>
+                            </Border>
+
+                            <!-- 2. LOADED PANEL (Stage 1) -->
+                            <Border Background="#F0F7FF" BorderBrush="#BBDEFB" BorderThickness="1"
+                                    CornerRadius="8" Padding="18"
+                                    Visibility="{Binding ShipmentStatus, Converter={StaticResource EnumEqualsToVisConverter}, ConverterParameter=Loaded}">
+                                <StackPanel>
+                                    <TextBlock Text="Yüklənmə Tarixi" FontWeight="SemiBold" FontSize="13" Foreground="#1A237E" Margin="0,0,0,8"/>
+                                    <DatePicker SelectedDate="{Binding LoadedDate, Mode=TwoWay}"
+                                                HorizontalAlignment="Stretch" Padding="8,6" BorderBrush="#D1D1D1"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 3. IN-TRANSIT PANEL (Stage 2) -->
+                            <Border Background="#F6F4FB" BorderBrush="#D1C4E9" BorderThickness="1"
+                                    CornerRadius="8" Padding="18"
+                                    Visibility="{Binding ShipmentStatus, Converter={StaticResource EnumEqualsToVisConverter}, ConverterParameter=InTransit}">
+                                <StackPanel>
+                                    <TextBlock Text="Yola Çıxma Tarixi" FontWeight="SemiBold" FontSize="13" Foreground="#4A148C" Margin="0,0,0,8"/>
+                                    <DatePicker SelectedDate="{Binding InTransitStartDate, Mode=TwoWay}"
+                                                HorizontalAlignment="Stretch" Padding="8,6" Margin="0,0,0,14"/>
+
+                                    <TextBlock Text="Yüklənmə Tarixi" FontWeight="SemiBold" FontSize="13" Foreground="#555" Margin="0,0,0,8"/>
                                     <DatePicker SelectedDate="{Binding LoadedDate, Mode=TwoWay}"
                                                 HorizontalAlignment="Stretch" Padding="8,6"/>
                                 </StackPanel>
-                            </Grid>
+                            </Border>
 
-                            <Grid Margin="0,4,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-
-                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                                    <TextBlock Text="Yola Çıxma Tarixi" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
-                                    <DatePicker SelectedDate="{Binding InTransitStartDate, Mode=TwoWay}"
-                                                HorizontalAlignment="Stretch" Padding="8,6"/>
-                                </StackPanel>
-
-                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                                    <TextBlock Text="Çatdırılma Tarixi" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                            <!-- 4. DELIVERED PANEL (Stage 3) -->
+                            <Border Background="#E8F5E9" BorderBrush="#A5D6A7" BorderThickness="1"
+                                    CornerRadius="8" Padding="18"
+                                    Visibility="{Binding ShipmentStatus, Converter={StaticResource EnumEqualsToVisConverter}, ConverterParameter=Delivered}">
+                                <StackPanel>
+                                    <TextBlock Text="Çatdırılma Tarixi" FontWeight="SemiBold" FontSize="13" Foreground="#1B5E20" Margin="0,0,0,8"/>
                                     <DatePicker SelectedDate="{Binding DeliveredDate, Mode=TwoWay}"
+                                                HorizontalAlignment="Stretch" Padding="8,6" Margin="0,0,0,14"/>
+
+                                    <TextBlock Text="Yola Çıxma Tarixi" FontWeight="SemiBold" FontSize="13" Foreground="#555" Margin="0,0,0,8"/>
+                                    <DatePicker SelectedDate="{Binding InTransitStartDate, Mode=TwoWay}"
+                                                HorizontalAlignment="Stretch" Padding="8,6" Margin="0,0,0,14"/>
+
+                                    <TextBlock Text="Yüklənmə Tarixi" FontWeight="SemiBold" FontSize="13" Foreground="#555" Margin="0,0,0,8"/>
+                                    <DatePicker SelectedDate="{Binding LoadedDate, Mode=TwoWay}"
                                                 HorizontalAlignment="Stretch" Padding="8,6"/>
                                 </StackPanel>
-                            </Grid>
+                            </Border>
                         </StackPanel>
                     </Border>
 

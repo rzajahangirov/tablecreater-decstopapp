@@ -110,16 +110,16 @@ public partial class TransactionEntryViewModel : ObservableObject
     private ShipmentStatus _shipmentStatus = ShipmentStatus.Pending;
 
     [ObservableProperty]
-    private DateTime? _loadedDate = DateTime.Today;
+    private DateTime? _loadedDate;
 
     [ObservableProperty]
-    private DateTime? _inTransitStartDate = DateTime.Today;
+    private DateTime? _inTransitStartDate;
 
     [ObservableProperty]
     private DateTime? _inTransitEndDate;
 
     [ObservableProperty]
-    private DateTime? _deliveredDate = DateTime.Today;
+    private DateTime? _deliveredDate;
 
     [ObservableProperty]
     private bool _isInTransitAutoDates = true;
@@ -558,10 +558,10 @@ public partial class TransactionEntryViewModel : ObservableObject
         AdditionalExpenseCurrency = PaymentCurrency.Usd;
         AdditionalExpenseDescription = string.Empty;
         ShipmentStatus = ShipmentStatus.Pending;
-        LoadedDate = DateTime.Today;
-        InTransitStartDate = DateTime.Today;
+        LoadedDate = null;
+        InTransitStartDate = null;
         InTransitEndDate = null;
-        DeliveredDate = DateTime.Today;
+        DeliveredDate = null;
         IsInTransitAutoDates = true;
         // Keep exchange rate — user likely needs the same rate for multiple entries
         ClearFile();

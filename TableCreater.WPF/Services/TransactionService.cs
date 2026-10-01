@@ -508,9 +508,7 @@ public class TransactionService : ITransactionService
                 break;
 
             case ShipmentStatus.Loaded:
-                if (!loadedDate.HasValue)
-                    throw new InvalidOperationException("Yüklənmə tarixi mütləq qeyd edilməlidir.");
-                entity.LoadedDate = loadedDate.Value;
+                entity.LoadedDate = loadedDate;
                 entity.InTransitStartDate = null;
                 entity.InTransitEndDate = null;
                 entity.DeliveredDate = null;
@@ -518,9 +516,7 @@ public class TransactionService : ITransactionService
                 break;
 
             case ShipmentStatus.InTransit:
-                if (!inTransitStartDate.HasValue)
-                    throw new InvalidOperationException("Yola çıxma tarixi mütləq qeyd edilməlidir.");
-                entity.InTransitStartDate = inTransitStartDate.Value;
+                entity.InTransitStartDate = inTransitStartDate;
                 entity.InTransitEndDate = null; // Yoldadır — hələ çatmayıb
                 if (loadedDate.HasValue)
                 {
@@ -531,12 +527,13 @@ public class TransactionService : ITransactionService
                 break;
 
             case ShipmentStatus.Delivered:
-                if (!deliveredDate.HasValue)
-                    throw new InvalidOperationException("Çatdırılma tarixi mütləq qeyd edilməlidir.");
-                entity.DeliveredDate = deliveredDate.Value;
+                entity.DeliveredDate = deliveredDate;
                 // Stage 3 biznes qaydası: Yoldadır intervalının ikinci tarixi çatdı tarixi ilə eyni olacaq
-                entity.InTransitEndDate = deliveredDate.Value;
-                entity.InTransitStartDate = inTransitStartDate ?? entity.InTransitStartDate ?? entity.LoadedDate ?? entity.TransactionDate;
+                entity.InTransitEndDate = deliveredDate;
+                if (inTransitStartDate.HasValue)
+                {
+                    entity.InTransitStartDate = inTransitStartDate.Value;
+                }
                 if (loadedDate.HasValue)
                 {
                     entity.LoadedDate = loadedDate.Value;

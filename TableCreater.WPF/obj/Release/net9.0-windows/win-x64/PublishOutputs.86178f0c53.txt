@@ -1,2 +1,0 @@
-C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\bin\Release\net9.0-windows\win-x64\publish\TableCreater.WPF.pdb
-C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\bin\Release\net9.0-windows\win-x64\publish\TableCreater.WPF.exe

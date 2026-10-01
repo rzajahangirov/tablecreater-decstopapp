@@ -46,4 +46,26 @@ public partial class TransactionEntryPage : UserControl
 
     private void BtnReset_Click(object sender, RoutedEventArgs e)
         => ViewModel?.ResetFormCommand.Execute(null);
+
+    private void BtnOpenStatusDialog_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel == null) return;
+
+        var dialog = new Dialogs.ShipmentStatusDialog(
+            ViewModel.ShipmentStatus,
+            ViewModel.LoadedDate.HasValue ? DateOnly.FromDateTime(ViewModel.LoadedDate.Value) : null,
+            ViewModel.InTransitStartDate.HasValue ? DateOnly.FromDateTime(ViewModel.InTransitStartDate.Value) : null,
+            ViewModel.DeliveredDate.HasValue ? DateOnly.FromDateTime(ViewModel.DeliveredDate.Value) : null)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            ViewModel.ShipmentStatus = dialog.ResultStatus;
+            ViewModel.LoadedDate = dialog.ResultLoadedDate?.ToDateTime(TimeOnly.MinValue);
+            ViewModel.InTransitStartDate = dialog.ResultInTransitStartDate?.ToDateTime(TimeOnly.MinValue);
+            ViewModel.DeliveredDate = dialog.ResultDeliveredDate?.ToDateTime(TimeOnly.MinValue);
+        }
+    }
 }

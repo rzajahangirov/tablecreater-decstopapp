@@ -22,6 +22,60 @@
             <converters:ShipmentStatusToForegroundConverter x:Key="ShipmentStatusToFgConverter"/>
             <converters:ShipmentStatusToTextConverter x:Key="ShipmentStatusToTextConverter"/>
             <converters:ShipmentStatusToGlyphConverter x:Key="ShipmentStatusToGlyphConverter"/>
+            <converters:EnumEqualsToVisibilityConverter x:Key="EnumEqualsToVisConverter"/>
+            <converters:EnumEqualsToBoolConverter x:Key="EnumEqualsToBoolConverter"/>
+
+            <!-- Status Card RadioButton Style (Unified for Dialog and Entry Page) -->
+            <Style x:Key="StatusCardRadioButtonStyle" TargetType="RadioButton">
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="#333333"/>
+                <Setter Property="Margin" Value="0"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="RadioButton">
+                            <Border x:Name="Bd"
+                                    Background="White"
+                                    BorderBrush="#DDDDDD"
+                                    BorderThickness="1.5"
+                                    CornerRadius="8"
+                                    Padding="14,12">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ContentPresenter Grid.Column="0"
+                                                      VerticalAlignment="Center"
+                                                      RecognizesAccessKey="True"/>
+                                    <Border x:Name="Indicator" Grid.Column="1"
+                                            Width="18" Height="18" CornerRadius="9"
+                                            BorderBrush="#CCCCCC" BorderThickness="1.5"
+                                            Background="Transparent" VerticalAlignment="Center" Margin="8,0,0,0">
+                                        <Ellipse x:Name="Dot" Width="8" Height="8" Fill="#005FB8" Visibility="Collapsed"/>
+                                    </Border>
+                                </Grid>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#005FB8"/>
+                                    <Setter TargetName="Bd" Property="Background" Value="#F8FAFC"/>
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#005FB8"/>
+                                    <Setter TargetName="Bd" Property="Background" Value="#F0F7FF"/>
+                                    <Setter TargetName="Dot" Property="Visibility" Value="Visible"/>
+                                    <Setter TargetName="Indicator" Property="BorderBrush" Value="#005FB8"/>
+                                    <Setter Property="Foreground" Value="#005FB8"/>
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
 
             <!-- Remove focus rectangles globally + modern selection styles -->
             <Style TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
