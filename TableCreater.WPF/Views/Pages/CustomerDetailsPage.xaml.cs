@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using TableCreater.WPF.Models;
 using TableCreater.WPF.ViewModels;
 
 namespace TableCreater.WPF.Views.Pages;
@@ -35,6 +36,25 @@ public partial class CustomerDetailsPage : UserControl
         {
             var mainWindow = Window.GetWindow(this) as MainWindow;
             mainWindow?.NavigateToNewTransaction(ViewModel.CustomerId);
+        }
+    }
+
+    /// <summary>
+    /// Open the shipment status update dialog for the selected transaction.
+    /// </summary>
+    private void BtnChangeStatus_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is TransactionReadResponse transaction && ViewModel != null)
+        {
+            var dialog = new Dialogs.ShipmentStatusDialog(transaction, ViewModel.TransactionService)
+            {
+                Owner = Window.GetWindow(this)
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                ViewModel.RefreshDataCommand.Execute(null);
+            }
         }
     }
 

@@ -17,6 +17,11 @@
             <converters:NullToBoolConverter x:Key="NullToBoolConverter"/>
             <converters:NullToVisibilityConverter x:Key="NullToVisConverter"/>
             <converters:EnumToUpperConverter x:Key="EnumToUpperConverter"/>
+            <converters:ProfitLossToColorConverter x:Key="ProfitLossToColorConverter"/>
+            <converters:ShipmentStatusToBackgroundConverter x:Key="ShipmentStatusToBgConverter"/>
+            <converters:ShipmentStatusToForegroundConverter x:Key="ShipmentStatusToFgConverter"/>
+            <converters:ShipmentStatusToTextConverter x:Key="ShipmentStatusToTextConverter"/>
+            <converters:ShipmentStatusToGlyphConverter x:Key="ShipmentStatusToGlyphConverter"/>
 
             <!-- Remove focus rectangles globally + modern selection styles -->
             <Style TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">

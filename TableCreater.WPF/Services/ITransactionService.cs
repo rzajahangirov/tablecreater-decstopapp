@@ -14,6 +14,7 @@ public interface ITransactionService
     Task<ExpenseIncomeReport> CalculateExpenseAndIncome(DateOnly from, DateOnly to);
     Task<ExpenseIncomeReport> CalculateCustomerExpenseAndIncome(long customerId);
     Task<TransactionReadResponse> UpdateTransaction(long id, TransactionUpdateRequest request);
+    Task<TransactionReadResponse> UpdateShipmentStatus(long id, ShipmentStatusUpdateRequest request);
     Task<TransactionEditFormData> GetTransactionForUpdate(long id);
     Task DeleteTransaction(long id);
     Task ExportCustomerTransactions(long customerId, string filePath);

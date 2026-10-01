@@ -73,7 +73,13 @@ public class AppDbContext : DbContext
             entity.Property(t => t.TransportType)
                   .HasConversion<string>();
 
+            entity.Property(t => t.TransportCurrency)
+                  .HasConversion<string>();
+
             entity.Property(t => t.PaidCurrency)
+                  .HasConversion<string>();
+
+            entity.Property(t => t.AdditionalExpenseCurrency)
                   .HasConversion<string>();
 
             // IsCompleted default = false (SQLite INTEGER DEFAULT 0)
@@ -99,7 +105,35 @@ public class AppDbContext : DbContext
             entity.Property(t => t.PaidAmount).HasColumnType("REAL");
             entity.Property(t => t.HistoricalExchangeRate).HasColumnType("REAL");
             entity.Property(t => t.HistoricalTotalExpenseUsd).HasColumnType("REAL");
-            entity.Property(t => t.HistoricalRemainingDebtUsd).HasColumnType("REAL");
+            entity.Property(t => t.AdditionalExpenseAmount).HasColumnType("REAL");
+
+            // Shipment tracking properties
+            entity.Property(t => t.ShipmentStatus)
+                  .HasConversion<string>()
+                  .HasDefaultValue(ShipmentStatus.Pending);
+
+            entity.Property(t => t.LoadedDate)
+                  .HasConversion(
+                      v => v.HasValue ? v.Value.ToString("yyyy-MM-dd") : null,
+                      v => !string.IsNullOrEmpty(v) ? DateOnly.Parse(v) : null);
+
+            entity.Property(t => t.InTransitStartDate)
+                  .HasConversion(
+                      v => v.HasValue ? v.Value.ToString("yyyy-MM-dd") : null,
+                      v => !string.IsNullOrEmpty(v) ? DateOnly.Parse(v) : null);
+
+            entity.Property(t => t.InTransitEndDate)
+                  .HasConversion(
+                      v => v.HasValue ? v.Value.ToString("yyyy-MM-dd") : null,
+                      v => !string.IsNullOrEmpty(v) ? DateOnly.Parse(v) : null);
+
+            entity.Property(t => t.DeliveredDate)
+                  .HasConversion(
+                      v => v.HasValue ? v.Value.ToString("yyyy-MM-dd") : null,
+                      v => !string.IsNullOrEmpty(v) ? DateOnly.Parse(v) : null);
+
+            entity.Property(t => t.IsInTransitAutoDates)
+                  .HasDefaultValue(true);
         });
 
         // =====================================================================

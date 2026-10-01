@@ -24,6 +24,11 @@ public record TransactionCreateRequest
     [Required(ErrorMessage = "Qəbul edən firma qeyd edilməlidir")]
     public string ReceivingCompany { get; init; } = string.Empty;
 
+    /// <summary>
+    /// Göndərən firma (sending company). Optional.
+    /// </summary>
+    public string? SendingCompany { get; init; }
+
     [Required, Range(0.01, (double)decimal.MaxValue, ErrorMessage = "Çəki mütləq 0-dan böyük olmalıdır")]
     public decimal WeightTon { get; init; }
 
@@ -33,7 +38,13 @@ public record TransactionCreateRequest
     [Required(ErrorMessage = "Nəqliyyat növü seçilməlidir")]
     public TransportType TransportType { get; init; }
 
-    [Range(1, int.MaxValue, ErrorMessage = "Maşın/Gəmi sayı ən az 1 olmalıdır")]
+    /// <summary>
+    /// Nəqliyyat valyutası — manual seçilir, artıq avtomatik deyil.
+    /// </summary>
+    [Required(ErrorMessage = "Nəqliyyat valyutası seçilməlidir")]
+    public PaymentCurrency TransportCurrency { get; init; } = PaymentCurrency.Usd;
+
+    [Range(1, int.MaxValue, ErrorMessage = "Vasitə sayı ən az 1 olmalıdır")]
     public int? VehicleCount { get; init; }
 
     [Range(0, (double)decimal.MaxValue, ErrorMessage = "Nəqliyyat qiyməti mənfi ola bilməz")]
@@ -48,10 +59,49 @@ public record TransactionCreateRequest
     [Required, Range(0.0001, (double)decimal.MaxValue, ErrorMessage = "Məzənnə 0-dan böyük olmalıdır")]
     public decimal HistoricalExchangeRate { get; init; }
 
+    // === Əlavə Xərclər (Additional Expenses) ===
+
+    /// <summary>
+    /// Əlavə xərc məbləği. Nullable — mütləq deyil.
+    /// </summary>
+    [Range(0, (double)decimal.MaxValue, ErrorMessage = "Əlavə xərc mənfi ola bilməz")]
+    public decimal? AdditionalExpenseAmount { get; init; }
+
+    /// <summary>
+    /// Əlavə xərcin valyutası (USD və ya RUB).
+    /// </summary>
+    public PaymentCurrency? AdditionalExpenseCurrency { get; init; }
+
+    /// <summary>
+    /// Əlavə xərcin təsviri.
+    /// </summary>
+    public string? AdditionalExpenseDescription { get; init; }
+
     /// <summary>
     /// Local file path selected via OpenFileDialog (replaces MultipartFile from Java).
     /// </summary>
     public string? DocumentFilePath { get; init; }
+
+    // === Göndərmə Statusu və Tarixlər ===
+    public ShipmentStatus ShipmentStatus { get; init; } = ShipmentStatus.Pending;
+    public DateOnly? LoadedDate { get; init; }
+    public DateOnly? InTransitStartDate { get; init; }
+    public DateOnly? InTransitEndDate { get; init; }
+    public DateOnly? DeliveredDate { get; init; }
+    public bool IsInTransitAutoDates { get; init; } = true;
+}
+
+/// <summary>
+/// Request model specifically for updating the shipment tracking status of a transaction.
+/// </summary>
+public record ShipmentStatusUpdateRequest
+{
+    [Required(ErrorMessage = "Status seçilməlidir")]
+    public ShipmentStatus Status { get; init; }
+
+    public DateOnly? LoadedDate { get; init; }
+    public DateOnly? InTransitStartDate { get; init; }
+    public DateOnly? DeliveredDate { get; init; }
 }
 
 /// <summary>
@@ -78,9 +128,11 @@ public record TransactionReadResponse
     public DateOnly CreatedAt { get; init; }
     public string ProductName { get; init; } = string.Empty;
     public string ReceivingCompany { get; init; } = string.Empty;
+    public string? SendingCompany { get; init; }
     public decimal WeightTon { get; init; }
     public decimal PricePerTonRub { get; init; }
     public TransportType TransportType { get; init; }
+    public PaymentCurrency TransportCurrency { get; init; }
     public int? VehicleCount { get; init; }
     public decimal? PricePerVehicle { get; init; }
     public decimal? PaidAmount { get; init; }
@@ -91,6 +143,52 @@ public record TransactionReadResponse
     public decimal HistoricalRemainingDebtUsd { get; init; }
     public decimal PaidInUsd { get; init; }
     public bool IsCompleted { get; init; }
+
+    // === Göndərmə Statusu və Tarixlər ===
+    public ShipmentStatus ShipmentStatus { get; init; } = ShipmentStatus.Pending;
+    public DateOnly? LoadedDate { get; init; }
+    public DateOnly? InTransitStartDate { get; init; }
+    public DateOnly? InTransitEndDate { get; init; }
+    public DateOnly? DeliveredDate { get; init; }
+    public bool IsInTransitAutoDates { get; init; } = true;
+
+    public string ShipmentStatusDisplay => ShipmentStatus switch
+    {
+        ShipmentStatus.Pending => "Gözləmədə",
+        ShipmentStatus.Loaded => "Yükləndi",
+        ShipmentStatus.InTransit => "Yoldadır",
+        ShipmentStatus.Delivered => "Çatdı",
+        _ => ShipmentStatus.ToString()
+    };
+
+    public string TrackingDatesSummary
+    {
+        get
+        {
+            return ShipmentStatus switch
+            {
+                ShipmentStatus.Pending => string.Empty,
+                ShipmentStatus.Loaded => LoadedDate.HasValue ? $"Yükləndi: {LoadedDate.Value:yyyy-MM-dd}" : string.Empty,
+                ShipmentStatus.InTransit => InTransitStartDate.HasValue 
+                    ? (LoadedDate.HasValue 
+                        ? $"Yükləndi: {LoadedDate.Value:yyyy-MM-dd} | Yola çıxdı: {InTransitStartDate.Value:yyyy-MM-dd}" 
+                        : $"Yola çıxdı: {InTransitStartDate.Value:yyyy-MM-dd}")
+                    : string.Empty,
+                ShipmentStatus.Delivered => DeliveredDate.HasValue
+                    ? (InTransitStartDate.HasValue 
+                        ? $"Çatdı: {DeliveredDate.Value:yyyy-MM-dd} | Yolda: {InTransitStartDate.Value:yyyy-MM-dd} — {DeliveredDate.Value:yyyy-MM-dd}"
+                        : $"Çatdı: {DeliveredDate.Value:yyyy-MM-dd}")
+                    : string.Empty,
+                _ => string.Empty
+            };
+        }
+    }
+
+    // === Əlavə Xərclər ===
+    public decimal? AdditionalExpenseAmount { get; init; }
+    public PaymentCurrency? AdditionalExpenseCurrency { get; init; }
+    public string? AdditionalExpenseDescription { get; init; }
+    public decimal AdditionalExpenseUsd { get; init; }
 }
 
 /// <summary>
@@ -102,9 +200,11 @@ public record TransactionEditFormData
     public DateOnly TransactionDate { get; init; }
     public string ProductName { get; init; } = string.Empty;
     public string ReceivingCompany { get; init; } = string.Empty;
+    public string? SendingCompany { get; init; }
     public decimal WeightTon { get; init; }
     public decimal PricePerTonRub { get; init; }
     public TransportType TransportType { get; init; }
+    public PaymentCurrency TransportCurrency { get; init; }
     public int? VehicleCount { get; init; }
     public decimal? PricePerVehicle { get; init; }
     public PaymentCurrency PaidCurrency { get; init; }
@@ -112,6 +212,19 @@ public record TransactionEditFormData
     public decimal HistoricalExchangeRate { get; init; }
     public string? DocumentImageUrl { get; init; }
     public bool IsCompleted { get; init; }
+
+    // === Göndərmə Statusu və Tarixlər ===
+    public ShipmentStatus ShipmentStatus { get; init; } = ShipmentStatus.Pending;
+    public DateOnly? LoadedDate { get; init; }
+    public DateOnly? InTransitStartDate { get; init; }
+    public DateOnly? InTransitEndDate { get; init; }
+    public DateOnly? DeliveredDate { get; init; }
+    public bool IsInTransitAutoDates { get; init; } = true;
+
+    // === Əlavə Xərclər ===
+    public decimal? AdditionalExpenseAmount { get; init; }
+    public PaymentCurrency? AdditionalExpenseCurrency { get; init; }
+    public string? AdditionalExpenseDescription { get; init; }
 }
 
 /// <summary>

@@ -58,11 +58,12 @@ public class ExcelService : IExcelService
         // ── Column Headers ──────────────────────────────────────────
         int headerRow = 5;
         string[] headers = {
-            "#", "Date", "Product", "Receiving Company",
-            "Weight (Ton)", "Price/Ton (RUB)", "Transport",
-            "Vehicles", "Price/Vehicle", "Exchange Rate",
+            "#", "Date", "Product", "Sending Company", "Receiving Company",
+            "Weight (Ton)", "Price/Ton (RUB)", "Transport", "Transport Curr.",
+            "Vehicles", "Price/Vehicle", "Add. Expense", "Add. Exp. Curr.",
+            "Add. Exp. Desc.", "Exchange Rate",
             "Total Expense (USD)", "Paid Amount", "Paid Currency",
-            "Paid (USD)", "Remaining Debt (USD)", "Completed"
+            "Paid (USD)", "Gəlir (USD)", "Status", "Yüklənmə Tarixi", "Yolda Olma", "Çatdırılma Tarixi", "Completed"
         };
 
         for (int i = 0; i < headers.Length; i++)
@@ -92,32 +93,54 @@ public class ExcelService : IExcelService
                 ? paidAmount * t.HistoricalExchangeRate
                 : paidAmount;
 
+            string statusAzeri = t.ShipmentStatus switch
+            {
+                ShipmentStatus.Pending => "Gözləmədə",
+                ShipmentStatus.Loaded => "Yükləndi",
+                ShipmentStatus.InTransit => "Yoldadır",
+                ShipmentStatus.Delivered => "Çatdı",
+                _ => t.ShipmentStatus.ToString()
+            };
+            string transitRange = t.InTransitStartDate.HasValue
+                ? (t.InTransitEndDate.HasValue ? $"{t.InTransitStartDate.Value:yyyy-MM-dd} — {t.InTransitEndDate.Value:yyyy-MM-dd}" : $"{t.InTransitStartDate.Value:yyyy-MM-dd}")
+                : "";
+
             ws.Cell(row, 1).Value = i + 1;
             ws.Cell(row, 2).Value = t.TransactionDate.ToString("yyyy-MM-dd");
             ws.Cell(row, 3).Value = t.ProductName ?? "";
-            ws.Cell(row, 4).Value = t.ReceivingCompany ?? "";
-            ws.Cell(row, 5).Value = (double)t.WeightTon;
-            ws.Cell(row, 6).Value = (double)t.PricePerTonRub;
-            ws.Cell(row, 7).Value = t.TransportType.ToString();
-            ws.Cell(row, 8).Value = t.VehicleCount ?? 0;
-            ws.Cell(row, 9).Value = (double)(t.PricePerVehicle ?? 0);
-            ws.Cell(row, 10).Value = (double)t.HistoricalExchangeRate;
-            ws.Cell(row, 11).Value = (double)t.HistoricalTotalExpenseUsd;
-            ws.Cell(row, 12).Value = (double)paidAmount;
-            ws.Cell(row, 13).Value = t.PaidCurrency.ToString();
-            ws.Cell(row, 14).Value = (double)paidInUsd;
-            ws.Cell(row, 15).Value = (double)t.HistoricalRemainingDebtUsd;
-            ws.Cell(row, 16).Value = t.IsCompleted ? "Yes" : "No";
+            ws.Cell(row, 4).Value = t.SendingCompany ?? "";
+            ws.Cell(row, 5).Value = t.ReceivingCompany ?? "";
+            ws.Cell(row, 6).Value = (double)t.WeightTon;
+            ws.Cell(row, 7).Value = (double)t.PricePerTonRub;
+            ws.Cell(row, 8).Value = t.TransportType.ToString();
+            ws.Cell(row, 9).Value = t.TransportCurrency.ToString();
+            ws.Cell(row, 10).Value = t.VehicleCount ?? 0;
+            ws.Cell(row, 11).Value = (double)(t.PricePerVehicle ?? 0);
+            ws.Cell(row, 12).Value = (double)(t.AdditionalExpenseAmount ?? 0);
+            ws.Cell(row, 13).Value = t.AdditionalExpenseCurrency?.ToString() ?? "";
+            ws.Cell(row, 14).Value = t.AdditionalExpenseDescription ?? "";
+            ws.Cell(row, 15).Value = (double)t.HistoricalExchangeRate;
+            ws.Cell(row, 16).Value = (double)t.HistoricalTotalExpenseUsd;
+            ws.Cell(row, 17).Value = (double)paidAmount;
+            ws.Cell(row, 18).Value = t.PaidCurrency.ToString();
+            ws.Cell(row, 19).Value = (double)paidInUsd;
+            ws.Cell(row, 20).Value = (double)t.HistoricalRemainingDebtUsd;
+            ws.Cell(row, 21).Value = statusAzeri;
+            ws.Cell(row, 22).Value = t.LoadedDate.HasValue ? t.LoadedDate.Value.ToString("yyyy-MM-dd") : "";
+            ws.Cell(row, 23).Value = transitRange;
+            ws.Cell(row, 24).Value = t.DeliveredDate.HasValue ? t.DeliveredDate.Value.ToString("yyyy-MM-dd") : "";
+            ws.Cell(row, 25).Value = t.IsCompleted ? "Bəli" : "Xeyr";
 
             // Currency formatting
-            ws.Cell(row, 5).Style.NumberFormat.Format = "#,##0.00";
             ws.Cell(row, 6).Style.NumberFormat.Format = "#,##0.00";
-            ws.Cell(row, 9).Style.NumberFormat.Format = "#,##0.00";
-            ws.Cell(row, 10).Style.NumberFormat.Format = "0.000000";
-            ws.Cell(row, 11).Style.NumberFormat.Format = "$#,##0.00";
+            ws.Cell(row, 7).Style.NumberFormat.Format = "#,##0.00";
+            ws.Cell(row, 11).Style.NumberFormat.Format = "#,##0.00";
             ws.Cell(row, 12).Style.NumberFormat.Format = "#,##0.00";
-            ws.Cell(row, 14).Style.NumberFormat.Format = "$#,##0.00";
-            ws.Cell(row, 15).Style.NumberFormat.Format = "$#,##0.00";
+            ws.Cell(row, 15).Style.NumberFormat.Format = "0.000000";
+            ws.Cell(row, 16).Style.NumberFormat.Format = "$#,##0.00";
+            ws.Cell(row, 17).Style.NumberFormat.Format = "#,##0.00";
+            ws.Cell(row, 19).Style.NumberFormat.Format = "$#,##0.00";
+            ws.Cell(row, 20).Style.NumberFormat.Format = "$#,##0.00";
 
             // Alternating row colors
             if (i % 2 == 1)
@@ -128,9 +151,9 @@ public class ExcelService : IExcelService
 
             // Color-code remaining debt
             if (t.HistoricalRemainingDebtUsd < 0)
-                ws.Cell(row, 15).Style.Font.FontColor = XLColor.Red;
+                ws.Cell(row, 20).Style.Font.FontColor = XLColor.Red;
             else if (t.HistoricalRemainingDebtUsd > 0)
-                ws.Cell(row, 15).Style.Font.FontColor = XLColor.DarkGreen;
+                ws.Cell(row, 20).Style.Font.FontColor = XLColor.DarkGreen;
 
             // Borders
             ws.Range(row, 1, row, headers.Length).Style
@@ -147,18 +170,18 @@ public class ExcelService : IExcelService
         ws.Cell(summaryRow, 1).Value = "TOTALS";
         ws.Cell(summaryRow, 1).Style.Font.Bold = true;
 
-        ws.Cell(summaryRow, 11).Value = (double)totalExpense;
-        ws.Cell(summaryRow, 11).Style.NumberFormat.Format = "$#,##0.00";
-        ws.Cell(summaryRow, 11).Style.Font.Bold = true;
+        ws.Cell(summaryRow, 16).Value = (double)totalExpense;
+        ws.Cell(summaryRow, 16).Style.NumberFormat.Format = "$#,##0.00";
+        ws.Cell(summaryRow, 16).Style.Font.Bold = true;
 
-        ws.Cell(summaryRow, 14).Value = (double)totalPaidUsd;
-        ws.Cell(summaryRow, 14).Style.NumberFormat.Format = "$#,##0.00";
-        ws.Cell(summaryRow, 14).Style.Font.Bold = true;
+        ws.Cell(summaryRow, 19).Value = (double)totalPaidUsd;
+        ws.Cell(summaryRow, 19).Style.NumberFormat.Format = "$#,##0.00";
+        ws.Cell(summaryRow, 19).Style.Font.Bold = true;
 
-        ws.Cell(summaryRow, 15).Value = (double)totalBenefit;
-        ws.Cell(summaryRow, 15).Style.NumberFormat.Format = "$#,##0.00";
-        ws.Cell(summaryRow, 15).Style.Font.Bold = true;
-        ws.Cell(summaryRow, 15).Style.Font.FontColor =
+        ws.Cell(summaryRow, 20).Value = (double)totalBenefit;
+        ws.Cell(summaryRow, 20).Style.NumberFormat.Format = "$#,##0.00";
+        ws.Cell(summaryRow, 20).Style.Font.Bold = true;
+        ws.Cell(summaryRow, 20).Style.Font.FontColor =
             totalBenefit >= 0 ? XLColor.DarkGreen : XLColor.Red;
 
         ws.Range(summaryRow, 1, summaryRow, headers.Length).Style

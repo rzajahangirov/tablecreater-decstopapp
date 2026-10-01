@@ -128,6 +128,26 @@ public partial class CustomerDetailsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    public async Task RefreshDataAsync()
+    {
+        try
+        {
+            IsLoading = true;
+            await RefreshTransactionsAndCards();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    public ITransactionService TransactionService => _transactionService;
+
+    [RelayCommand]
     private void OpenDocument(string? documentPath)
     {
         if (!string.IsNullOrEmpty(documentPath) && System.IO.File.Exists(documentPath))
@@ -160,13 +180,13 @@ public partial class CustomerDetailsViewModel : ObservableObject
         var report = await _transactionService.CalculateCustomerExpenseAndIncome(CustomerId);
         TotalExpenseUsd = report.TotalExpenseUsd;
         TotalPaidUsd = report.TotalPaidUsd;
-        RemainingDebtUsd = report.TotalBenefitUsd; // TotalPaid - TotalExpense
+        RemainingDebtUsd = report.TotalBenefitUsd; // TotalPaid - TotalExpense (Gəlir)
 
         if (RemainingDebtUsd < 0)
-            DebtStatusColor = "#C62828"; // Red — debt
+            DebtStatusColor = "#C62828"; // Red — Zərər
         else if (RemainingDebtUsd > 0)
-            DebtStatusColor = "#2E7D32"; // Green — overpayment
+            DebtStatusColor = "#2E7D32"; // Green — Gəlir
         else
-            DebtStatusColor = "#888888"; // Gray — balanced
+            DebtStatusColor = "#888888"; // Gray — Balans
     }
 }

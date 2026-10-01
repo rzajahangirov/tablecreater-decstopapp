@@ -1,0 +1,9 @@
+# SQLite temporary files
+*.db-shm
+*.db-wal
+
+# WPF temporary compile files
+*_wpftmp*
+
+# Large publish output binaries (>100MB blocked by GitHub)
+**/publish/*.exe

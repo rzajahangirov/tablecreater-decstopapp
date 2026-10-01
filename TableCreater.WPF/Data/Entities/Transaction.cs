@@ -37,8 +37,17 @@ public class Transaction
     [MaxLength(500)]
     public string? ProductName { get; set; }
 
+    /// <summary>
+    /// Qəbul edən firma (receiving company).
+    /// </summary>
     [MaxLength(500)]
     public string? ReceivingCompany { get; set; }
+
+    /// <summary>
+    /// Göndərən firma (sending company).
+    /// </summary>
+    [MaxLength(500)]
+    public string? SendingCompany { get; set; }
 
     /// <summary>
     /// Weight in tons.
@@ -51,18 +60,24 @@ public class Transaction
     public decimal PricePerTonRub { get; set; }
 
     /// <summary>
-    /// Transport type: Truck (USD pricing) or Ship (RUB pricing).
+    /// Transport type: Truck or Wagon.
     /// Stored as string in SQLite.
     /// </summary>
     public TransportType TransportType { get; set; }
 
     /// <summary>
-    /// Number of vehicles/ships used.
+    /// Currency for transport pricing. Manual selection (USD or RUB).
+    /// No longer auto-determined by TransportType.
+    /// </summary>
+    public PaymentCurrency TransportCurrency { get; set; } = PaymentCurrency.Usd;
+
+    /// <summary>
+    /// Number of vehicles/wagons used.
     /// </summary>
     public int? VehicleCount { get; set; }
 
     /// <summary>
-    /// Cost per vehicle. USD for Truck, RUB for Ship.
+    /// Cost per vehicle. Currency is determined by TransportCurrency.
     /// </summary>
     public decimal? PricePerVehicle { get; set; }
 
@@ -89,9 +104,27 @@ public class Transaction
     [Required]
     public decimal HistoricalExchangeRate { get; set; }
 
+    // === Əlavə Xərclər (Additional Expenses) ===
+
     /// <summary>
-    /// CALCULATED: Total cost in USD (goods + transport), computed at persist time.
-    /// Formula: GoodsCostUsd + TransportCostUsd
+    /// Əlavə xərc məbləği. Nullable — mütləq doldurulmalı deyil.
+    /// </summary>
+    public decimal? AdditionalExpenseAmount { get; set; }
+
+    /// <summary>
+    /// Əlavə xərcin valyutası (USD və ya RUB). Hesablamalarda məzənnəyə görə konvertasiya olunur.
+    /// </summary>
+    public PaymentCurrency? AdditionalExpenseCurrency { get; set; }
+
+    /// <summary>
+    /// Əlavə xərcin təsviri — nə üçün olduğunu açıqlayır.
+    /// </summary>
+    [MaxLength(1000)]
+    public string? AdditionalExpenseDescription { get; set; }
+
+    /// <summary>
+    /// CALCULATED: Total cost in USD (goods + transport + additional expenses), computed at persist time.
+    /// Formula: GoodsCostUsd + TransportCostUsd + AdditionalExpenseUsd
     /// </summary>
     public decimal HistoricalTotalExpenseUsd { get; set; }
 
@@ -103,9 +136,41 @@ public class Transaction
     public decimal HistoricalRemainingDebtUsd { get; set; }
 
     /// <summary>
-    /// Marks the transaction as completed.
+    /// Marks the transaction as completed (synchronized with ShipmentStatus == Delivered).
     /// </summary>
     public bool IsCompleted { get; set; }
+
+    // === Göndərmə Statusu və İzləmə (Shipment Tracking) ===
+
+    /// <summary>
+    /// Cari göndərmə statusu: Pending, Loaded, InTransit, Delivered.
+    /// </summary>
+    public ShipmentStatus ShipmentStatus { get; set; } = ShipmentStatus.Pending;
+
+    /// <summary>
+    /// Yükləndiyi tarix (Loaded statusunda tələb olunur).
+    /// </summary>
+    public DateOnly? LoadedDate { get; set; }
+
+    /// <summary>
+    /// Yola çıxdığı başlanğıc tarix.
+    /// </summary>
+    public DateOnly? InTransitStartDate { get; set; }
+
+    /// <summary>
+    /// Yolda olma bitmə tarixi (və ya çatdırılma tarixi ilə eyniləşdirilir).
+    /// </summary>
+    public DateOnly? InTransitEndDate { get; set; }
+
+    /// <summary>
+    /// Çatdığı tarix (Delivered statusunda tələb olunur).
+    /// </summary>
+    public DateOnly? DeliveredDate { get; set; }
+
+    /// <summary>
+    /// Yolda olma tarix aralığı avtomatik tenzimlenir (LoadedDate və DeliveredDate aralığı) yoxsa əl ilə daxil edilib.
+    /// </summary>
+    public bool IsInTransitAutoDates { get; set; } = true;
 
     // === Navigation Properties ===
 

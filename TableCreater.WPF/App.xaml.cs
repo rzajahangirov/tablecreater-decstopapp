@@ -54,6 +54,9 @@ public partial class App : Application
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Database.EnsureCreated();
 
+            // Migrate schema if tables were created with an older structure
+            MigrateDatabaseSchema(db);
+
             // Seed default admin user on first run
             var authService = Services.GetRequiredService<IAuthService>();
             await authService.SeedDefaultAdminIfEmpty();
@@ -146,5 +149,37 @@ public partial class App : Application
             MessageBoxButton.OK,
             MessageBoxImage.Error);
         Environment.Exit(1);
+    }
+
+    /// <summary>
+    /// Safely adds new columns to SQLite database if upgrading from an earlier version.
+    /// </summary>
+    private static void MigrateDatabaseSchema(AppDbContext db)
+    {
+        string[] migrationQueries =
+        [
+            "ALTER TABLE Transactions ADD COLUMN SendingCompany TEXT;",
+            "ALTER TABLE Transactions ADD COLUMN TransportCurrency TEXT NOT NULL DEFAULT 'Usd';",
+            "ALTER TABLE Transactions ADD COLUMN AdditionalExpenseAmount REAL;",
+            "ALTER TABLE Transactions ADD COLUMN AdditionalExpenseDescription TEXT;",
+            "ALTER TABLE Transactions ADD COLUMN ShipmentStatus TEXT NOT NULL DEFAULT 'Pending';",
+            "ALTER TABLE Transactions ADD COLUMN LoadedDate TEXT;",
+            "ALTER TABLE Transactions ADD COLUMN InTransitStartDate TEXT;",
+            "ALTER TABLE Transactions ADD COLUMN InTransitEndDate TEXT;",
+            "ALTER TABLE Transactions ADD COLUMN DeliveredDate TEXT;",
+            "ALTER TABLE Transactions ADD COLUMN IsInTransitAutoDates INTEGER NOT NULL DEFAULT 1;"
+        ];
+
+        foreach (var sql in migrationQueries)
+        {
+            try
+            {
+                db.Database.ExecuteSqlRaw(sql);
+            }
+            catch
+            {
+                // Column already exists or schema is already up to date
+            }
+        }
     }
 }

@@ -187,8 +187,6 @@ C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\bin\Debug
 C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\bin\Debug\net9.0-windows\fa-IR\ModernWpf.resources.dll
 C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\bin\Debug\net9.0-windows\fi-FI\ModernWpf.Controls.resources.dll
 C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\bin\Debug\net9.0-windows\fi-FI\ModernWpf.resources.dll
-C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\bin\Debug\net9.0-windows\fil-PH\ModernWpf.Controls.resources.dll
-C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\bin\Debug\net9.0-windows\fil-PH\ModernWpf.resources.dll
 C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\bin\Debug\net9.0-windows\fr-CA\ModernWpf.Controls.resources.dll
 C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\bin\Debug\net9.0-windows\fr-CA\ModernWpf.resources.dll
 C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\bin\Debug\net9.0-windows\fr-FR\ModernWpf.Controls.resources.dll
@@ -291,3 +289,7 @@ C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\obj\Debug
 C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\obj\Debug\net9.0-windows\Views\Pages\SettingsPage.g.cs
 C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\obj\Debug\net9.0-windows\Views\Pages\CustomerDetailsPage.baml
 C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\obj\Debug\net9.0-windows\Views\Pages\CustomerDetailsPage.g.cs
+C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\obj\Debug\net9.0-windows\TableCreater.WPF.sourcelink.json
+C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\bin\Debug\net9.0-windows\System.Text.Json.dll
+C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\obj\Debug\net9.0-windows\Views\Dialogs\ShipmentStatusDialog.g.cs
+C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\obj\Debug\net9.0-windows\Views\Dialogs\ShipmentStatusDialog.baml

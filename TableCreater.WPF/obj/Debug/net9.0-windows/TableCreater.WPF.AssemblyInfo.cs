@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TableCreater.WPF")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+82657c2b94a1ff2df7996f53e622eebd18b8c532")]
 [assembly: System.Reflection.AssemblyProductAttribute("TableCreater.WPF")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TableCreater.WPF")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

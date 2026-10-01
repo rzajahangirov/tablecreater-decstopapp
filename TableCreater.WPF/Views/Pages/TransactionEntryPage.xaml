@@ -78,6 +78,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0" Margin="0,0,10,0">
@@ -87,11 +88,18 @@
                                      ui:ControlHelper.PlaceholderText="Məs: Dəmir Filizi"/>
                         </StackPanel>
 
-                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                        <StackPanel Grid.Column="1" Margin="10,0,10,0">
                             <TextBlock Text="Qəbul Edən Firma *" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
                             <TextBox Text="{Binding ReceivingCompany, UpdateSourceTrigger=PropertyChanged}"
                                      FontSize="14" Padding="12,10" BorderBrush="#D1D1D1"
                                      ui:ControlHelper.PlaceholderText="Məs: ABC MMC"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" Margin="10,0,0,0">
+                            <TextBlock Text="Göndərən Firma" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                            <TextBox Text="{Binding SendingCompany, UpdateSourceTrigger=PropertyChanged}"
+                                     FontSize="14" Padding="12,10" BorderBrush="#D1D1D1"
+                                     ui:ControlHelper.PlaceholderText="Məs: XYZ LLC"/>
                         </StackPanel>
                     </Grid>
 
@@ -135,6 +143,7 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0" Margin="0,0,10,0">
@@ -153,6 +162,21 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Margin="10,0,10,0">
+                            <TextBlock Text="Nəql. Valyutası" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                            <ComboBox ItemsSource="{Binding PaymentCurrencies}"
+                                      SelectedItem="{Binding TransportCurrency, Mode=TwoWay}"
+                                      HorizontalAlignment="Stretch"
+                                      FontSize="14" Padding="12,10"
+                                      BorderBrush="#D1D1D1">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Converter={StaticResource EnumToUpperConverter}}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" Margin="10,0,10,0">
                             <TextBlock Text="Vasitə Sayı" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
                             <ui:NumberBox Value="{Binding VehicleCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                           SpinButtonPlacementMode="Compact"
@@ -160,13 +184,13 @@
                                           HorizontalAlignment="Stretch" Padding="8,6"/>
                         </StackPanel>
 
-                        <StackPanel Grid.Column="2" Margin="10,0,0,0">
+                        <StackPanel Grid.Column="3" Margin="10,0,0,0">
                             <TextBlock FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Text" Value="Qiymət/Vasitə (USD)"/>
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding TransportType}" Value="Ship">
+                                            <DataTrigger Binding="{Binding TransportCurrency}" Value="Rub">
                                                 <Setter Property="Text" Value="Qiymət/Vasitə (RUB)"/>
                                             </DataTrigger>
                                         </Style.Triggers>
@@ -212,6 +236,107 @@
                                           HorizontalAlignment="Stretch" Padding="8,6"/>
                         </StackPanel>
                     </Grid>
+
+                    <!-- Section: Əlavə Xərclər -->
+                    <TextBlock Text="Əlavə Xərclər" FontSize="18" FontWeight="Bold" Margin="0,12,0,16" Foreground="#222"/>
+
+                    <Border Background="#FFFBF0" CornerRadius="8" Padding="20" Margin="0,0,0,24"
+                            BorderBrush="#FFE082" BorderThickness="1">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                    <TextBlock Text="Əlavə Xərc Valyutası" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                                    <ComboBox ItemsSource="{Binding PaymentCurrencies}"
+                                              SelectedItem="{Binding AdditionalExpenseCurrency, Mode=TwoWay}"
+                                              HorizontalAlignment="Stretch"
+                                              FontSize="14" Padding="12,10"
+                                              BorderBrush="#D1D1D1">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Converter={StaticResource EnumToUpperConverter}}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                    <TextBlock Text="Əlavə Xərc Məbləği" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                                    <ui:NumberBox Value="{Binding AdditionalExpenseAmount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                  SpinButtonPlacementMode="Compact"
+                                                  Minimum="0"
+                                                  HorizontalAlignment="Stretch" Padding="8,6"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <StackPanel>
+                                <TextBlock Text="Əlavə Xərcin Təsviri" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                                <TextBox Text="{Binding AdditionalExpenseDescription, UpdateSourceTrigger=PropertyChanged}"
+                                         FontSize="14" Padding="12,10" BorderBrush="#D1D1D1"
+                                         TextWrapping="Wrap" MinHeight="50" AcceptsReturn="True"
+                                         ui:ControlHelper.PlaceholderText="Məs: Gömrük rüsumu, sığorta xərci, anbar xərci..."/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Section: Göndərmə Statusu -->
+                    <TextBlock Text="Göndərmə Statusu" FontSize="18" FontWeight="Bold" Margin="0,12,0,16" Foreground="#222"/>
+
+                    <Border Background="#F9FAFB" CornerRadius="8" Padding="20" Margin="0,0,0,24"
+                            BorderBrush="#E5E7EB" BorderThickness="1">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                    <TextBlock Text="Cari Status *" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                                    <ComboBox ItemsSource="{Binding ShipmentStatuses}"
+                                              SelectedItem="{Binding ShipmentStatus, Mode=TwoWay}"
+                                              HorizontalAlignment="Stretch"
+                                              FontSize="14" Padding="12,10"
+                                              BorderBrush="#D1D1D1">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Converter={StaticResource ShipmentStatusToTextConverter}}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                    <TextBlock Text="Yüklənmə Tarixi" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                                    <DatePicker SelectedDate="{Binding LoadedDate, Mode=TwoWay}"
+                                                HorizontalAlignment="Stretch" Padding="8,6"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <Grid Margin="0,4,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                    <TextBlock Text="Yola Çıxma Tarixi" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                                    <DatePicker SelectedDate="{Binding InTransitStartDate, Mode=TwoWay}"
+                                                HorizontalAlignment="Stretch" Padding="8,6"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                    <TextBlock Text="Çatdırılma Tarixi" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                                    <DatePicker SelectedDate="{Binding DeliveredDate, Mode=TwoWay}"
+                                                HorizontalAlignment="Stretch" Padding="8,6"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
 
                     <!-- Section: Sənəd Yükləmə -->
                     <TextBlock Text="Sənəd" FontSize="18" FontWeight="Bold" Margin="0,12,0,16" Foreground="#222"/>
@@ -328,6 +453,16 @@
 
                         <Separator Margin="0,0,0,20" Background="#E0E0E0"/>
 
+                        <!-- Əlavə Xərclər -->
+                        <TextBlock Text="ƏLAVƏ XƏRCLƏR" FontSize="11" Foreground="#888" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <Grid Margin="0,0,0,20">
+                            <TextBlock Text="Qiymət (USD)" FontSize="14" Foreground="#444"/>
+                            <TextBlock HorizontalAlignment="Right" FontSize="14" FontWeight="Bold" Foreground="#E67E22"
+                                       Text="{Binding LiveAdditionalExpenseUsd, StringFormat='{}{0:N2} $'}"/>
+                        </Grid>
+
+                        <Separator Margin="0,0,0,20" Background="#E0E0E0"/>
+
                         <!-- Ümumi Xərc -->
                         <Grid Margin="0,0,0,20">
                             <TextBlock Text="ÜMUMİ XƏRC" FontSize="15" FontWeight="Bold" Foreground="#222"/>
@@ -345,13 +480,13 @@
                                        Text="{Binding LivePaidInUsd, StringFormat='{}{0:N2} $'}"/>
                         </Grid>
 
-                        <!-- Qalıq Borc Card -->
+                        <!-- Gəlir / Zərər Card -->
                         <Border CornerRadius="8" Padding="20,16" Background="#FFFFFF" BorderBrush="#E0E0E0" BorderThickness="1">
                             <StackPanel HorizontalAlignment="Center">
                                 <TextBlock Text="{Binding DebtStatusText}"
-                                           FontSize="12" FontWeight="Bold"
+                                           FontSize="13" FontWeight="Bold"
                                            HorizontalAlignment="Center" Margin="0,0,0,6"
-                                           Opacity="0.7"/>
+                                           Opacity="0.8"/>
                                 <TextBlock FontSize="32" FontWeight="ExtraBold"
                                            HorizontalAlignment="Center"
                                            Text="{Binding LiveRemainingDebtUsd, StringFormat='{}{0:N2} $'}">
@@ -359,10 +494,10 @@
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Foreground" Value="#888888"/>
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding DebtStatusText}" Value="Supplier-ə Borc">
+                                                <DataTrigger Binding="{Binding DebtStatusText}" Value="Zərər">
                                                     <Setter Property="Foreground" Value="#C62828"/>
                                                 </DataTrigger>
-                                                <DataTrigger Binding="{Binding DebtStatusText}" Value="Artıq Ödəniş">
+                                                <DataTrigger Binding="{Binding DebtStatusText}" Value="Gəlir">
                                                     <Setter Property="Foreground" Value="#2E7D32"/>
                                                 </DataTrigger>
                                             </Style.Triggers>

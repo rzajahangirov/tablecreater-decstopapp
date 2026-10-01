@@ -8,13 +8,13 @@ C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\obj\Debug
 TableCreater.WPF
 none
 false
-TRACE;DEBUG;NET;NET9_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR_GREATER;NET7_0_OR_GREATER;NET8_0_OR_GREATER;NET9_0_OR_GREATER;NETCOREAPP3_0_OR_GREATER;NETCOREAPP3_1_OR_GREATER;WINDOWS7_0_OR_GREATER
+TRACE;DEBUG;NET;NET9_0;NETCOREAPP
 C:\Users\vcaha\Java Projects\teablecreater-dekstopapp\TableCreater.WPF\App.xaml
-61911949596
+7584878401
 
-431383579327
-229-431499984
-MainWindow.xaml;Views\Pages\CustomerDetailsPage.xaml;Views\Pages\CustomerListPage.xaml;Views\Pages\ReportsPage.xaml;Views\Pages\SettingsPage.xaml;Views\Pages\TransactionEntryPage.xaml;
+45-1233673176
+2291894673292
+MainWindow.xaml;Views\Dialogs\ShipmentStatusDialog.xaml;Views\Pages\CustomerDetailsPage.xaml;Views\Pages\CustomerListPage.xaml;Views\Pages\ReportsPage.xaml;Views\Pages\SettingsPage.xaml;Views\Pages\TransactionEntryPage.xaml;
 
 False
 

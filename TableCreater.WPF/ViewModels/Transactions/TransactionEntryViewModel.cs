@@ -57,6 +57,9 @@ public partial class TransactionEntryViewModel : ObservableObject
     private string _receivingCompany = string.Empty;
 
     [ObservableProperty]
+    private string _sendingCompany = string.Empty;
+
+    [ObservableProperty]
     private decimal _weightTon;
 
     [ObservableProperty]
@@ -64,6 +67,12 @@ public partial class TransactionEntryViewModel : ObservableObject
 
     [ObservableProperty]
     private TransportType _transportType = TransportType.Truck;
+
+    /// <summary>
+    /// Nəqliyyat valyutası — manual seçilir, artıq avtomatik TransportType-a görə deyil.
+    /// </summary>
+    [ObservableProperty]
+    private PaymentCurrency _transportCurrency = PaymentCurrency.Usd;
 
     [ObservableProperty]
     private int _vehicleCount = 1;
@@ -79,6 +88,43 @@ public partial class TransactionEntryViewModel : ObservableObject
 
     [ObservableProperty]
     private decimal _historicalExchangeRate = 1.0m;
+
+    // =========================================================================
+    // ƏLAVƏ XƏRCLƏR (Additional Expenses)
+    // =========================================================================
+
+    [ObservableProperty]
+    private decimal _additionalExpenseAmount;
+
+    [ObservableProperty]
+    private PaymentCurrency _additionalExpenseCurrency = PaymentCurrency.Usd;
+
+    [ObservableProperty]
+    private string _additionalExpenseDescription = string.Empty;
+
+    // =========================================================================
+    // GÖNDƏRMƏ STATUSU VƏ TARİXLƏR (Shipment Tracking)
+    // =========================================================================
+
+    [ObservableProperty]
+    private ShipmentStatus _shipmentStatus = ShipmentStatus.Pending;
+
+    [ObservableProperty]
+    private DateTime? _loadedDate = DateTime.Today;
+
+    [ObservableProperty]
+    private DateTime? _inTransitStartDate = DateTime.Today;
+
+    [ObservableProperty]
+    private DateTime? _inTransitEndDate;
+
+    [ObservableProperty]
+    private DateTime? _deliveredDate = DateTime.Today;
+
+    [ObservableProperty]
+    private bool _isInTransitAutoDates = true;
+
+    public ShipmentStatus[] ShipmentStatuses => Enum.GetValues<ShipmentStatus>();
 
     // =========================================================================
     // FILE UPLOAD
@@ -110,6 +156,9 @@ public partial class TransactionEntryViewModel : ObservableObject
     private decimal _liveTransportCostUsd;
 
     [ObservableProperty]
+    private decimal _liveAdditionalExpenseUsd;
+
+    [ObservableProperty]
     private decimal _liveTotalExpenseUsd;
 
     [ObservableProperty]
@@ -119,16 +168,16 @@ public partial class TransactionEntryViewModel : ObservableObject
     private decimal _liveRemainingDebtUsd;
 
     /// <summary>
-    /// Friendly text for the debt: "Debt" (negative) or "Overpayment" (positive).
+    /// Friendly text: "Gəlir" (positive), "Zərər" (negative), or "Balans" (zero).
     /// </summary>
     [ObservableProperty]
-    private string _debtStatusText = "Balanced";
+    private string _debtStatusText = "Gəlir";
 
     /// <summary>
-    /// Color indicator: Red for debt, Green for overpayment, Gray for balanced.
+    /// Color indicator: Green for Gəlir, Red for Zərər, Gray for balanced.
     /// </summary>
     [ObservableProperty]
-    private string _debtStatusColor = "#888888";
+    private string _debtStatusColor = "#2E7D32";
 
     // =========================================================================
     // UI STATE
@@ -171,16 +220,21 @@ public partial class TransactionEntryViewModel : ObservableObject
     partial void OnWeightTonChanged(decimal value) => Recalculate();
     partial void OnPricePerTonRubChanged(decimal value) => Recalculate();
     partial void OnTransportTypeChanged(TransportType value) => Recalculate();
+    partial void OnTransportCurrencyChanged(PaymentCurrency value) => Recalculate();
     partial void OnVehicleCountChanged(int value) => Recalculate();
     partial void OnPricePerVehicleChanged(decimal value) => Recalculate();
     partial void OnPaidCurrencyChanged(PaymentCurrency value) => Recalculate();
     partial void OnPaidAmountChanged(decimal value) => Recalculate();
     partial void OnHistoricalExchangeRateChanged(decimal value) => Recalculate();
+    partial void OnAdditionalExpenseAmountChanged(decimal value) => Recalculate();
+    partial void OnAdditionalExpenseCurrencyChanged(PaymentCurrency value) => Recalculate();
 
     // =========================================================================
     // CORE CALCULATION ENGINE — Section 5.1 (Live Preview)
     // Identical algorithm to TransactionService.CalculateHistoricalFields(),
     // but operates on ViewModel properties for instant UI feedback.
+    //
+    // UPDATED: Transport currency is now manual. Additional expenses included.
     // =========================================================================
 
     private void Recalculate()
@@ -191,32 +245,39 @@ public partial class TransactionEntryViewModel : ObservableObject
         LiveGoodsCostRub = WeightTon * PricePerTonRub;
         LiveGoodsCostUsd = LiveGoodsCostRub * rate;
 
-        // Step 3 & 4: Transport Cost
+        // Step 3 & 4: Transport Cost — manual currency selection
         LiveTransportCostRaw = PricePerVehicle * VehicleCount;
-        LiveTransportCostUsd = TransportType == TransportType.Ship
-            ? LiveTransportCostRaw * rate    // Ship: RUB → USD
-            : LiveTransportCostRaw;          // Truck: already USD
+        LiveTransportCostUsd = TransportCurrency == PaymentCurrency.Rub
+            ? LiveTransportCostRaw * rate    // RUB → USD
+            : LiveTransportCostRaw;          // Already USD
 
-        // Step 5: Total Expense
-        LiveTotalExpenseUsd = LiveGoodsCostUsd + LiveTransportCostUsd;
+        // Step 5: Additional Expense
+        LiveAdditionalExpenseUsd = AdditionalExpenseAmount > 0
+            ? (AdditionalExpenseCurrency == PaymentCurrency.Rub
+                ? AdditionalExpenseAmount * rate
+                : AdditionalExpenseAmount)
+            : 0m;
 
-        // Step 6: Paid in USD
+        // Step 6: Total Expense
+        LiveTotalExpenseUsd = LiveGoodsCostUsd + LiveTransportCostUsd + LiveAdditionalExpenseUsd;
+
+        // Step 7: Paid in USD
         LivePaidInUsd = PaidCurrency == PaymentCurrency.Rub
             ? PaidAmount * rate              // RUB → USD
             : PaidAmount;                    // Already USD
 
-        // Step 7: Remaining Debt
+        // Step 8: Gəlir (Profit / Benefit)
         LiveRemainingDebtUsd = LivePaidInUsd - LiveTotalExpenseUsd;
 
-        // Update debt status indicator
+        // Update status indicator
         if (LiveRemainingDebtUsd < 0)
         {
-            DebtStatusText = "Supplier-ə Borc";
+            DebtStatusText = "Zərər";
             DebtStatusColor = "#C62828";  // Red
         }
         else if (LiveRemainingDebtUsd > 0)
         {
-            DebtStatusText = "Artıq Ödəniş";
+            DebtStatusText = "Gəlir";
             DebtStatusColor = "#2E7D32";  // Green
         }
         else
@@ -273,14 +334,29 @@ public partial class TransactionEntryViewModel : ObservableObject
             TransactionDate = data.TransactionDate;
             ProductName = data.ProductName;
             ReceivingCompany = data.ReceivingCompany;
+            SendingCompany = data.SendingCompany ?? string.Empty;
             WeightTon = data.WeightTon;
             PricePerTonRub = data.PricePerTonRub;
             TransportType = data.TransportType;
+            TransportCurrency = data.TransportCurrency;
             VehicleCount = data.VehicleCount ?? 1;
             PricePerVehicle = data.PricePerVehicle ?? 0m;
             PaidCurrency = data.PaidCurrency;
             PaidAmount = data.PaidAmount ?? 0m;
             HistoricalExchangeRate = data.HistoricalExchangeRate;
+
+            // Additional Expenses
+            AdditionalExpenseAmount = data.AdditionalExpenseAmount ?? 0m;
+            AdditionalExpenseCurrency = data.AdditionalExpenseCurrency ?? PaymentCurrency.Usd;
+            AdditionalExpenseDescription = data.AdditionalExpenseDescription ?? string.Empty;
+
+            // Shipment Tracking
+            ShipmentStatus = data.ShipmentStatus;
+            LoadedDate = data.LoadedDate?.ToDateTime(TimeOnly.MinValue);
+            InTransitStartDate = data.InTransitStartDate?.ToDateTime(TimeOnly.MinValue);
+            InTransitEndDate = data.InTransitEndDate?.ToDateTime(TimeOnly.MinValue);
+            DeliveredDate = data.DeliveredDate?.ToDateTime(TimeOnly.MinValue);
+            IsInTransitAutoDates = data.IsInTransitAutoDates;
 
             if (!string.IsNullOrEmpty(data.DocumentImageUrl))
             {
@@ -354,16 +430,28 @@ public partial class TransactionEntryViewModel : ObservableObject
                     TransactionDate = TransactionDate,
                     ProductName = ProductName,
                     ReceivingCompany = ReceivingCompany,
+                    SendingCompany = string.IsNullOrWhiteSpace(SendingCompany) ? null : SendingCompany,
                     WeightTon = WeightTon,
                     PricePerTonRub = PricePerTonRub,
                     TransportType = TransportType,
+                    TransportCurrency = TransportCurrency,
                     VehicleCount = VehicleCount,
                     PricePerVehicle = PricePerVehicle,
                     PaidCurrency = PaidCurrency,
                     PaidAmount = PaidAmount,
                     HistoricalExchangeRate = HistoricalExchangeRate,
                     DocumentFilePath = DocumentFilePath,
-                    IsCompleted = false
+                    AdditionalExpenseAmount = AdditionalExpenseAmount > 0 ? AdditionalExpenseAmount : null,
+                    AdditionalExpenseCurrency = AdditionalExpenseAmount > 0 ? AdditionalExpenseCurrency : null,
+                    AdditionalExpenseDescription = string.IsNullOrWhiteSpace(AdditionalExpenseDescription)
+                        ? null : AdditionalExpenseDescription,
+                    ShipmentStatus = ShipmentStatus,
+                    LoadedDate = LoadedDate.HasValue ? DateOnly.FromDateTime(LoadedDate.Value) : null,
+                    InTransitStartDate = InTransitStartDate.HasValue ? DateOnly.FromDateTime(InTransitStartDate.Value) : null,
+                    InTransitEndDate = (ShipmentStatus == ShipmentStatus.Delivered && DeliveredDate.HasValue) ? DateOnly.FromDateTime(DeliveredDate.Value) : null,
+                    DeliveredDate = DeliveredDate.HasValue ? DateOnly.FromDateTime(DeliveredDate.Value) : null,
+                    IsInTransitAutoDates = true,
+                    IsCompleted = ShipmentStatus == ShipmentStatus.Delivered
                 };
 
                 await _transactionService.UpdateTransaction(EditTransactionId, request);
@@ -381,15 +469,27 @@ public partial class TransactionEntryViewModel : ObservableObject
                     TransactionDate = TransactionDate,
                     ProductName = ProductName,
                     ReceivingCompany = ReceivingCompany,
+                    SendingCompany = string.IsNullOrWhiteSpace(SendingCompany) ? null : SendingCompany,
                     WeightTon = WeightTon,
                     PricePerTonRub = PricePerTonRub,
                     TransportType = TransportType,
+                    TransportCurrency = TransportCurrency,
                     VehicleCount = VehicleCount,
                     PricePerVehicle = PricePerVehicle,
                     PaidCurrency = PaidCurrency,
                     PaidAmount = PaidAmount,
                     HistoricalExchangeRate = HistoricalExchangeRate,
-                    DocumentFilePath = DocumentFilePath
+                    DocumentFilePath = DocumentFilePath,
+                    AdditionalExpenseAmount = AdditionalExpenseAmount > 0 ? AdditionalExpenseAmount : null,
+                    AdditionalExpenseCurrency = AdditionalExpenseAmount > 0 ? AdditionalExpenseCurrency : null,
+                    AdditionalExpenseDescription = string.IsNullOrWhiteSpace(AdditionalExpenseDescription)
+                        ? null : AdditionalExpenseDescription,
+                    ShipmentStatus = ShipmentStatus,
+                    LoadedDate = LoadedDate.HasValue ? DateOnly.FromDateTime(LoadedDate.Value) : null,
+                    InTransitStartDate = InTransitStartDate.HasValue ? DateOnly.FromDateTime(InTransitStartDate.Value) : null,
+                    InTransitEndDate = (ShipmentStatus == ShipmentStatus.Delivered && DeliveredDate.HasValue) ? DateOnly.FromDateTime(DeliveredDate.Value) : null,
+                    DeliveredDate = DeliveredDate.HasValue ? DateOnly.FromDateTime(DeliveredDate.Value) : null,
+                    IsInTransitAutoDates = true
                 };
 
                 await _transactionService.CreateTransaction(request, SelectedCustomer!.Id);
@@ -445,13 +545,24 @@ public partial class TransactionEntryViewModel : ObservableObject
         TransactionDate = DateOnly.FromDateTime(DateTime.Today);
         ProductName = string.Empty;
         ReceivingCompany = string.Empty;
+        SendingCompany = string.Empty;
         WeightTon = 0;
         PricePerTonRub = 0;
         TransportType = TransportType.Truck;
+        TransportCurrency = PaymentCurrency.Usd;
         VehicleCount = 1;
         PricePerVehicle = 0;
         PaidCurrency = PaymentCurrency.Usd;
         PaidAmount = 0;
+        AdditionalExpenseAmount = 0;
+        AdditionalExpenseCurrency = PaymentCurrency.Usd;
+        AdditionalExpenseDescription = string.Empty;
+        ShipmentStatus = ShipmentStatus.Pending;
+        LoadedDate = DateTime.Today;
+        InTransitStartDate = DateTime.Today;
+        InTransitEndDate = null;
+        DeliveredDate = DateTime.Today;
+        IsInTransitAutoDates = true;
         // Keep exchange rate — user likely needs the same rate for multiple entries
         ClearFile();
         ErrorMessage = null;

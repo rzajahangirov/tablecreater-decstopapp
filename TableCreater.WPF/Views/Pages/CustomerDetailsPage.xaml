@@ -63,10 +63,10 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- Remaining Debt -->
+                    <!-- Gəlir (Benefit / Profit) -->
                     <Border Grid.Column="3" Margin="8,0,0,0" Padding="20,16" Background="#F9F9F9" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="8">
                         <StackPanel>
-                            <TextBlock Text="Qalıq Borc (USD)" FontSize="11" Foreground="#666" FontWeight="Bold" Margin="0,0,0,6"/>
+                            <TextBlock Text="Gəlir (USD)" FontSize="11" Foreground="#666" FontWeight="Bold" Margin="0,0,0,6"/>
                             <TextBlock Text="{Binding RemainingDebtUsd, StringFormat='$ {0:N2}'}" FontSize="22" FontWeight="Bold"
                                        Foreground="{Binding DebtStatusColor}"/>
                         </StackPanel>
@@ -169,8 +169,11 @@
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
 
-                            <!-- Firma -->
-                            <DataGridTextColumn Header="Firma" Binding="{Binding ReceivingCompany}" Width="120"/>
+                            <!-- Göndərən Firma -->
+                            <DataGridTextColumn Header="Göndərən" Binding="{Binding SendingCompany}" Width="100"/>
+
+                            <!-- Qəbul Edən Firma -->
+                            <DataGridTextColumn Header="Qəbul Edən" Binding="{Binding ReceivingCompany}" Width="100"/>
 
                             <!-- Çəki -->
                             <DataGridTextColumn Header="Çəki (T)" Binding="{Binding WeightTon, StringFormat='{}{0:N2}'}" Width="75"/>
@@ -179,13 +182,36 @@
                             <DataGridTextColumn Header="Qiymət/T (₽)" Binding="{Binding PricePerTonRub, StringFormat='{}{0:N0}'}" Width="90"/>
 
                             <!-- Nəqliyyat Növü -->
-                            <DataGridTextColumn Header="Nəql." Binding="{Binding TransportType}" Width="60"/>
+                            <DataGridTextColumn Header="Nəql." Binding="{Binding TransportType}" Width="65"/>
 
-                            <!-- Maşın/Gəmi Sayı -->
+                            <!-- Sayı -->
                             <DataGridTextColumn Header="Sayı" Binding="{Binding VehicleCount}" Width="50"/>
 
                             <!-- Nəqliyyat Qiyməti -->
-                            <DataGridTextColumn Header="Nəql. Qiym." Binding="{Binding PricePerVehicle, StringFormat='{}{0:N0}'}" Width="85"/>
+                            <DataGridTemplateColumn Header="Nəql. Qiym." Width="95">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock VerticalAlignment="Center">
+                                            <Run Text="{Binding PricePerVehicle, StringFormat='{}{0:N0}', Mode=OneWay}"/>
+                                            <Run Text=" "/>
+                                            <Run Text="{Binding TransportCurrency, Mode=OneWay}" FontSize="10" Foreground="#888"/>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- Əlavə Xərc -->
+                            <DataGridTemplateColumn Header="Əlavə Xərc" Width="105">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock VerticalAlignment="Center" ToolTip="{Binding AdditionalExpenseDescription}">
+                                            <Run Text="{Binding AdditionalExpenseAmount, StringFormat='{}{0:N0}', Mode=OneWay}"/>
+                                            <Run Text=" "/>
+                                            <Run Text="{Binding AdditionalExpenseCurrency, Mode=OneWay}" FontSize="10" Foreground="#888"/>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
 
                             <!-- Ödənilən Məbləğ + Valyuta -->
                             <DataGridTemplateColumn Header="Ödəniş" Width="100">
@@ -210,58 +236,39 @@
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
 
-                            <!-- Qalıq Borc USD -->
-                            <DataGridTemplateColumn Header="Borc (USD)" Width="100">
+                            <!-- Gəlir USD -->
+                            <DataGridTemplateColumn Header="Gəlir (USD)" Width="105">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding HistoricalRemainingDebtUsd, StringFormat='$ {0:N2}'}"
-                                                   FontWeight="Bold" VerticalAlignment="Center">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="#888"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding HistoricalRemainingDebtUsd, Converter={StaticResource NullToBoolConverter}}" Value="True">
-                                                            <Setter Property="Foreground" Value="#888"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
+                                                   Foreground="{Binding HistoricalRemainingDebtUsd, Converter={StaticResource ProfitLossToColorConverter}}"
+                                                   FontWeight="Bold" VerticalAlignment="Center"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
 
                             <!-- Status -->
-                            <DataGridTemplateColumn Header="Status" Width="90">
+                            <DataGridTemplateColumn Header="Status" Width="110">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Border CornerRadius="10" Padding="8,3" HorizontalAlignment="Left"
-                                                VerticalAlignment="Center">
-                                            <Border.Style>
-                                                <Style TargetType="Border">
-                                                    <Setter Property="Background" Value="#FFF8E1"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsCompleted}" Value="True">
-                                                            <Setter Property="Background" Value="#E8F5E9"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </Border.Style>
-                                            <TextBlock FontSize="11" FontWeight="SemiBold">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Text" Value="Gözləmədə"/>
-                                                        <Setter Property="Foreground" Value="#F57F17"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsCompleted}" Value="True">
-                                                                <Setter Property="Text" Value="Tamamlanıb"/>
-                                                                <Setter Property="Foreground" Value="#2E7D32"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                        </Border>
+                                        <Button Click="BtnChangeStatus_Click"
+                                                Tag="{Binding}"
+                                                Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
+                                                ToolTip="{Binding TrackingDatesSummary}">
+                                            <Border CornerRadius="12" Padding="8,4" HorizontalAlignment="Left"
+                                                    Background="{Binding ShipmentStatus, Converter={StaticResource ShipmentStatusToBgConverter}}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding ShipmentStatus, Converter={StaticResource ShipmentStatusToGlyphConverter}}"
+                                                               FontFamily="Segoe MDL2 Assets" FontSize="11" Margin="0,0,5,0"
+                                                               Foreground="{Binding ShipmentStatus, Converter={StaticResource ShipmentStatusToFgConverter}}"
+                                                               VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding ShipmentStatusDisplay}"
+                                                               FontSize="11" FontWeight="SemiBold"
+                                                               Foreground="{Binding ShipmentStatus, Converter={StaticResource ShipmentStatusToFgConverter}}"
+                                                               VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Button>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -281,11 +288,17 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
 
-                            <!-- Actions: Edit & Delete -->
-                            <DataGridTemplateColumn Header="Əməliyyat" Width="120">
+                            <!-- Actions: Status, Edit & Delete -->
+                            <DataGridTemplateColumn Header="Əməliyyat" Width="135">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Button Click="BtnChangeStatus_Click"
+                                                    Tag="{Binding}"
+                                                    Background="Transparent" BorderThickness="0"
+                                                    Padding="6,4" Cursor="Hand" ToolTip="Göndərmə statusunu dəyiş" Margin="0,0,4,0">
+                                                <TextBlock Text="&#xE7EC;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#5E35B1"/>
+                                            </Button>
                                             <Button Click="BtnEditTransaction_Click"
                                                     Tag="{Binding Id}"
                                                     Background="Transparent" BorderThickness="0"

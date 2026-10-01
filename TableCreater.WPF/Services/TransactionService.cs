@@ -11,7 +11,7 @@ namespace TableCreater.WPF.Services;
 /// Full implementation of the Transaction service.
 /// Ports the Java TransactionService including the core Calculation Engine (Section 5.1)
 /// and Aggregate Financial Reporting (Section 5.2).
-/// 
+///
 /// All methods are async to keep the WPF UI responsive.
 /// </summary>
 public class TransactionService : ITransactionService
@@ -61,17 +61,29 @@ public class TransactionService : ITransactionService
             CreatedAt = DateTime.UtcNow,
             ProductName = request.ProductName,
             ReceivingCompany = request.ReceivingCompany,
+            SendingCompany = request.SendingCompany,
             WeightTon = request.WeightTon,
             PricePerTonRub = request.PricePerTonRub,
             TransportType = request.TransportType,
+            TransportCurrency = request.TransportCurrency,
             VehicleCount = request.VehicleCount,
             PricePerVehicle = request.PricePerVehicle,
             PaidAmount = request.PaidAmount,
             PaidCurrency = request.PaidCurrency,
             HistoricalExchangeRate = request.HistoricalExchangeRate,
             DocumentPath = savedDocumentPath,
-            IsCompleted = false
+            AdditionalExpenseAmount = request.AdditionalExpenseAmount,
+            AdditionalExpenseCurrency = request.AdditionalExpenseCurrency,
+            AdditionalExpenseDescription = request.AdditionalExpenseDescription
         };
+
+        // Sync and validate shipment status dates
+        SyncShipmentStatusAndDates(
+            entity,
+            request.ShipmentStatus,
+            request.LoadedDate,
+            request.InTransitStartDate,
+            request.DeliveredDate);
 
         // === CALCULATION ENGINE (replaces Java @PrePersist) ===
         CalculateHistoricalFields(entity);
@@ -158,19 +170,61 @@ public class TransactionService : ITransactionService
         entity.TransactionDate = request.TransactionDate;
         entity.ProductName = request.ProductName;
         entity.ReceivingCompany = request.ReceivingCompany;
+        entity.SendingCompany = request.SendingCompany;
         entity.WeightTon = request.WeightTon;
         entity.PricePerTonRub = request.PricePerTonRub;
         entity.TransportType = request.TransportType;
+        entity.TransportCurrency = request.TransportCurrency;
         entity.VehicleCount = request.VehicleCount;
         entity.PricePerVehicle = request.PricePerVehicle;
         entity.PaidAmount = request.PaidAmount;
         entity.PaidCurrency = request.PaidCurrency;
         entity.HistoricalExchangeRate = request.HistoricalExchangeRate;
         entity.DocumentPath = savedDocumentPath;
-        entity.IsCompleted = request.IsCompleted ?? entity.IsCompleted;
+        entity.AdditionalExpenseAmount = request.AdditionalExpenseAmount;
+        entity.AdditionalExpenseCurrency = request.AdditionalExpenseCurrency;
+        entity.AdditionalExpenseDescription = request.AdditionalExpenseDescription;
+
+        // Sync shipment tracking status and dates
+        SyncShipmentStatusAndDates(
+            entity,
+            request.ShipmentStatus,
+            request.LoadedDate,
+            request.InTransitStartDate,
+            request.DeliveredDate);
+
+        if (request.IsCompleted.HasValue)
+        {
+            entity.IsCompleted = request.IsCompleted.Value;
+        }
 
         // === RECALCULATION ENGINE (replaces Java @PreUpdate) ===
         CalculateHistoricalFields(entity);
+
+        await _db.SaveChangesAsync();
+
+        return MapToReadResponse(entity, entity.Customer.Name);
+    }
+
+    // =========================================================================
+    // UPDATE SHIPMENT STATUS (Dedicated Endpoint / Action)
+    // =========================================================================
+
+    /// <inheritdoc />
+    public async Task<TransactionReadResponse> UpdateShipmentStatus(
+        long id, ShipmentStatusUpdateRequest request)
+    {
+        var entity = await _db.Transactions
+            .Include(t => t.Customer)
+            .FirstOrDefaultAsync(t => t.Id == id)
+            ?? throw new InvalidOperationException($"Transaction not found (id={id})");
+
+        SyncShipmentStatusAndDates(
+            entity,
+            request.Status,
+            request.LoadedDate,
+            request.InTransitStartDate,
+            request.DeliveredDate);
 
         await _db.SaveChangesAsync();
 
@@ -194,16 +248,27 @@ public class TransactionService : ITransactionService
             TransactionDate = entity.TransactionDate,
             ProductName = entity.ProductName ?? string.Empty,
             ReceivingCompany = entity.ReceivingCompany ?? string.Empty,
+            SendingCompany = entity.SendingCompany,
             WeightTon = entity.WeightTon,
             PricePerTonRub = entity.PricePerTonRub,
             TransportType = entity.TransportType,
+            TransportCurrency = entity.TransportCurrency,
             VehicleCount = entity.VehicleCount,
             PricePerVehicle = entity.PricePerVehicle,
             PaidCurrency = entity.PaidCurrency,
             PaidAmount = entity.PaidAmount,
             HistoricalExchangeRate = entity.HistoricalExchangeRate,
             DocumentImageUrl = entity.DocumentPath,
-            IsCompleted = entity.IsCompleted
+            IsCompleted = entity.IsCompleted,
+            ShipmentStatus = entity.ShipmentStatus,
+            LoadedDate = entity.LoadedDate,
+            InTransitStartDate = entity.InTransitStartDate,
+            InTransitEndDate = entity.InTransitEndDate,
+            DeliveredDate = entity.DeliveredDate,
+            IsInTransitAutoDates = entity.IsInTransitAutoDates,
+            AdditionalExpenseAmount = entity.AdditionalExpenseAmount,
+            AdditionalExpenseCurrency = entity.AdditionalExpenseCurrency,
+            AdditionalExpenseDescription = entity.AdditionalExpenseDescription
         };
     }
 
@@ -254,21 +319,25 @@ public class TransactionService : ITransactionService
     //
     //  This is the heart of the system's financial integrity.
     //  All values are "locked in" using the HistoricalExchangeRate at persist time.
+    //
+    //  UPDATED: Transport currency is now manual (TransportCurrency field).
+    //           Additional expenses are included in total expense.
     // =========================================================================
 
     /// <summary>
     /// Calculates and sets the historical financial fields on a Transaction entity.
     /// Must be called before every save (create or update).
-    /// 
-    /// Algorithm (from Section 5.1 of the Master Specification):
-    /// 
+    ///
+    /// Algorithm (updated):
+    ///
     /// 1. GoodsCostRub  = WeightTon × PricePerTonRub
     /// 2. GoodsCostUsd  = GoodsCostRub × HistoricalExchangeRate
     /// 3. TransportRaw  = PricePerVehicle × VehicleCount
-    /// 4. TransportUsd  = (Ship) ? TransportRaw × Rate : TransportRaw  [Truck = already USD]
-    /// 5. TotalExpense   = GoodsCostUsd + TransportCostUsd
-    /// 6. PaidInUsd      = (Rub) ? PaidAmount × Rate : PaidAmount
-    /// 7. RemainingDebt  = PaidInUsd − TotalExpense  [negative = debt, positive = overpayment]
+    /// 4. TransportUsd  = (TransportCurrency==RUB) ? TransportRaw × Rate : TransportRaw
+    /// 5. AdditionalExpUsd = (AdditionalExpenseCurrency==RUB) ? Amount × Rate : Amount
+    /// 6. TotalExpense   = GoodsCostUsd + TransportCostUsd + AdditionalExpenseUsd
+    /// 7. PaidInUsd      = (PaidCurrency==RUB) ? PaidAmount × Rate : PaidAmount
+    /// 8. RemainingDebt  = PaidInUsd − TotalExpense  [negative = debt, positive = overpayment]
     /// </summary>
     private static void CalculateHistoricalFields(Transaction entity)
     {
@@ -279,24 +348,35 @@ public class TransactionService : ITransactionService
         decimal goodsCostUsd = goodsCostRub * rate;
 
         // ── Step 3 & 4: Transport Cost ──────────────────────────────────────
+        // Transport currency is now manually selected via TransportCurrency
         decimal pricePerVehicle = entity.PricePerVehicle ?? 0m;
         int vehicleCount = entity.VehicleCount ?? 0;
         decimal totalTransportRaw = pricePerVehicle * vehicleCount;
 
-        decimal transportCostUsd = entity.TransportType == TransportType.Ship
-            ? totalTransportRaw * rate    // Ship: RUB → USD conversion
-            : totalTransportRaw;          // Truck: already in USD
+        decimal transportCostUsd = entity.TransportCurrency == PaymentCurrency.Rub
+            ? totalTransportRaw * rate    // RUB → USD conversion
+            : totalTransportRaw;          // Already in USD
 
-        // ── Step 5: Total Expense (USD) ─────────────────────────────────────
-        entity.HistoricalTotalExpenseUsd = goodsCostUsd + transportCostUsd;
+        // ── Step 5: Additional Expense ──────────────────────────────────────
+        decimal additionalExpenseUsd = 0m;
+        if (entity.AdditionalExpenseAmount.HasValue && entity.AdditionalExpenseAmount.Value > 0)
+        {
+            decimal addAmount = entity.AdditionalExpenseAmount.Value;
+            additionalExpenseUsd = (entity.AdditionalExpenseCurrency == PaymentCurrency.Rub)
+                ? addAmount * rate    // RUB → USD conversion
+                : addAmount;          // Already in USD (or null defaults to USD)
+        }
 
-        // ── Step 6: Paid Amount in USD ──────────────────────────────────────
+        // ── Step 6: Total Expense (USD) ─────────────────────────────────────
+        entity.HistoricalTotalExpenseUsd = goodsCostUsd + transportCostUsd + additionalExpenseUsd;
+
+        // ── Step 7: Paid Amount in USD ──────────────────────────────────────
         decimal paidAmount = entity.PaidAmount ?? 0m;
         decimal paidInUsd = entity.PaidCurrency == PaymentCurrency.Rub
             ? paidAmount * rate           // RUB → USD conversion
             : paidAmount;                 // Already in USD
 
-        // ── Step 7: Remaining Debt (USD) ────────────────────────────────────
+        // ── Step 8: Remaining Debt (USD) ────────────────────────────────────
         // Negative = debt to supplier, Positive = overpayment
         entity.HistoricalRemainingDebtUsd = paidInUsd - entity.HistoricalTotalExpenseUsd;
     }
@@ -313,6 +393,19 @@ public class TransactionService : ITransactionService
             : paidAmount;
     }
 
+    /// <summary>
+    /// Computes the AdditionalExpenseUsd for a single transaction from its raw fields.
+    /// </summary>
+    private static decimal ComputeAdditionalExpenseUsd(Transaction t)
+    {
+        if (!t.AdditionalExpenseAmount.HasValue || t.AdditionalExpenseAmount.Value <= 0)
+            return 0m;
+
+        return (t.AdditionalExpenseCurrency == PaymentCurrency.Rub)
+            ? t.AdditionalExpenseAmount.Value * t.HistoricalExchangeRate
+            : t.AdditionalExpenseAmount.Value;
+    }
+
     // =========================================================================
     //  AGGREGATE FINANCIAL REPORTING — Section 5.2
     //  Builds an ExpenseIncomeReport from a set of transactions.
@@ -320,7 +413,7 @@ public class TransactionService : ITransactionService
 
     /// <summary>
     /// Builds the aggregate financial report from a list of transactions.
-    /// 
+    ///
     /// - TotalExpenseUsd: Sum of HistoricalTotalExpenseUsd (pre-calculated on each entity)
     /// - TotalPaidUsd:    Sum of PaidInUsd (recomputed from raw PaidAmount + PaidCurrency + Rate)
     /// - TotalBenefitUsd: TotalPaidUsd − TotalExpenseUsd
@@ -360,9 +453,11 @@ public class TransactionService : ITransactionService
             CreatedAt = DateOnly.FromDateTime(entity.CreatedAt),
             ProductName = entity.ProductName ?? string.Empty,
             ReceivingCompany = entity.ReceivingCompany ?? string.Empty,
+            SendingCompany = entity.SendingCompany,
             WeightTon = entity.WeightTon,
             PricePerTonRub = entity.PricePerTonRub,
             TransportType = entity.TransportType,
+            TransportCurrency = entity.TransportCurrency,
             VehicleCount = entity.VehicleCount,
             PricePerVehicle = entity.PricePerVehicle,
             PaidAmount = entity.PaidAmount,
@@ -372,8 +467,83 @@ public class TransactionService : ITransactionService
             HistoricalTotalExpenseUsd = entity.HistoricalTotalExpenseUsd,
             HistoricalRemainingDebtUsd = entity.HistoricalRemainingDebtUsd,
             PaidInUsd = ComputePaidInUsd(entity),
-            IsCompleted = entity.IsCompleted
+            IsCompleted = entity.IsCompleted,
+            ShipmentStatus = entity.ShipmentStatus,
+            LoadedDate = entity.LoadedDate,
+            InTransitStartDate = entity.InTransitStartDate,
+            InTransitEndDate = entity.InTransitEndDate,
+            DeliveredDate = entity.DeliveredDate,
+            IsInTransitAutoDates = entity.IsInTransitAutoDates,
+            AdditionalExpenseAmount = entity.AdditionalExpenseAmount,
+            AdditionalExpenseCurrency = entity.AdditionalExpenseCurrency,
+            AdditionalExpenseDescription = entity.AdditionalExpenseDescription,
+            AdditionalExpenseUsd = ComputeAdditionalExpenseUsd(entity)
         };
+    }
+
+    /// <summary>
+    /// Synchronizes shipment status, transit date intervals, and completion flag.
+    /// Stage 0 (Pending): All dates null.
+    /// Stage 1 (Loaded): Stores LoadedDate.
+    /// Stage 2 (InTransit): Stores InTransitStartDate (and optional LoadedDate). InTransitEndDate remains null.
+    /// Stage 3 (Delivered): Stores DeliveredDate. InTransitEndDate is automatically set equal to DeliveredDate.
+    /// </summary>
+    private static void SyncShipmentStatusAndDates(
+        Transaction entity,
+        ShipmentStatus status,
+        DateOnly? loadedDate,
+        DateOnly? inTransitStartDate,
+        DateOnly? deliveredDate)
+    {
+        entity.ShipmentStatus = status;
+
+        switch (status)
+        {
+            case ShipmentStatus.Pending:
+                entity.LoadedDate = null;
+                entity.InTransitStartDate = null;
+                entity.InTransitEndDate = null;
+                entity.DeliveredDate = null;
+                entity.IsCompleted = false;
+                break;
+
+            case ShipmentStatus.Loaded:
+                if (!loadedDate.HasValue)
+                    throw new InvalidOperationException("Yüklənmə tarixi mütləq qeyd edilməlidir.");
+                entity.LoadedDate = loadedDate.Value;
+                entity.InTransitStartDate = null;
+                entity.InTransitEndDate = null;
+                entity.DeliveredDate = null;
+                entity.IsCompleted = false;
+                break;
+
+            case ShipmentStatus.InTransit:
+                if (!inTransitStartDate.HasValue)
+                    throw new InvalidOperationException("Yola çıxma tarixi mütləq qeyd edilməlidir.");
+                entity.InTransitStartDate = inTransitStartDate.Value;
+                entity.InTransitEndDate = null; // Yoldadır — hələ çatmayıb
+                if (loadedDate.HasValue)
+                {
+                    entity.LoadedDate = loadedDate.Value;
+                }
+                entity.DeliveredDate = null;
+                entity.IsCompleted = false;
+                break;
+
+            case ShipmentStatus.Delivered:
+                if (!deliveredDate.HasValue)
+                    throw new InvalidOperationException("Çatdırılma tarixi mütləq qeyd edilməlidir.");
+                entity.DeliveredDate = deliveredDate.Value;
+                // Stage 3 biznes qaydası: Yoldadır intervalının ikinci tarixi çatdı tarixi ilə eyni olacaq
+                entity.InTransitEndDate = deliveredDate.Value;
+                entity.InTransitStartDate = inTransitStartDate ?? entity.InTransitStartDate ?? entity.LoadedDate ?? entity.TransactionDate;
+                if (loadedDate.HasValue)
+                {
+                    entity.LoadedDate = loadedDate.Value;
+                }
+                entity.IsCompleted = true;
+                break;
+        }
     }
 
     // =========================================================================
