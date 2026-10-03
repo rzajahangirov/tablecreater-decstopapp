@@ -84,7 +84,7 @@
                 </Grid>
 
                 <!-- TOOLBAR -->
-                <Grid Margin="0,0,0,16">
+                <Grid Margin="0,0,0,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
@@ -106,6 +106,171 @@
                         </StackPanel>
                     </Button>
                 </Grid>
+
+                <!-- ===== TRANSACTION STATISTICS (Paid/Unpaid) ===== -->
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Paid Count Badge -->
+                    <Border Grid.Column="0" Background="#E8F5E9" CornerRadius="14" Padding="12,6" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="12" 
+                                       Foreground="#2E7D32" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Ödənilib:" FontSize="12" Foreground="#2E7D32" FontWeight="SemiBold" 
+                                       VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <TextBlock Text="{Binding PaidTransactionCount}" FontSize="14" FontWeight="ExtraBold" 
+                                       Foreground="#1B5E20" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Unpaid Count Badge -->
+                    <Border Grid.Column="1" Background="#FFEBEE" CornerRadius="14" Padding="12,6" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="12" 
+                                       Foreground="#C62828" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Ödənilməyib:" FontSize="12" Foreground="#C62828" FontWeight="SemiBold" 
+                                       VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <TextBlock Text="{Binding UnpaidTransactionCount}" FontSize="14" FontWeight="ExtraBold" 
+                                       Foreground="#B71C1C" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Filtered Count (shown when filter active) -->
+                    <Border Grid.Column="2" Background="#E3F2FD" CornerRadius="14" Padding="12,6">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE71C;" FontFamily="Segoe MDL2 Assets" FontSize="12" 
+                                       Foreground="#1565C0" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Göstərilən:" FontSize="12" Foreground="#1565C0" FontWeight="SemiBold" 
+                                       VerticalAlignment="Center" Margin="0,0,4,0"/>
+                            <TextBlock Text="{Binding FilteredTransactionCount}" FontSize="14" FontWeight="ExtraBold" 
+                                       Foreground="#0D47A1" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- ===== TRANSACTION FILTER / SEARCH PANEL ===== -->
+                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" 
+                        Padding="16,12" Margin="0,0,0,14">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Row 0: Filters -->
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="150"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Date From -->
+                            <TextBlock Grid.Column="0" Text="Tarixdən:" FontSize="12" Foreground="#64748B" 
+                                       FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <DatePicker Grid.Column="1" SelectedDate="{Binding TxFilterDateFrom, Mode=TwoWay}" 
+                                        FontSize="12" Margin="0,0,12,0" VerticalAlignment="Center"/>
+
+                            <!-- Date To -->
+                            <TextBlock Grid.Column="2" Text="Tarixə:" FontSize="12" Foreground="#64748B" 
+                                       FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <DatePicker Grid.Column="3" SelectedDate="{Binding TxFilterDateTo, Mode=TwoWay}" 
+                                        FontSize="12" Margin="0,0,12,0" VerticalAlignment="Center"/>
+
+                            <!-- Payment Status -->
+                            <TextBlock Grid.Column="4" Text="Ödəniş:" FontSize="12" Foreground="#64748B" 
+                                       FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ComboBox Grid.Column="5" ItemsSource="{Binding PaymentStatusFilterOptions}" 
+                                      SelectedItem="{Binding TxFilterPaymentStatus, Mode=TwoWay}"
+                                      FontSize="12" Margin="0,0,12,0" VerticalAlignment="Center" Padding="8,5">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock>
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="{Binding Converter={StaticResource PaymentStatusToTextConverter}}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                                                            <Setter Property="Text" Value="Hamısı"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <!-- Shipment Status -->
+                            <TextBlock Grid.Column="6" Text="Status:" FontSize="12" Foreground="#64748B" 
+                                       FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <ComboBox Grid.Column="7" ItemsSource="{Binding ShipmentStatusFilterOptions}" 
+                                      SelectedItem="{Binding TxFilterShipmentStatus, Mode=TwoWay}"
+                                      FontSize="12" Margin="0,0,12,0" VerticalAlignment="Center" Padding="8,5">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock>
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Text" Value="{Binding Converter={StaticResource ShipmentStatusToTextConverter}}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                                                            <Setter Property="Text" Value="Hamısı"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <!-- Search box -->
+                            <TextBox Grid.Column="8" 
+                                     Text="{Binding TxSearchText, UpdateSourceTrigger=PropertyChanged}" 
+                                     FontSize="12" Padding="8,5" VerticalAlignment="Center"
+                                     ui:ControlHelper.PlaceholderText="🔍 Məhsul, göndərən, qəbul edən..."
+                                     Margin="0,0,8,0" BorderBrush="#D1D5DB"/>
+
+                            <!-- Apply Filter Button -->
+                            <Button Grid.Column="9" Command="{Binding ApplyTransactionFiltersCommand}"
+                                    Padding="12,6" Background="#005FB8" Foreground="White" 
+                                    BorderThickness="0" VerticalAlignment="Center" Cursor="Hand" Margin="0,0,4,0"
+                                    ToolTip="Filtrləri tətbiq et">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE71C;" FontFamily="Segoe MDL2 Assets" FontSize="12" 
+                                               VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                    <TextBlock Text="Filtr" FontWeight="SemiBold" FontSize="12"/>
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Clear Filter Button -->
+                            <Button Grid.Column="10" Command="{Binding ClearTransactionFiltersCommand}"
+                                    Padding="12,6" Background="Transparent" Foreground="#64748B" 
+                                    BorderBrush="#CBD5E1" BorderThickness="1" VerticalAlignment="Center" Cursor="Hand"
+                                    ToolTip="Filtrləri təmizlə">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE894;" FontFamily="Segoe MDL2 Assets" FontSize="12" 
+                                               VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                    <TextBlock Text="Təmizlə" FontSize="12"/>
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Grid>
+                </Border>
 
                 <!-- TRANSACTIONS DATA GRID -->
                 <Border CornerRadius="4" Background="White" BorderBrush="#E0E0E0" BorderThickness="1" Margin="0,0,0,24">
@@ -459,7 +624,59 @@
                 </Border>
 
                 <!-- BALANS TARİXÇƏSİ (LEDGER HISTORY) -->
-                <TextBlock Text="📜 Balans Tarixçəsi (Ledger)" FontSize="18" FontWeight="Bold" Margin="0,8,0,14" Foreground="#222"/>
+                <TextBlock Text="📜 Balans Tarixçəsi (Ledger)" FontSize="18" FontWeight="Bold" Margin="0,8,0,10" Foreground="#222"/>
+
+                <!-- Balance History Filter Panel -->
+                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" 
+                        Padding="16,10" Margin="0,0,0,10">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Date From -->
+                        <TextBlock Grid.Column="0" Text="Tarixdən:" FontSize="12" Foreground="#64748B" 
+                                   FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <DatePicker Grid.Column="1" SelectedDate="{Binding BhFilterDateFrom, Mode=TwoWay}" 
+                                    FontSize="12" Margin="0,0,12,0" VerticalAlignment="Center"/>
+
+                        <!-- Date To -->
+                        <TextBlock Grid.Column="2" Text="Tarixə:" FontSize="12" Foreground="#64748B" 
+                                   FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <DatePicker Grid.Column="3" SelectedDate="{Binding BhFilterDateTo, Mode=TwoWay}" 
+                                    FontSize="12" Margin="0,0,12,0" VerticalAlignment="Center"/>
+
+                        <!-- Apply Filter -->
+                        <Button Grid.Column="5" Command="{Binding ApplyBalanceHistoryFiltersCommand}"
+                                Padding="12,6" Background="#005FB8" Foreground="White" 
+                                BorderThickness="0" VerticalAlignment="Center" Cursor="Hand" Margin="0,0,4,0"
+                                ToolTip="Filtrləri tətbiq et">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE71C;" FontFamily="Segoe MDL2 Assets" FontSize="12" 
+                                           VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <TextBlock Text="Filtr" FontWeight="SemiBold" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Clear Filter -->
+                        <Button Grid.Column="6" Command="{Binding ClearBalanceHistoryFiltersCommand}"
+                                Padding="12,6" Background="Transparent" Foreground="#64748B" 
+                                BorderBrush="#CBD5E1" BorderThickness="1" VerticalAlignment="Center" Cursor="Hand"
+                                ToolTip="Filtrləri təmizlə">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE894;" FontFamily="Segoe MDL2 Assets" FontSize="12" 
+                                           VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                <TextBlock Text="Təmizlə" FontSize="12"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
 
                 <Border CornerRadius="4" Background="White" BorderBrush="#E0E0E0" BorderThickness="1" Margin="0,0,0,32">
                     <DataGrid ItemsSource="{Binding BalanceHistories}"

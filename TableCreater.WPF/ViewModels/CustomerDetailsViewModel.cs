@@ -11,7 +11,7 @@ namespace TableCreater.WPF.ViewModels;
 /// <summary>
 /// ViewModel for the Customer Details page (Master-Detail pattern).
 /// Displays customer-specific financial statistics and full transaction list.
-/// Supports Delete operations with automatic dashboard refresh.
+/// Supports filtering, sorting, search, and statistics.
 /// </summary>
 public partial class CustomerDetailsViewModel : ObservableObject
 {
@@ -40,14 +40,92 @@ public partial class CustomerDetailsViewModel : ObservableObject
     private string _customerPhone = string.Empty;
 
     // =========================================================================
-    // TRANSACTION LIST
+    // TRANSACTION LIST (raw + filtered)
     // =========================================================================
+
+    /// <summary>
+    /// All transactions loaded from DB (unfiltered).
+    /// </summary>
+    private List<TransactionReadResponse> _allTransactions = new();
 
     [ObservableProperty]
     private ObservableCollection<TransactionReadResponse> _transactions = new();
 
     [ObservableProperty]
     private TransactionReadResponse? _selectedTransaction;
+
+    // =========================================================================
+    // TRANSACTION FILTER FIELDS
+    // =========================================================================
+
+    [ObservableProperty]
+    private DateTime? _txFilterDateFrom;
+
+    [ObservableProperty]
+    private DateTime? _txFilterDateTo;
+
+    [ObservableProperty]
+    private PaymentStatus? _txFilterPaymentStatus;
+
+    [ObservableProperty]
+    private ShipmentStatus? _txFilterShipmentStatus;
+
+    [ObservableProperty]
+    private string _txSearchText = string.Empty;
+
+    /// <summary>
+    /// Options for Payment Status filter ComboBox (null = Hamısı).
+    /// </summary>
+    public PaymentStatus?[] PaymentStatusFilterOptions => new PaymentStatus?[]
+    {
+        null,
+        PaymentStatus.Paid,
+        PaymentStatus.Unpaid
+    };
+
+    /// <summary>
+    /// Options for Shipment Status filter ComboBox (null = Hamısı).
+    /// </summary>
+    public ShipmentStatus?[] ShipmentStatusFilterOptions => new ShipmentStatus?[]
+    {
+        null,
+        ShipmentStatus.Pending,
+        ShipmentStatus.Loaded,
+        ShipmentStatus.InTransit,
+        ShipmentStatus.Delivered
+    };
+
+    // =========================================================================
+    // TRANSACTION STATISTICS
+    // =========================================================================
+
+    [ObservableProperty]
+    private int _paidTransactionCount;
+
+    [ObservableProperty]
+    private int _unpaidTransactionCount;
+
+    [ObservableProperty]
+    private int _filteredTransactionCount;
+
+    // =========================================================================
+    // BALANCE HISTORY (raw + filtered)
+    // =========================================================================
+
+    private List<CustomerBalanceHistoryResponse> _allBalanceHistories = new();
+
+    [ObservableProperty]
+    private ObservableCollection<CustomerBalanceHistoryResponse> _balanceHistories = new();
+
+    // =========================================================================
+    // BALANCE HISTORY FILTER FIELDS
+    // =========================================================================
+
+    [ObservableProperty]
+    private DateTime? _bhFilterDateFrom;
+
+    [ObservableProperty]
+    private DateTime? _bhFilterDateTo;
 
     // =========================================================================
     // DASHBOARD CARDS
@@ -73,13 +151,6 @@ public partial class CustomerDetailsViewModel : ObservableObject
 
     [ObservableProperty]
     private string _balanceStatusColor = "#888888";
-
-    // =========================================================================
-    // BALANCE HISTORY
-    // =========================================================================
-
-    [ObservableProperty]
-    private ObservableCollection<CustomerBalanceHistoryResponse> _balanceHistories = new();
 
     // =========================================================================
     // BALANCE ADJUSTMENT FIELDS
@@ -240,7 +311,8 @@ public partial class CustomerDetailsViewModel : ObservableObject
         try
         {
             var histories = await _customerService.GetBalanceHistory(CustomerId);
-            BalanceHistories = new ObservableCollection<CustomerBalanceHistoryResponse>(histories);
+            _allBalanceHistories = histories;
+            ExecuteBalanceHistoryFilter();
         }
         catch (Exception ex)
         {
@@ -269,14 +341,95 @@ public partial class CustomerDetailsViewModel : ObservableObject
     }
 
     // =========================================================================
+    // FILTER COMMANDS
+    // =========================================================================
+
+    [RelayCommand]
+    private void ApplyTransactionFilters()
+    {
+        IEnumerable<TransactionReadResponse> filtered = _allTransactions;
+
+        // Date range filter
+        if (TxFilterDateFrom.HasValue)
+        {
+            var fromDate = DateOnly.FromDateTime(TxFilterDateFrom.Value);
+            filtered = filtered.Where(t => t.TransactionDate >= fromDate);
+        }
+        if (TxFilterDateTo.HasValue)
+        {
+            var toDate = DateOnly.FromDateTime(TxFilterDateTo.Value);
+            filtered = filtered.Where(t => t.TransactionDate <= toDate);
+        }
+
+        // Payment status filter
+        if (TxFilterPaymentStatus.HasValue)
+        {
+            filtered = filtered.Where(t => t.PaymentStatus == TxFilterPaymentStatus.Value);
+        }
+
+        // Shipment status filter
+        if (TxFilterShipmentStatus.HasValue)
+        {
+            filtered = filtered.Where(t => t.ShipmentStatus == TxFilterShipmentStatus.Value);
+        }
+
+        // Text search (product name, receiving company, sending company)
+        if (!string.IsNullOrWhiteSpace(TxSearchText))
+        {
+            var searchLower = TxSearchText.ToLower();
+            filtered = filtered.Where(t =>
+                (t.ProductName?.ToLower().Contains(searchLower) == true) ||
+                (t.ReceivingCompany?.ToLower().Contains(searchLower) == true) ||
+                (t.SendingCompany?.ToLower().Contains(searchLower) == true));
+        }
+
+        // Default sort: newest first (already sorted from DB, but ensure after filtering)
+        var result = filtered.OrderByDescending(t => t.TransactionDate).ToList();
+
+        Transactions = new ObservableCollection<TransactionReadResponse>(result);
+        FilteredTransactionCount = result.Count;
+
+        // Update statistics
+        UpdateTransactionStatistics();
+    }
+
+    [RelayCommand]
+    private void ClearTransactionFilters()
+    {
+        TxFilterDateFrom = null;
+        TxFilterDateTo = null;
+        TxFilterPaymentStatus = null;
+        TxFilterShipmentStatus = null;
+        TxSearchText = string.Empty;
+        ApplyTransactionFilters();
+    }
+
+    [RelayCommand]
+    private void ApplyBalanceHistoryFilters()
+    {
+        ExecuteBalanceHistoryFilter();
+    }
+
+    [RelayCommand]
+    private void ClearBalanceHistoryFilters()
+    {
+        BhFilterDateFrom = null;
+        BhFilterDateTo = null;
+        ExecuteBalanceHistoryFilter();
+    }
+
+    // =========================================================================
     // HELPERS
     // =========================================================================
 
     private async Task RefreshTransactionsAndCards()
     {
         var transactions = await _transactionService.GetTransactionsByCustomer(CustomerId);
-        Transactions = new ObservableCollection<TransactionReadResponse>(transactions);
+        _allTransactions = transactions;
         TransactionCount = transactions.Count;
+
+        // Apply current filters
+        ApplyTransactionFilters();
 
         var report = await _transactionService.CalculateCustomerExpenseAndIncome(CustomerId);
         TotalExpenseUsd = report.TotalExpenseUsd;
@@ -304,5 +457,32 @@ public partial class CustomerDetailsViewModel : ObservableObject
             BalanceStatusColor = "#2E7D32"; // Green — avansı var
         else
             BalanceStatusColor = "#888888"; // Gray — balans
+    }
+
+    private void UpdateTransactionStatistics()
+    {
+        // Statistics are based on ALL transactions (not filtered), to give full picture
+        PaidTransactionCount = _allTransactions.Count(t => t.PaymentStatus == PaymentStatus.Paid);
+        UnpaidTransactionCount = _allTransactions.Count(t => t.PaymentStatus == PaymentStatus.Unpaid);
+    }
+
+    private void ExecuteBalanceHistoryFilter()
+    {
+        IEnumerable<CustomerBalanceHistoryResponse> filtered = _allBalanceHistories;
+
+        if (BhFilterDateFrom.HasValue)
+        {
+            filtered = filtered.Where(h => h.CreatedAt >= BhFilterDateFrom.Value.Date);
+        }
+        if (BhFilterDateTo.HasValue)
+        {
+            // Include the entire end date
+            filtered = filtered.Where(h => h.CreatedAt < BhFilterDateTo.Value.Date.AddDays(1));
+        }
+
+        // Default sort: newest first
+        var result = filtered.OrderByDescending(h => h.CreatedAt).ToList();
+
+        BalanceHistories = new ObservableCollection<CustomerBalanceHistoryResponse>(result);
     }
 }
