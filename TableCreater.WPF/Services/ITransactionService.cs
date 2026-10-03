@@ -13,6 +13,7 @@ public interface ITransactionService
     Task<List<TransactionReadResponse>> GetTransactionsByCustomer(long customerId);
     Task<ExpenseIncomeReport> CalculateExpenseAndIncome(DateOnly from, DateOnly to);
     Task<ExpenseIncomeReport> CalculateCustomerExpenseAndIncome(long customerId);
+    Task<List<TransactionReadResponse>> GetTransactionsByDateRange(DateOnly from, DateOnly to);
     Task<TransactionReadResponse> UpdateTransaction(long id, TransactionUpdateRequest request);
     Task<TransactionReadResponse> UpdateShipmentStatus(long id, ShipmentStatusUpdateRequest request);
     Task<TransactionEditFormData> GetTransactionForUpdate(long id);

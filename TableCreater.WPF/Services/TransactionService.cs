@@ -156,6 +156,21 @@ public class TransactionService : ITransactionService
         return BuildExpenseIncomeReport(transactions);
     }
 
+    /// <inheritdoc />
+    public async Task<List<TransactionReadResponse>> GetTransactionsByDateRange(DateOnly from, DateOnly to)
+    {
+        if (to < from)
+            throw new ArgumentException("'to' date must be >= 'from' date.");
+
+        var transactions = await _db.Transactions
+            .Include(t => t.Customer)
+            .Where(t => t.TransactionDate >= from && t.TransactionDate <= to)
+            .OrderByDescending(t => t.TransactionDate)
+            .ToListAsync();
+
+        return transactions.Select(t => MapToReadResponse(t, t.Customer?.Name ?? string.Empty)).ToList();
+    }
+
     // =========================================================================
     // T5 — UPDATE TRANSACTION
     // Mapped from: TransactionService.updateTransaction(Long, TransactionUpdateDto)
@@ -468,10 +483,13 @@ public class TransactionService : ITransactionService
 
     /// <summary>
     /// Computes the PaidInUsd for a single transaction from its raw fields.
-    /// Used by aggregate reporting since PaidInUsd is not stored as a column.
+    /// If payment status is Unpaid, returns 0.
     /// </summary>
     private static decimal ComputePaidInUsd(Transaction t)
     {
+        if (t.PaymentStatus == PaymentStatus.Unpaid)
+            return 0m;
+
         decimal paidAmount = t.PaidAmount ?? 0m;
         return t.PaidCurrency == PaymentCurrency.Rub
             ? paidAmount * t.HistoricalExchangeRate
@@ -498,24 +516,34 @@ public class TransactionService : ITransactionService
 
     /// <summary>
     /// Builds the aggregate financial report from a list of transactions.
-    ///
-    /// - TotalExpenseUsd: Sum of HistoricalTotalExpenseUsd (pre-calculated on each entity)
-    /// - TotalPaidUsd:    Sum of PaidInUsd (recomputed from raw PaidAmount + PaidCurrency + Rate)
-    /// - TotalBenefitUsd: TotalPaidUsd − TotalExpenseUsd
-    /// - TransactionCount: Number of transactions
+    /// Computes full financial breakdown matching the updated accounting engine.
     /// </summary>
     private static ExpenseIncomeReport BuildExpenseIncomeReport(List<Transaction> transactions)
     {
         decimal totalExpense = transactions.Sum(t => t.HistoricalTotalExpenseUsd);
+        decimal totalBilled = transactions.Sum(t => t.HistoricalCustomerBilledUsd);
+        decimal totalUserProfit = transactions.Sum(t => t.HistoricalUserProfitUsd);
         decimal totalPaid = transactions.Sum(ComputePaidInUsd);
-        decimal totalBenefit = totalPaid - totalExpense;
+        decimal totalBenefit = totalPaid - totalBilled;
+        decimal totalCashFlow = totalPaid - totalExpense;
+        decimal totalWeight = transactions.Sum(t => t.WeightTon);
+        int totalVehicles = transactions.Sum(t => t.VehicleCount ?? 0);
+        int paidCount = transactions.Count(t => t.PaymentStatus == PaymentStatus.Paid);
+        int unpaidCount = transactions.Count(t => t.PaymentStatus == PaymentStatus.Unpaid);
 
         return new ExpenseIncomeReport
         {
             TotalExpenseUsd = totalExpense,
+            TotalBilledUsd = totalBilled,
+            TotalUserProfitUsd = totalUserProfit,
             TotalPaidUsd = totalPaid,
             TotalBenefitUsd = totalBenefit,
-            TransactionCount = transactions.Count
+            TotalCashFlowUsd = totalCashFlow,
+            TransactionCount = transactions.Count,
+            PaidTransactionCount = paidCount,
+            UnpaidTransactionCount = unpaidCount,
+            TotalWeightTon = totalWeight,
+            TotalVehicleCount = totalVehicles
         };
     }
 

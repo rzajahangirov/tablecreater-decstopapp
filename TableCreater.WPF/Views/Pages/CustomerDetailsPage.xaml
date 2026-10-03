@@ -107,13 +107,24 @@
                         <TextBlock Text="{Binding CustomerPhone}" FontSize="14" Foreground="#666" VerticalAlignment="Center"/>
                     </StackPanel>
 
-                    <Button Grid.Column="1" Click="BtnNewTransaction_Click"
-                            Padding="16,10" Background="#005FB8" Foreground="White" BorderThickness="0">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="Yeni Tranzaksiya" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button Click="BtnExportTransactionsExcel_Click"
+                                Padding="14,10" Background="#107C41" Foreground="White" BorderThickness="0" Margin="0,0,10,0" Cursor="Hand"
+                                ToolTip="Tranzaksiyaları seçilmiş sütunlarla Excel-ə ixrac et">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE8B5;" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Excel İxracı" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+
+                        <Button Click="BtnNewTransaction_Click"
+                                Padding="16,10" Background="#005FB8" Foreground="White" BorderThickness="0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="Yeni Tranzaksiya" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
                 </Grid>
 
                 <!-- ===== TRANSACTION STATISTICS (Paid/Unpaid) ===== -->
@@ -683,7 +694,21 @@
                 </Border>
 
                 <!-- BALANS TARİXÇƏSİ (LEDGER HISTORY) -->
-                <TextBlock Text="📜 Balans Tarixçəsi (Ledger)" FontSize="18" FontWeight="Bold" Margin="0,8,0,10" Foreground="#222"/>
+                <Grid Margin="0,8,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="📜 Balans Tarixçəsi (Ledger)" FontSize="18" FontWeight="Bold" Foreground="#222" VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" Command="{Binding ExportBalanceHistoryToExcelCommand}"
+                            Padding="14,8" Background="#107C41" Foreground="White" BorderThickness="0" Cursor="Hand"
+                            ToolTip="Balans tarixçəsini Excel (.xlsx) olaraq ixrac et">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#xE8B5;" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="Balans Tarixçəsini Excel-ə İxrac Et" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
 
                 <!-- Balance History Filter Panel -->
                 <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" 

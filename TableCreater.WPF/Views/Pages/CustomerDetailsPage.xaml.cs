@@ -41,6 +41,27 @@ public partial class CustomerDetailsPage : UserControl
     }
 
     /// <summary>
+    /// Open the customizable column Excel export dialog for transactions.
+    /// </summary>
+    private void BtnExportTransactionsExcel_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel != null)
+        {
+            var dialog = new Dialogs.ExcelExportColumnsDialog(
+                ViewModel.CustomerId,
+                ViewModel.CustomerName,
+                ViewModel.ExcelService,
+                ViewModel.AllTransactions,
+                ViewModel.Transactions)
+            {
+                Owner = Window.GetWindow(this)
+            };
+
+            dialog.ShowDialog();
+        }
+    }
+
+    /// <summary>
     /// Open the shipment status update dialog for the selected transaction.
     /// </summary>
     private void BtnChangeStatus_Click(object sender, RoutedEventArgs e)

@@ -195,6 +195,9 @@ public record TransactionReadResponse
 
     public string WeightTonFormatted => $"{WeightTon:N2} T";
 
+    public string BilledUsdFormatted => $"${HistoricalCustomerBilledUsd:N2}";
+    public string PaidUsdFormatted => $"${PaidInUsd:N2}";
+
     // === Göndərmə Statusu və Tarixlər ===
     public ShipmentStatus ShipmentStatus { get; init; } = ShipmentStatus.Pending;
     public DateOnly? LoadedDate { get; init; }
@@ -285,12 +288,53 @@ public record TransactionEditFormData
 
 /// <summary>
 /// Financial summary report for a date range or customer.
-/// Mapped from Java TranslationExpenseDto.
+/// Contains comprehensive financial metrics for the updated accounting engine.
 /// </summary>
 public record ExpenseIncomeReport
 {
+    /// <summary>Ümumi Xərc: Şirkətin çəkdiyi birbaşa xərclər (Maya + Daşıma + Əlavə xərc)</summary>
     public decimal TotalExpenseUsd { get; init; }
+
+    /// <summary>Xərc + Qazanc: Müştəriyə hesablanan yekun məbləğ (TotalExpenseUsd + TotalUserProfitUsd)</summary>
+    public decimal TotalBilledUsd { get; init; }
+
+    /// <summary>Şirkət Qazancı / Mənfəəti: Ton başına qazanc * Çəki (USD)</summary>
+    public decimal TotalUserProfitUsd { get; init; }
+
+    /// <summary>Ümumi Ödəniş: Faktiki yığılmış ödənişlər (USD)</summary>
     public decimal TotalPaidUsd { get; init; }
+
+    /// <summary>Qalıq Balans Fərqi: TotalPaidUsd - TotalBilledUsd (mənfi = borc var)</summary>
     public decimal TotalBenefitUsd { get; init; }
+
+    /// <summary>Kassa Fərqi: TotalPaidUsd - TotalExpenseUsd (faktiki daxil olan pul - çıxan birbaşa xərc)</summary>
+    public decimal TotalCashFlowUsd { get; init; }
+
+    /// <summary>Müştəri Borcu: TotalBilledUsd > TotalPaidUsd olarsa fərq</summary>
+    public decimal RemainingDebtUsd => TotalBilledUsd > TotalPaidUsd ? TotalBilledUsd - TotalPaidUsd : 0m;
+
+    /// <summary>Ümumi tranzaksiya sayı</summary>
     public long TransactionCount { get; init; }
+
+    /// <summary>Ödənilmiş tranzaksiyaların sayı</summary>
+    public int PaidTransactionCount { get; init; }
+
+    /// <summary>Ödənilməmiş tranzaksiyaların sayı</summary>
+    public int UnpaidTransactionCount { get; init; }
+
+    /// <summary>Cəmi yük çəkisi (ton)</summary>
+    public decimal TotalWeightTon { get; init; }
+
+    /// <summary>Cəmi nəqliyyat vasitəsi sayı</summary>
+    public int TotalVehicleCount { get; init; }
+
+    /// <summary>Mənfəət faizi (%): (TotalUserProfitUsd / TotalBilledUsd) * 100</summary>
+    public decimal ProfitMarginPercent => TotalBilledUsd > 0
+        ? Math.Round((TotalUserProfitUsd / TotalBilledUsd) * 100m, 1)
+        : 0m;
+
+    /// <summary>Ödəniş yığım faizi (%): (TotalPaidUsd / TotalBilledUsd) * 100</summary>
+    public decimal CollectionRatePercent => TotalBilledUsd > 0
+        ? Math.Round((TotalPaidUsd / TotalBilledUsd) * 100m, 1)
+        : 0m;
 }

@@ -17,14 +17,19 @@ public partial class CustomerDetailsViewModel : ObservableObject
 {
     private readonly ITransactionService _transactionService;
     private readonly ICustomerService _customerService;
+    private readonly IExcelService _excelService;
 
     public CustomerDetailsViewModel(
         ITransactionService transactionService,
-        ICustomerService customerService)
+        ICustomerService customerService,
+        IExcelService excelService)
     {
         _transactionService = transactionService;
         _customerService = customerService;
+        _excelService = excelService;
     }
+
+    public IExcelService ExcelService => _excelService;
 
     // =========================================================================
     // CUSTOMER INFO
@@ -343,6 +348,58 @@ public partial class CustomerDetailsViewModel : ObservableObject
         }
     }
 
+    [RelayCommand]
+    private async Task ExportBalanceHistoryToExcelAsync()
+    {
+        try
+        {
+            ErrorMessage = null;
+            SuccessMessage = null;
+
+            var saveDialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "Balans Tarixçəsini Excel-ə İxrac Et",
+                Filter = "Excel Workbook (*.xlsx)|*.xlsx",
+                FileName = $"{CustomerName}_Balans_Tarixcesi_{DateTime.Now:yyyyMMdd_HHmm}.xlsx",
+                DefaultExt = ".xlsx"
+            };
+
+            if (saveDialog.ShowDialog() != true) return;
+
+            IsLoading = true;
+            await _excelService.ExportBalanceHistoryToExcel(CustomerId, saveDialog.FileName, BalanceHistories);
+
+            SuccessMessage = $"Balans tarixçəsi uğurla ixrac edildi: {saveDialog.FileName}";
+
+            if (System.IO.File.Exists(saveDialog.FileName))
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = saveDialog.FileName,
+                        UseShellExecute = true
+                    });
+                }
+                catch
+                {
+                    // Ignore if no default viewer
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Excel ixracı zamanı xəta: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    public int TotalTransactionCount => _allTransactions.Count;
+    public List<TransactionReadResponse> AllTransactions => _allTransactions;
+
     // =========================================================================
     // FILTER COMMANDS
     // =========================================================================
@@ -437,7 +494,7 @@ public partial class CustomerDetailsViewModel : ObservableObject
         var report = await _transactionService.CalculateCustomerExpenseAndIncome(CustomerId);
         TotalExpenseUsd = report.TotalExpenseUsd;
         TotalPaidUsd = report.TotalPaidUsd;
-        TotalBilledUsd = _allTransactions.Sum(t => t.HistoricalCustomerBilledUsd);
+        TotalBilledUsd = report.TotalBilledUsd;
         RemainingDebtUsd = report.TotalBenefitUsd;
 
         if (RemainingDebtUsd < 0)
