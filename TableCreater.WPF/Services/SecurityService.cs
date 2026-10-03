@@ -173,6 +173,7 @@ public class SecurityService : ISecurityService
         try
         {
             // Check if file is unencrypted (starts with ASCII "SQLite format 3")
+            bool isPlaintext;
             using (var fs = new FileStream(dbFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
                 byte[] header = new byte[16];
@@ -180,15 +181,22 @@ public class SecurityService : ISecurityService
                 if (bytesRead >= 15)
                 {
                     string headerStr = Encoding.ASCII.GetString(header, 0, 15);
-                    if (!headerStr.StartsWith("SQLite format 3"))
-                    {
-                        // Already encrypted!
-                        return;
-                    }
+                    isPlaintext = headerStr.StartsWith("SQLite format 3");
+                }
+                else
+                {
+                    return; // File too small
                 }
             }
 
-            // It's unencrypted! Migrate to SQLCipher encrypted file.
+            if (!isPlaintext)
+            {
+                // Already encrypted — nothing to do
+                return;
+            }
+
+            // ─── Migrate plain → encrypted ──────────────────────────────────
+            // Strategy: Open plain DB, attach a NEW encrypted DB, export, swap files.
             string tempEncryptedPath = Path.Combine(
                 Path.GetDirectoryName(dbFilePath) ?? ".",
                 $"enc_temp_{Guid.NewGuid():N}.db");
@@ -196,17 +204,47 @@ public class SecurityService : ISecurityService
             if (File.Exists(tempEncryptedPath))
                 File.Delete(tempEncryptedPath);
 
-            // Connect to unencrypted database and export to encrypted database
-            using (var conn = new SqliteConnection($"Data Source={dbFilePath};"))
+            // Open the PLAIN (unencrypted) database
+            using (var plainConn = new SqliteConnection($"Data Source={dbFilePath};"))
             {
-                conn.Open();
-                using var cmd = conn.CreateCommand();
-                cmd.CommandText = $@"
-                    ATTACH DATABASE '{tempEncryptedPath}' AS encrypted KEY '{_activeDek}';
-                    SELECT sqlcipher_export('encrypted');
-                    DETACH DATABASE encrypted;
-                ";
-                cmd.ExecuteNonQuery();
+                plainConn.Open();
+
+                // Attach a new encrypted database with the DEK as key
+                // The key must be a hex string prefixed with "x'" for raw key mode
+                using (var attachCmd = plainConn.CreateCommand())
+                {
+                    attachCmd.CommandText = $"ATTACH DATABASE @encPath AS encrypted KEY @key;";
+                    attachCmd.Parameters.AddWithValue("@encPath", tempEncryptedPath);
+                    attachCmd.Parameters.AddWithValue("@key", _activeDek);
+                    attachCmd.ExecuteNonQuery();
+                }
+
+                // Export all data from main to encrypted
+                using (var exportCmd = plainConn.CreateCommand())
+                {
+                    exportCmd.CommandText = "SELECT sqlcipher_export('encrypted');";
+                    exportCmd.ExecuteNonQuery();
+                }
+
+                // Detach
+                using (var detachCmd = plainConn.CreateCommand())
+                {
+                    detachCmd.CommandText = "DETACH DATABASE encrypted;";
+                    detachCmd.ExecuteNonQuery();
+                }
+            }
+
+            // Verify the encrypted file can be opened with the DEK
+            using (var verifyConn = new SqliteConnection($"Data Source={tempEncryptedPath};Password={_activeDek};"))
+            {
+                verifyConn.Open();
+                using var verifyCmd = verifyConn.CreateCommand();
+                verifyCmd.CommandText = "SELECT count(*) FROM sqlite_master;";
+                var result = verifyCmd.ExecuteScalar();
+                if (result == null || Convert.ToInt32(result) < 0)
+                {
+                    throw new InvalidOperationException("Encrypted DB verification failed.");
+                }
             }
 
             // Create a safety backup of the original unencrypted DB before replacing
@@ -219,18 +257,45 @@ public class SecurityService : ISecurityService
         }
         catch (Exception ex)
         {
-            // If migration fails (e.g., in testing environment), log and keep going safely
-            System.Diagnostics.Debug.WriteLine($"DB Encryption check note: {ex.Message}");
+            // If migration fails, log and keep going with unencrypted DB
+            System.Diagnostics.Debug.WriteLine($"DB Encryption migration note: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Stack: {ex.StackTrace}");
         }
     }
 
     public string GetConnectionString(string dbFilePath)
     {
-        if (!string.IsNullOrEmpty(_activeDek))
+        if (!string.IsNullOrEmpty(_activeDek) && IsFileEncrypted(dbFilePath))
         {
             return $"Data Source={dbFilePath};Password={_activeDek};";
         }
 
         return $"Data Source={dbFilePath};";
+    }
+
+    /// <summary>
+    /// Checks whether a database file is encrypted by reading its header.
+    /// SQLite databases start with "SQLite format 3\0"; encrypted ones do not.
+    /// </summary>
+    private static bool IsFileEncrypted(string dbFilePath)
+    {
+        if (!File.Exists(dbFilePath))
+            return true; // New DB — will be created encrypted by EF Core with Password=
+
+        try
+        {
+            using var fs = new FileStream(dbFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            if (fs.Length < 16)
+                return false;
+
+            byte[] header = new byte[16];
+            fs.ReadExactly(header, 0, 16);
+            string headerStr = Encoding.ASCII.GetString(header, 0, 15);
+            return !headerStr.StartsWith("SQLite format 3");
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

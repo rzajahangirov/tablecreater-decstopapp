@@ -3,7 +3,6 @@ using System.Windows;
 using System.Windows.Threading;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using SQLitePCL;
 using TableCreater.WPF.Data;
 using TableCreater.WPF.Services;
 using TableCreater.WPF.ViewModels;
@@ -38,8 +37,10 @@ public partial class App : Application
 
     public App()
     {
-        // Initialize SQLCipher provider before anything else
-        Batteries_V2.Init();
+        // Initialize SQLCipher provider EXPLICITLY before anything else.
+        // We must use the e_sqlcipher provider (not the default e_sqlite3)
+        // to support encrypted databases.
+        SQLitePCL.raw.SetProvider(new SQLitePCL.SQLite3Provider_e_sqlcipher());
 
         // Create security service (reads/creates security.json)
         Security = new SecurityService();
@@ -65,15 +66,10 @@ public partial class App : Application
         }
 
         // ─── Step 2: Encrypt DB if still plain ──────────────────────
-        try
-        {
-            Security.EnsureDatabaseEncrypted(DbFilePath);
-        }
-        catch (Exception ex)
-        {
-            ShowFatalError("Baza Şifrələmə Xətası", ex.Message);
-            return;
-        }
+        // This is non-fatal: if encryption migration fails, the app
+        // continues with the unencrypted DB. The method has its own
+        // internal error handling and logging.
+        Security.EnsureDatabaseEncrypted(DbFilePath);
 
         // ─── Step 3: Build DI container with encrypted connection ────
         Services = ConfigureServices();
