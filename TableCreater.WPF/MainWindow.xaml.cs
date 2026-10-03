@@ -62,8 +62,11 @@ public partial class MainWindow
 
     private void BtnNavSettings_Click(object sender, RoutedEventArgs e)
     {
-        TxtPageTitle.Text = "Settings & About";
-        PageContent.Content = new SettingsPage();
+        TxtPageTitle.Text = "Tənzimləmələr və Haqqında";
+        var vm = App.Services.GetRequiredService<SettingsViewModel>();
+        var page = new SettingsPage { DataContext = vm };
+        PageContent.Content = page;
+        vm.LoadSettingsCommand.Execute(null);
     }
 
     private void BtnLogout_Click(object sender, RoutedEventArgs e)

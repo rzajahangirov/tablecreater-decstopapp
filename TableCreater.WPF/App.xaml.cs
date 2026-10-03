@@ -123,6 +123,7 @@ public partial class App : Application
         services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<ITransactionService, TransactionService>();
         services.AddScoped<IExcelService, ExcelService>();
+        services.AddSingleton<IBackupService, BackupService>();
 
         // ─── ViewModels ──────────────────────────────────────────────
         services.AddTransient<MainViewModel>();
@@ -131,6 +132,7 @@ public partial class App : Application
         services.AddTransient<ReportsViewModel>();
         services.AddTransient<CustomerDetailsViewModel>();
         services.AddTransient<TransactionDetailViewModel>();
+        services.AddTransient<SettingsViewModel>();
 
         return services.BuildServiceProvider();
     }
