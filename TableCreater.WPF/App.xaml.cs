@@ -91,6 +91,7 @@ public partial class App : Application
         services.AddTransient<TransactionEntryViewModel>();
         services.AddTransient<ReportsViewModel>();
         services.AddTransient<CustomerDetailsViewModel>();
+        services.AddTransient<TransactionDetailViewModel>();
 
         return services.BuildServiceProvider();
     }

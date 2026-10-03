@@ -127,6 +127,20 @@ public partial class MainWindow
         vm.LoadForEditCommand.Execute(transactionId);
     }
 
+    public void NavigateToTransactionDetail(long transactionId, long customerId)
+    {
+        TxtPageTitle.Text = "Tranzaksiya Detalları";
+
+        var vm = App.Services.GetRequiredService<TransactionDetailViewModel>();
+        vm.TransactionId = transactionId;
+        vm.CustomerId = customerId;
+
+        var page = new TransactionDetailPage { DataContext = vm };
+        PageContent.Content = page;
+
+        vm.LoadDataCommand.Execute(null);
+    }
+
     private void NavigateToReports()
     {
         TxtPageTitle.Text = "Hesabatlar";

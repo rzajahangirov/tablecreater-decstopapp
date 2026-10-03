@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using TableCreater.WPF.Models;
 using TableCreater.WPF.ViewModels;
 
@@ -98,6 +99,18 @@ public partial class CustomerDetailsPage : UserControl
         if (sender is Button btn && btn.Tag is string documentPath)
         {
             ViewModel?.OpenDocumentCommand.Execute(documentPath);
+        }
+    }
+
+    /// <summary>
+    /// Navigate to TransactionDetailPage on double-click.
+    /// </summary>
+    private void TransactionGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is DataGrid grid && grid.SelectedItem is TransactionReadResponse tx)
+        {
+            var mainWindow = Window.GetWindow(this) as MainWindow;
+            mainWindow?.NavigateToTransactionDetail(tx.Id, tx.CustomerId);
         }
     }
 }

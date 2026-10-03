@@ -290,7 +290,8 @@
                               Background="Transparent"
                               HorizontalScrollBarVisibility="Auto"
                               CanUserResizeColumns="True"
-                              CanUserSortColumns="True">
+                              CanUserSortColumns="True"
+                              MouseDoubleClick="TransactionGrid_MouseDoubleClick">
 
                         <DataGrid.Resources>
                             <Style TargetType="DataGridColumnHeader">
