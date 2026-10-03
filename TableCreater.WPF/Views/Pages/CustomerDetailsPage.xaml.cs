@@ -134,4 +134,16 @@ public partial class CustomerDetailsPage : UserControl
             mainWindow?.NavigateToTransactionDetail(tx.Id, tx.CustomerId);
         }
     }
+
+    /// <summary>
+    /// Smooth mouse wheel scrolling for the customer details page.
+    /// </summary>
+    private void MainScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (sender is ScrollViewer scv)
+        {
+            scv.ScrollToVerticalOffset(scv.VerticalOffset - (e.Delta * 0.75));
+            e.Handled = true;
+        }
+    }
 }
