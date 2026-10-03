@@ -123,6 +123,40 @@ public class Transaction
     public string? AdditionalExpenseDescription { get; set; }
 
     /// <summary>
+    /// Ödəniş statusu: Paid (Ödənilib) və ya Unpaid (Ödənilməyib).
+    /// </summary>
+    public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Paid;
+
+    /// <summary>
+    /// İstifadəçinin / şirkətin ton başına qazancı (məsələn, 15 USD/ton və ya 1200 RUB/ton).
+    /// </summary>
+    public decimal ProfitPerTon { get; set; } = 0m;
+
+    /// <summary>
+    /// Ton başına qazancın valyutası (USD / RUB).
+    /// </summary>
+    public PaymentCurrency ProfitPerTonCurrency { get; set; } = PaymentCurrency.Usd;
+
+    /// <summary>
+    /// CALCULATED: Şirkətin cəmi qazancı (USD), persist anında hesablanır.
+    /// Formula: WeightTon * ProfitPerTon (USD)
+    /// </summary>
+    public decimal HistoricalUserProfitUsd { get; set; }
+
+    /// <summary>
+    /// CALCULATED: Müştəriyə çıxarılan cəmi hesab (USD).
+    /// Formula: HistoricalTotalExpenseUsd + HistoricalUserProfitUsd
+    /// </summary>
+    public decimal HistoricalCustomerBilledUsd { get; set; }
+
+    /// <summary>
+    /// CALCULATED: Bu tranzaksiyanın müştərinin əsas balansına olan xalis təsiri (USD).
+    /// Formula: (PaidInUsd) - (HistoricalCustomerBilledUsd)
+    /// Müsbət = müştəri artıq ödəyib (balans artır), Mənfi = borclanır (balans azalır).
+    /// </summary>
+    public decimal HistoricalBalanceDeltaUsd { get; set; }
+
+    /// <summary>
     /// CALCULATED: Total cost in USD (goods + transport + additional expenses), computed at persist time.
     /// Formula: GoodsCostUsd + TransportCostUsd + AdditionalExpenseUsd
     /// </summary>
@@ -131,7 +165,6 @@ public class Transaction
     /// <summary>
     /// CALCULATED: Remaining debt in USD, computed at persist time.
     /// Formula: PaidInUsd - HistoricalTotalExpenseUsd
-    /// Negative = debt to supplier, Positive = overpayment.
     /// </summary>
     public decimal HistoricalRemainingDebtUsd { get; set; }
 

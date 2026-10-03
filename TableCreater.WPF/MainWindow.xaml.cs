@@ -27,7 +27,7 @@ public partial class MainWindow
         Loaded += MainWindow_Loaded;
     }
 
-    private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    private void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         // Set user info in the sidebar
         var user = App.Services.GetRequiredService<IAuthService>().GetCurrentUser();

@@ -24,6 +24,11 @@
             <converters:ShipmentStatusToGlyphConverter x:Key="ShipmentStatusToGlyphConverter"/>
             <converters:EnumEqualsToVisibilityConverter x:Key="EnumEqualsToVisConverter"/>
             <converters:EnumEqualsToBoolConverter x:Key="EnumEqualsToBoolConverter"/>
+            <converters:PaymentStatusToTextConverter x:Key="PaymentStatusToTextConverter"/>
+            <converters:PaymentStatusToBackgroundConverter x:Key="PaymentStatusToBgConverter"/>
+            <converters:PaymentStatusToForegroundConverter x:Key="PaymentStatusToFgConverter"/>
+            <converters:BalanceTypeToTextConverter x:Key="BalanceTypeToTextConverter"/>
+            <converters:BalanceTypeToColorConverter x:Key="BalanceTypeToColorConverter"/>
 
             <!-- Status Card RadioButton Style (Unified for Dialog and Entry Page) -->
             <Style x:Key="StatusCardRadioButtonStyle" TargetType="RadioButton">

@@ -53,6 +53,17 @@ public partial class CustomerListViewModel : ObservableObject
     [ObservableProperty]
     private bool _isEditMode;
 
+    [ObservableProperty]
+    private decimal _dialogInitialBalance;
+
+    [ObservableProperty]
+    private PaymentCurrency _dialogInitialBalanceCurrency = PaymentCurrency.Usd;
+
+    [ObservableProperty]
+    private decimal _dialogInitialBalanceExchangeRate = 1.0m;
+
+    public PaymentCurrency[] PaymentCurrencies => Enum.GetValues<PaymentCurrency>();
+
     // =========================================================================
     // COMMANDS
     // =========================================================================
@@ -117,6 +128,9 @@ public partial class CustomerListViewModel : ObservableObject
     {
         DialogName = string.Empty;
         DialogPhone = string.Empty;
+        DialogInitialBalance = 0;
+        DialogInitialBalanceCurrency = PaymentCurrency.Usd;
+        DialogInitialBalanceExchangeRate = 1.0m;
         IsEditMode = false;
         IsDialogOpen = true;
     }
@@ -162,7 +176,10 @@ public partial class CustomerListViewModel : ObservableObject
                     new CustomerCreateRequest
                     {
                         Name = DialogName,
-                        Phone = DialogPhone
+                        Phone = DialogPhone,
+                        InitialBalance = DialogInitialBalance != 0 ? DialogInitialBalance : null,
+                        InitialBalanceCurrency = DialogInitialBalanceCurrency,
+                        InitialExchangeRate = DialogInitialBalanceExchangeRate > 0 ? DialogInitialBalanceExchangeRate : 1.0m
                     });
             }
 

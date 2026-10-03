@@ -151,7 +151,7 @@
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
-                    <DataGridTextColumn Header="Telefon" Binding="{Binding Phone}" Width="250">
+                    <DataGridTextColumn Header="Telefon" Binding="{Binding Phone}" Width="200">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Padding" Value="16,0"/>
@@ -159,6 +159,18 @@
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
+
+                    <DataGridTemplateColumn Header="Balans (USD)" Width="160">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding BalanceUsd, StringFormat='${0:N2}'}"
+                                           Foreground="{Binding BalanceUsd, Converter={StaticResource ProfitLossToColorConverter}}"
+                                           FontWeight="Bold"
+                                           Padding="16,0"
+                                           VerticalAlignment="Center"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                 </DataGrid.Columns>
             </DataGrid>
         </Border>
@@ -218,9 +230,50 @@
 
                     <TextBlock Text="Telefon" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
                     <TextBox Text="{Binding DialogPhone, UpdateSourceTrigger=PropertyChanged}"
-                             FontSize="14" Padding="12" Margin="0,0,0,32"
+                             FontSize="14" Padding="12" Margin="0,0,0,20"
                              BorderBrush="#D1D1D1"
                              ui:ControlHelper.PlaceholderText="Məs: +994 50 123 45 67"/>
+
+                    <!-- Initial Balance (Shown only on Create) -->
+                    <StackPanel Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}" Margin="0,0,0,24">
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="130"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                <TextBlock Text="İlkin Balans (istəyə bağlı)" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                                <ui:NumberBox Value="{Binding DialogInitialBalance, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                              SpinButtonPlacementMode="Compact"
+                                              Minimum="0"
+                                              HorizontalAlignment="Stretch" Padding="8,6"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="Valyuta" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                                <ComboBox ItemsSource="{Binding PaymentCurrencies}"
+                                          SelectedItem="{Binding DialogInitialBalanceCurrency, Mode=TwoWay}"
+                                          HorizontalAlignment="Stretch"
+                                          FontSize="14" Padding="10,8"
+                                          BorderBrush="#D1D1D1">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Converter={StaticResource EnumToUpperConverter}}"/>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+                        </Grid>
+
+                        <StackPanel Visibility="{Binding DialogInitialBalanceCurrency, Converter={StaticResource EnumEqualsToVisConverter}, ConverterParameter=Rub}">
+                            <TextBlock Text="RUB / USD Məzənnəsi (1 RUB = ? USD)" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,6" Foreground="#555"/>
+                            <ui:NumberBox Value="{Binding DialogInitialBalanceExchangeRate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          SpinButtonPlacementMode="Compact"
+                                          Minimum="0"
+                                          HorizontalAlignment="Stretch" Padding="8,6"/>
+                        </StackPanel>
+                    </StackPanel>
 
                     <Grid>
                         <Grid.ColumnDefinitions>

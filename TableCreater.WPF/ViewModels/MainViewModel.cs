@@ -56,7 +56,7 @@ public partial class MainViewModel : ObservableObject
     /// Called when the main window loads. Sets up the initial page and user info.
     /// </summary>
     [RelayCommand]
-    private async Task InitializeAsync()
+    private void Initialize()
     {
         CurrentUser = _authService.GetCurrentUser();
         NavigateToCustomers();

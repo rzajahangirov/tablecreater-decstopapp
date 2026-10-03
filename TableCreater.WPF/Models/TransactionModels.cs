@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using TableCreater.WPF.Enums;
+using TableCreater.WPF.Data.Entities;
 
 namespace TableCreater.WPF.Models;
 
@@ -82,6 +83,24 @@ public record TransactionCreateRequest
     /// </summary>
     public string? DocumentFilePath { get; init; }
 
+    // === Ödəniş Statusu və Ton Başına Qazanc ===
+
+    /// <summary>
+    /// Ödəniş statusu: Paid (Ödənilib) və ya Unpaid (Ödənilməyib).
+    /// </summary>
+    public PaymentStatus PaymentStatus { get; init; } = PaymentStatus.Paid;
+
+    /// <summary>
+    /// Şirkətin ton başına qazancı.
+    /// </summary>
+    [Range(0, (double)decimal.MaxValue, ErrorMessage = "Ton başına qazanc mənfi ola bilməz")]
+    public decimal ProfitPerTon { get; init; }
+
+    /// <summary>
+    /// Ton başına qazancın valyutası (USD / RUB).
+    /// </summary>
+    public PaymentCurrency ProfitPerTonCurrency { get; init; } = PaymentCurrency.Usd;
+
     // === Göndərmə Statusu və Tarixlər ===
     public ShipmentStatus ShipmentStatus { get; init; } = ShipmentStatus.Pending;
     public DateOnly? LoadedDate { get; init; }
@@ -143,6 +162,21 @@ public record TransactionReadResponse
     public decimal HistoricalRemainingDebtUsd { get; init; }
     public decimal PaidInUsd { get; init; }
     public bool IsCompleted { get; init; }
+
+    // === Ödəniş Statusu və Qazanc ===
+    public PaymentStatus PaymentStatus { get; init; }
+    public decimal ProfitPerTon { get; init; }
+    public PaymentCurrency ProfitPerTonCurrency { get; init; }
+    public decimal HistoricalUserProfitUsd { get; init; }
+    public decimal HistoricalCustomerBilledUsd { get; init; }
+    public decimal HistoricalBalanceDeltaUsd { get; init; }
+
+    public string PaymentStatusDisplay => PaymentStatus switch
+    {
+        PaymentStatus.Paid => "Ödənilib",
+        PaymentStatus.Unpaid => "Ödənilməyib",
+        _ => PaymentStatus.ToString()
+    };
 
     // === Göndərmə Statusu və Tarixlər ===
     public ShipmentStatus ShipmentStatus { get; init; } = ShipmentStatus.Pending;
@@ -212,6 +246,11 @@ public record TransactionEditFormData
     public decimal HistoricalExchangeRate { get; init; }
     public string? DocumentImageUrl { get; init; }
     public bool IsCompleted { get; init; }
+
+    // === Ödəniş Statusu və Qazanc ===
+    public PaymentStatus PaymentStatus { get; init; } = PaymentStatus.Paid;
+    public decimal ProfitPerTon { get; init; }
+    public PaymentCurrency ProfitPerTonCurrency { get; init; } = PaymentCurrency.Usd;
 
     // === Göndərmə Statusu və Tarixlər ===
     public ShipmentStatus ShipmentStatus { get; init; } = ShipmentStatus.Pending;

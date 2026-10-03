@@ -13,7 +13,10 @@ public class BoolToVisibilityConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        return value is true ? Visibility.Visible : Visibility.Collapsed;
+        bool b = value is true;
+        if (parameter is string paramStr && string.Equals(paramStr, "Inverse", StringComparison.OrdinalIgnoreCase))
+            b = !b;
+        return b ? Visibility.Visible : Visibility.Collapsed;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
@@ -267,3 +270,128 @@ public class EnumEqualsToBoolConverter : IValueConverter
         return System.Windows.Data.Binding.DoNothing;
     }
 }
+
+/// <summary>
+/// Converts PaymentStatus to friendly Azerbaijani text.
+/// Paid → "Ödənilib", Unpaid → "Ödənilməyib"
+/// </summary>
+public class PaymentStatusToTextConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is PaymentStatus status)
+        {
+            return status == PaymentStatus.Paid ? "Ödənilib" : "Ödənilməyib";
+        }
+        return value?.ToString() ?? string.Empty;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts PaymentStatus to a background brush.
+/// Paid → Light green, Unpaid → Light red.
+/// </summary>
+public class PaymentStatusToBackgroundConverter : IValueConverter
+{
+    private static readonly System.Windows.Media.Brush PaidBg = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(232, 245, 233));
+    private static readonly System.Windows.Media.Brush UnpaidBg = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 235, 238));
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is PaymentStatus status)
+        {
+            return status == PaymentStatus.Paid ? PaidBg : UnpaidBg;
+        }
+        return PaidBg;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts PaymentStatus to a foreground brush.
+/// Paid → Dark green, Unpaid → Crimson.
+/// </summary>
+public class PaymentStatusToForegroundConverter : IValueConverter
+{
+    private static readonly System.Windows.Media.Brush PaidFg = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(46, 125, 50));
+    private static readonly System.Windows.Media.Brush UnpaidFg = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(198, 40, 40));
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is PaymentStatus status)
+        {
+            return status == PaymentStatus.Paid ? PaidFg : UnpaidFg;
+        }
+        return PaidFg;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts BalanceTransactionType to friendly Azerbaijani text.
+/// </summary>
+public class BalanceTypeToTextConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is BalanceTransactionType type)
+        {
+            return type switch
+            {
+                BalanceTransactionType.Initial => "İlkin Balans",
+                BalanceTransactionType.TransactionCharge => "Tranzaksiya Xərci",
+                BalanceTransactionType.TransactionUpdate => "Tranzaksiya Düzəlişi",
+                BalanceTransactionType.TransactionRollback => "Tranzaksiya Ləğvi",
+                BalanceTransactionType.ManualDeposit => "Mədaxil (Artırma)",
+                BalanceTransactionType.ManualWithdrawal => "Məxaric (Çıxarış)",
+                BalanceTransactionType.Adjustment => "Düzəliş",
+                _ => type.ToString()
+            };
+        }
+        return value?.ToString() ?? string.Empty;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts BalanceTransactionType to color brush.
+/// </summary>
+public class BalanceTypeToColorConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is BalanceTransactionType type)
+        {
+            return type switch
+            {
+                BalanceTransactionType.ManualDeposit or BalanceTransactionType.Initial => System.Windows.Media.Brushes.DarkGreen,
+                BalanceTransactionType.ManualWithdrawal or BalanceTransactionType.TransactionCharge => System.Windows.Media.Brushes.Crimson,
+                _ => System.Windows.Media.Brushes.SteelBlue
+            };
+        }
+        return System.Windows.Media.Brushes.Black;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+

@@ -29,15 +29,40 @@ public class CustomerService : ICustomerService
     /// <inheritdoc />
     public async Task<CustomerReadResponse> CreateCustomer(CustomerCreateRequest request)
     {
+        // Convert initial balance to USD if provided
+        decimal initialBalanceUsd = 0m;
+        if (request.InitialBalance.HasValue && request.InitialBalance.Value != 0)
+        {
+            initialBalanceUsd = request.InitialBalanceCurrency == PaymentCurrency.Rub
+                ? request.InitialBalance.Value * request.InitialExchangeRate
+                : request.InitialBalance.Value;
+        }
+
         var entity = new Customer
         {
             Name = request.Name,
             Phone = request.Phone,
-            Type = CustomerType.Active  // Default per spec
+            Type = CustomerType.Active,
+            BalanceUsd = initialBalanceUsd
         };
 
         _db.Customers.Add(entity);
         await _db.SaveChangesAsync();
+
+        // Record initial balance in ledger if non-zero
+        if (initialBalanceUsd != 0)
+        {
+            _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
+            {
+                CustomerId = entity.Id,
+                CreatedAt = DateTime.UtcNow,
+                Type = BalanceTransactionType.Initial,
+                AmountUsd = initialBalanceUsd,
+                BalanceAfterUsd = initialBalanceUsd,
+                Description = $"İlkin balans təyinatı: {request.InitialBalance.GetValueOrDefault()} {request.InitialBalanceCurrency}"
+            });
+            await _db.SaveChangesAsync();
+        }
 
         return MapToReadResponse(entity);
     }
@@ -164,7 +189,103 @@ public class CustomerService : ICustomerService
         {
             Id = entity.Id,
             Name = entity.Name,
-            Phone = entity.Phone ?? string.Empty
+            Phone = entity.Phone ?? string.Empty,
+            BalanceUsd = entity.BalanceUsd
         };
+    }
+
+    // =========================================================================
+    // C8 — BALANCE ADJUSTMENT (Manual Deposit / Withdrawal / Direct Set)
+    // =========================================================================
+
+    /// <inheritdoc />
+    public async Task<CustomerReadResponse> AdjustBalance(long id, CustomerBalanceAdjustmentRequest request)
+    {
+        var entity = await _db.Customers.FindAsync(id)
+            ?? throw new InvalidOperationException("Customer not found");
+
+        // Convert amount to USD
+        decimal amountUsd = request.Currency == PaymentCurrency.Rub
+            ? request.Amount * request.ExchangeRate
+            : request.Amount;
+
+        decimal delta;
+        switch (request.Type)
+        {
+            case BalanceTransactionType.ManualDeposit:
+                delta = amountUsd;
+                break;
+            case BalanceTransactionType.ManualWithdrawal:
+                delta = -amountUsd;
+                break;
+            case BalanceTransactionType.Adjustment:
+                // Direct set: delta is the difference between new and old balance
+                delta = amountUsd - entity.BalanceUsd;
+                break;
+            default:
+                throw new ArgumentException($"Unsupported balance operation type: {request.Type}");
+        }
+
+        entity.BalanceUsd += delta;
+
+        _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
+        {
+            CustomerId = entity.Id,
+            CreatedAt = DateTime.UtcNow,
+            Type = request.Type,
+            AmountUsd = delta,
+            BalanceAfterUsd = entity.BalanceUsd,
+            Description = request.Description ?? request.Type.ToString()
+        });
+
+        await _db.SaveChangesAsync();
+
+        return MapToReadResponse(entity);
+    }
+
+    // =========================================================================
+    // C9 — GET BALANCE HISTORY
+    // =========================================================================
+
+    /// <inheritdoc />
+    public async Task<List<CustomerBalanceHistoryResponse>> GetBalanceHistory(long customerId)
+    {
+        var histories = await _db.Set<CustomerBalanceHistory>()
+            .Include(h => h.Transaction)
+            .Where(h => h.CustomerId == customerId)
+            .OrderByDescending(h => h.CreatedAt)
+            .ToListAsync();
+
+        return histories.Select(h =>
+        {
+            decimal? paidUsd = null;
+            if (h.Transaction != null)
+            {
+                if (h.Transaction.PaymentStatus == PaymentStatus.Unpaid)
+                {
+                    paidUsd = 0m;
+                }
+                else
+                {
+                    decimal rawPaid = h.Transaction.PaidAmount ?? 0m;
+                    paidUsd = h.Transaction.PaidCurrency == PaymentCurrency.Rub
+                        ? rawPaid * h.Transaction.HistoricalExchangeRate
+                        : rawPaid;
+                }
+            }
+
+            return new CustomerBalanceHistoryResponse
+            {
+                Id = h.Id,
+                CustomerId = h.CustomerId,
+                TransactionId = h.TransactionId,
+                CreatedAt = h.CreatedAt,
+                Type = h.Type,
+                AmountUsd = h.AmountUsd,
+                BalanceAfterUsd = h.BalanceAfterUsd,
+                Description = h.Description,
+                TransactionPaidAmountUsd = paidUsd
+            };
+        }).ToList();
     }
 }

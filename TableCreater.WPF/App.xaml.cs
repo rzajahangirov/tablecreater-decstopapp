@@ -167,7 +167,26 @@ public partial class App : Application
             "ALTER TABLE Transactions ADD COLUMN InTransitStartDate TEXT;",
             "ALTER TABLE Transactions ADD COLUMN InTransitEndDate TEXT;",
             "ALTER TABLE Transactions ADD COLUMN DeliveredDate TEXT;",
-            "ALTER TABLE Transactions ADD COLUMN IsInTransitAutoDates INTEGER NOT NULL DEFAULT 1;"
+            "ALTER TABLE Transactions ADD COLUMN IsInTransitAutoDates INTEGER NOT NULL DEFAULT 1;",
+            "ALTER TABLE Customers ADD COLUMN BalanceUsd REAL NOT NULL DEFAULT 0;",
+            "ALTER TABLE Transactions ADD COLUMN PaymentStatus TEXT NOT NULL DEFAULT 'Paid';",
+            "ALTER TABLE Transactions ADD COLUMN ProfitPerTon REAL NOT NULL DEFAULT 0;",
+            "ALTER TABLE Transactions ADD COLUMN ProfitPerTonCurrency TEXT NOT NULL DEFAULT 'Usd';",
+            "ALTER TABLE Transactions ADD COLUMN HistoricalUserProfitUsd REAL NOT NULL DEFAULT 0;",
+            "ALTER TABLE Transactions ADD COLUMN HistoricalCustomerBilledUsd REAL NOT NULL DEFAULT 0;",
+            "ALTER TABLE Transactions ADD COLUMN HistoricalBalanceDeltaUsd REAL NOT NULL DEFAULT 0;",
+            @"CREATE TABLE IF NOT EXISTS CustomerBalanceHistories (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                CustomerId INTEGER NOT NULL,
+                TransactionId INTEGER,
+                CreatedAt TEXT NOT NULL,
+                Type TEXT NOT NULL,
+                AmountUsd REAL NOT NULL,
+                BalanceAfterUsd REAL NOT NULL,
+                Description TEXT,
+                FOREIGN KEY (CustomerId) REFERENCES Customers(Id) ON DELETE CASCADE,
+                FOREIGN KEY (TransactionId) REFERENCES Transactions(Id) ON DELETE SET NULL
+            );"
         ];
 
         foreach (var sql in migrationQueries)

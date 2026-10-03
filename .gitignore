@@ -1,4 +1,5 @@
-# SQLite temporary files
+# SQLite database and temporary files
+*.db
 *.db-shm
 *.db-wal
 

@@ -103,6 +103,21 @@ public partial class TransactionEntryViewModel : ObservableObject
     private string _additionalExpenseDescription = string.Empty;
 
     // =========================================================================
+    // ÖDƏNİŞ STATUSU VƏ TON BAŞINA QAZANC
+    // =========================================================================
+
+    [ObservableProperty]
+    private PaymentStatus _paymentStatus = PaymentStatus.Paid;
+
+    [ObservableProperty]
+    private decimal _profitPerTon;
+
+    [ObservableProperty]
+    private PaymentCurrency _profitPerTonCurrency = PaymentCurrency.Usd;
+
+    public PaymentStatus[] PaymentStatuses => Enum.GetValues<PaymentStatus>();
+
+    // =========================================================================
     // GÖNDƏRMƏ STATUSU VƏ TARİXLƏR (Shipment Tracking)
     // =========================================================================
 
@@ -167,6 +182,15 @@ public partial class TransactionEntryViewModel : ObservableObject
     [ObservableProperty]
     private decimal _liveRemainingDebtUsd;
 
+    [ObservableProperty]
+    private decimal _liveUserProfitUsd;
+
+    [ObservableProperty]
+    private decimal _liveCustomerBilledUsd;
+
+    [ObservableProperty]
+    private decimal _liveBalanceDeltaUsd;
+
     /// <summary>
     /// Friendly text: "Gəlir" (positive), "Zərər" (negative), or "Balans" (zero).
     /// </summary>
@@ -227,6 +251,9 @@ public partial class TransactionEntryViewModel : ObservableObject
     partial void OnPaidAmountChanged(decimal value) => Recalculate();
     partial void OnHistoricalExchangeRateChanged(decimal value) => Recalculate();
     partial void OnAdditionalExpenseAmountChanged(decimal value) => Recalculate();
+    partial void OnPaymentStatusChanged(PaymentStatus value) => Recalculate();
+    partial void OnProfitPerTonChanged(decimal value) => Recalculate();
+    partial void OnProfitPerTonCurrencyChanged(PaymentCurrency value) => Recalculate();
     partial void OnAdditionalExpenseCurrencyChanged(PaymentCurrency value) => Recalculate();
 
     // =========================================================================
@@ -266,18 +293,37 @@ public partial class TransactionEntryViewModel : ObservableObject
             ? PaidAmount * rate              // RUB → USD
             : PaidAmount;                    // Already USD
 
-        // Step 8: Gəlir (Profit / Benefit)
+        // Step 8: Remaining Debt
         LiveRemainingDebtUsd = LivePaidInUsd - LiveTotalExpenseUsd;
 
-        // Update status indicator
-        if (LiveRemainingDebtUsd < 0)
+        // Step 9: User Profit (ton başına qazanc)
+        decimal profitPerTonUsd = ProfitPerTonCurrency == PaymentCurrency.Rub
+            ? ProfitPerTon * rate
+            : ProfitPerTon;
+        LiveUserProfitUsd = WeightTon * profitPerTonUsd;
+
+        // Step 10: Customer Billed
+        LiveCustomerBilledUsd = LiveTotalExpenseUsd + LiveUserProfitUsd;
+
+        // Step 11: Balance Delta
+        if (PaymentStatus == PaymentStatus.Unpaid)
         {
-            DebtStatusText = "Zərər";
+            LiveBalanceDeltaUsd = -LiveCustomerBilledUsd;
+        }
+        else
+        {
+            LiveBalanceDeltaUsd = LivePaidInUsd - LiveCustomerBilledUsd;
+        }
+
+        // Update status indicator
+        if (LiveBalanceDeltaUsd < 0)
+        {
+            DebtStatusText = "Borc";
             DebtStatusColor = "#C62828";  // Red
         }
-        else if (LiveRemainingDebtUsd > 0)
+        else if (LiveBalanceDeltaUsd > 0)
         {
-            DebtStatusText = "Gəlir";
+            DebtStatusText = "Avans";
             DebtStatusColor = "#2E7D32";  // Green
         }
         else
@@ -349,6 +395,11 @@ public partial class TransactionEntryViewModel : ObservableObject
             AdditionalExpenseAmount = data.AdditionalExpenseAmount ?? 0m;
             AdditionalExpenseCurrency = data.AdditionalExpenseCurrency ?? PaymentCurrency.Usd;
             AdditionalExpenseDescription = data.AdditionalExpenseDescription ?? string.Empty;
+
+            // Payment Status & Profit
+            PaymentStatus = data.PaymentStatus;
+            ProfitPerTon = data.ProfitPerTon;
+            ProfitPerTonCurrency = data.ProfitPerTonCurrency;
 
             // Shipment Tracking
             ShipmentStatus = data.ShipmentStatus;
@@ -445,6 +496,9 @@ public partial class TransactionEntryViewModel : ObservableObject
                     AdditionalExpenseCurrency = AdditionalExpenseAmount > 0 ? AdditionalExpenseCurrency : null,
                     AdditionalExpenseDescription = string.IsNullOrWhiteSpace(AdditionalExpenseDescription)
                         ? null : AdditionalExpenseDescription,
+                    PaymentStatus = PaymentStatus,
+                    ProfitPerTon = ProfitPerTon,
+                    ProfitPerTonCurrency = ProfitPerTonCurrency,
                     ShipmentStatus = ShipmentStatus,
                     LoadedDate = LoadedDate.HasValue ? DateOnly.FromDateTime(LoadedDate.Value) : null,
                     InTransitStartDate = InTransitStartDate.HasValue ? DateOnly.FromDateTime(InTransitStartDate.Value) : null,
@@ -484,6 +538,9 @@ public partial class TransactionEntryViewModel : ObservableObject
                     AdditionalExpenseCurrency = AdditionalExpenseAmount > 0 ? AdditionalExpenseCurrency : null,
                     AdditionalExpenseDescription = string.IsNullOrWhiteSpace(AdditionalExpenseDescription)
                         ? null : AdditionalExpenseDescription,
+                    PaymentStatus = PaymentStatus,
+                    ProfitPerTon = ProfitPerTon,
+                    ProfitPerTonCurrency = ProfitPerTonCurrency,
                     ShipmentStatus = ShipmentStatus,
                     LoadedDate = LoadedDate.HasValue ? DateOnly.FromDateTime(LoadedDate.Value) : null,
                     InTransitStartDate = InTransitStartDate.HasValue ? DateOnly.FromDateTime(InTransitStartDate.Value) : null,
@@ -557,6 +614,9 @@ public partial class TransactionEntryViewModel : ObservableObject
         AdditionalExpenseAmount = 0;
         AdditionalExpenseCurrency = PaymentCurrency.Usd;
         AdditionalExpenseDescription = string.Empty;
+        PaymentStatus = PaymentStatus.Paid;
+        ProfitPerTon = 0;
+        ProfitPerTonCurrency = PaymentCurrency.Usd;
         ShipmentStatus = ShipmentStatus.Pending;
         LoadedDate = null;
         InTransitStartDate = null;

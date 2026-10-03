@@ -204,39 +204,6 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- Section: Ödəniş -->
-                    <TextBlock Text="Ödəniş" FontSize="18" FontWeight="Bold" Margin="0,12,0,16" Foreground="#222"/>
-
-                    <Grid Margin="0,0,0,24">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                            <TextBlock Text="Ödəniş Valyutası" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
-                            <ComboBox ItemsSource="{Binding PaymentCurrencies}"
-                                      SelectedItem="{Binding PaidCurrency, Mode=TwoWay}"
-                                      HorizontalAlignment="Stretch"
-                                      FontSize="14" Padding="12,10"
-                                      BorderBrush="#D1D1D1">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding Converter={StaticResource EnumToUpperConverter}}"/>
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                            <TextBlock Text="Ödənilən Məbləğ" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
-                            <ui:NumberBox Value="{Binding PaidAmount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                          SpinButtonPlacementMode="Compact"
-                                          Minimum="0"
-                                          HorizontalAlignment="Stretch" Padding="8,6"/>
-                        </StackPanel>
-                    </Grid>
-
                     <!-- Section: Əlavə Xərclər -->
                     <TextBlock Text="Əlavə Xərclər" FontSize="18" FontWeight="Bold" Margin="0,12,0,16" Foreground="#222"/>
 
@@ -280,6 +247,128 @@
                                          TextWrapping="Wrap" MinHeight="50" AcceptsReturn="True"
                                          ui:ControlHelper.PlaceholderText="Məs: Gömrük rüsumu, sığorta xərci, anbar xərci..."/>
                             </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Section: Ton Başına Qazanc (İstifadəçi Gəliri) -->
+                    <TextBlock Text="Ton Başına Qazanc" FontSize="18" FontWeight="Bold" Margin="0,12,0,16" Foreground="#222"/>
+
+                    <Border Background="#F0FDF4" CornerRadius="8" Padding="20" Margin="0,0,0,24"
+                            BorderBrush="#BBF7D0" BorderThickness="1">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                    <TextBlock Text="Ton Başı Qazanc *" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#15803D"/>
+                                    <ui:NumberBox Value="{Binding ProfitPerTon, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                  SpinButtonPlacementMode="Compact"
+                                                  Minimum="0"
+                                                  HorizontalAlignment="Stretch" Padding="8,6"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Margin="10,0,10,0">
+                                    <TextBlock Text="Qazanc Valyutası" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#15803D"/>
+                                    <ComboBox ItemsSource="{Binding PaymentCurrencies}"
+                                              SelectedItem="{Binding ProfitPerTonCurrency, Mode=TwoWay}"
+                                              HorizontalAlignment="Stretch"
+                                              FontSize="14" Padding="12,10"
+                                              BorderBrush="#D1D1D1">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Converter={StaticResource EnumToUpperConverter}}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" Margin="10,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="Cəmi Qazancımız (USD)" FontSize="12" Foreground="#15803D" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                    <TextBlock Text="{Binding LiveUserProfitUsd, StringFormat='${0:N2}'}"
+                                               FontSize="20" FontWeight="Bold" Foreground="#15803D"/>
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="💡 Bu qazanc ümumi xərcin üzərinə əlavə olunaraq müştəriyə hesablanan yekun məbləği formalaşdırır."
+                                       FontSize="12" Foreground="#166534" Opacity="0.85"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Section: Ödəniş və Status -->
+                    <TextBlock Text="Ödəniş və Status" FontSize="18" FontWeight="Bold" Margin="0,12,0,16" Foreground="#222"/>
+
+                    <Border Background="#F9FAFB" CornerRadius="8" Padding="20" Margin="0,0,0,24"
+                            BorderBrush="#E5E7EB" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="Ödəniş Statusu *" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,10" Foreground="#555"/>
+                            <Grid Margin="0,0,0,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <RadioButton Grid.Column="0"
+                                             Style="{StaticResource StatusCardRadioButtonStyle}"
+                                             GroupName="PaymentStatusGroup"
+                                             Content="💳 Ödənilib"
+                                             Margin="0,0,8,0"
+                                             IsChecked="{Binding PaymentStatus, Converter={StaticResource EnumEqualsToBoolConverter}, ConverterParameter=Paid, Mode=TwoWay}"/>
+
+                                <RadioButton Grid.Column="1"
+                                             Style="{StaticResource StatusCardRadioButtonStyle}"
+                                             GroupName="PaymentStatusGroup"
+                                             Content="⏳ Ödənilməyib"
+                                             Margin="8,0,0,0"
+                                             IsChecked="{Binding PaymentStatus, Converter={StaticResource EnumEqualsToBoolConverter}, ConverterParameter=Unpaid, Mode=TwoWay}"/>
+                            </Grid>
+
+                            <!-- Ödənilməyib Note Panel -->
+                            <Border Background="#FFF1F2" BorderBrush="#FECDD3" BorderThickness="1"
+                                    CornerRadius="6" Padding="14,12" Margin="0,0,0,4"
+                                    Visibility="{Binding PaymentStatus, Converter={StaticResource EnumEqualsToVisConverter}, ConverterParameter=Unpaid}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="#BE123C" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Foreground="#BE123C" FontSize="13" VerticalAlignment="Center" TextWrapping="Wrap">
+                                        <Run Text="Ödəniş hələ edilməyib. Ümumi hesablanan məbləğ ("/>
+                                        <Run Text="{Binding LiveCustomerBilledUsd, StringFormat='${0:N2}', Mode=OneWay}" FontWeight="Bold"/>
+                                        <Run Text=") müştərinin balansından borc olaraq çıxılacaq."/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Ödənilib Inputs -->
+                            <Grid Visibility="{Binding PaymentStatus, Converter={StaticResource EnumEqualsToVisConverter}, ConverterParameter=Paid}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                    <TextBlock Text="Ödəniş Valyutası" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                                    <ComboBox ItemsSource="{Binding PaymentCurrencies}"
+                                              SelectedItem="{Binding PaidCurrency, Mode=TwoWay}"
+                                              HorizontalAlignment="Stretch"
+                                              FontSize="14" Padding="12,10"
+                                              BorderBrush="#D1D1D1">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Converter={StaticResource EnumToUpperConverter}}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                    <TextBlock Text="Ödənilən Məbləğ" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                                    <ui:NumberBox Value="{Binding PaidAmount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                  SpinButtonPlacementMode="Compact"
+                                                  Minimum="0"
+                                                  HorizontalAlignment="Stretch" Padding="8,6"/>
+                                </StackPanel>
+                            </Grid>
                         </StackPanel>
                     </Border>
 
@@ -523,46 +612,64 @@
                         <Separator Margin="0,0,0,20" Background="#E0E0E0"/>
 
                         <!-- Ümumi Xərc -->
-                        <Grid Margin="0,0,0,20">
-                            <TextBlock Text="ÜMUMİ XƏRC" FontSize="15" FontWeight="Bold" Foreground="#222"/>
-                            <TextBlock HorizontalAlignment="Right" FontSize="18" FontWeight="ExtraBold" Foreground="#E67E22"
+                        <Grid Margin="0,0,0,16">
+                            <TextBlock Text="ÜMUMİ XƏRC" FontSize="14" FontWeight="Bold" Foreground="#444"/>
+                            <TextBlock HorizontalAlignment="Right" FontSize="16" FontWeight="ExtraBold" Foreground="#E65100"
                                        Text="{Binding LiveTotalExpenseUsd, StringFormat='{}{0:N2} $'}"/>
+                        </Grid>
+
+                        <!-- Şirkət Qazancı (Ton Başına) -->
+                        <Grid Margin="0,0,0,16">
+                            <TextBlock Text="ŞİRKƏT QAZANCI" FontSize="14" FontWeight="Bold" Foreground="#15803D"/>
+                            <TextBlock HorizontalAlignment="Right" FontSize="16" FontWeight="ExtraBold" Foreground="#15803D"
+                                       Text="{Binding LiveUserProfitUsd, StringFormat='{}{0:N2} $'}"/>
+                        </Grid>
+
+                        <Separator Margin="0,0,0,16" Background="#E0E0E0"/>
+
+                        <!-- Müştəriyə Hesablanan Məbləğ -->
+                        <Grid Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="MÜŞTƏRİYƏ HESABLANAN" FontSize="13" FontWeight="Bold" Foreground="#1A237E"/>
+                                <TextBlock Text="(Xərc + Qazanc)" FontSize="10" Foreground="#888"/>
+                            </StackPanel>
+                            <TextBlock HorizontalAlignment="Right" FontSize="18" FontWeight="ExtraBold" Foreground="#1A237E"
+                                       Text="{Binding LiveCustomerBilledUsd, StringFormat='{}{0:N2} $'}"/>
                         </Grid>
 
                         <Separator Margin="0,0,0,20" Background="#E0E0E0"/>
 
-                        <!-- Ödəniş -->
-                        <TextBlock Text="ÖDƏNİŞ" FontSize="11" Foreground="#888" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <!-- Ödəniş Statusu və Məbləği -->
+                        <TextBlock Text="ÖDƏNİŞ MƏLUMATI" FontSize="11" Foreground="#888" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <Grid Margin="0,0,0,6">
+                            <TextBlock Text="Status" FontSize="14" Foreground="#444"/>
+                            <Border HorizontalAlignment="Right" CornerRadius="4" Padding="6,2"
+                                    Background="{Binding PaymentStatus, Converter={StaticResource PaymentStatusToBgConverter}}">
+                                <TextBlock Text="{Binding PaymentStatus, Converter={StaticResource PaymentStatusToTextConverter}}"
+                                           FontSize="12" FontWeight="Bold"
+                                           Foreground="{Binding PaymentStatus, Converter={StaticResource PaymentStatusToFgConverter}}"/>
+                            </Border>
+                        </Grid>
                         <Grid Margin="0,0,0,24">
-                            <TextBlock Text="Ödənilib (USD)" FontSize="14" Foreground="#444"/>
+                            <TextBlock Text="Faktiki Ödəniş (USD)" FontSize="14" Foreground="#444"/>
                             <TextBlock HorizontalAlignment="Right" FontSize="14" FontWeight="Bold" Foreground="#2E7D32"
                                        Text="{Binding LivePaidInUsd, StringFormat='{}{0:N2} $'}"/>
                         </Grid>
 
-                        <!-- Gəlir / Zərər Card -->
-                        <Border CornerRadius="8" Padding="20,16" Background="#FFFFFF" BorderBrush="#E0E0E0" BorderThickness="1">
+                        <!-- Müştəri Balansına Təsir (Balance Delta Card) -->
+                        <Border CornerRadius="8" Padding="16,14" Background="#FFFFFF" BorderBrush="#E0E0E0" BorderThickness="1">
                             <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="Müştəri Balansına Təsiri"
+                                           FontSize="12" FontWeight="SemiBold" Foreground="#666"
+                                           HorizontalAlignment="Center" Margin="0,0,0,4"/>
                                 <TextBlock Text="{Binding DebtStatusText}"
                                            FontSize="13" FontWeight="Bold"
-                                           HorizontalAlignment="Center" Margin="0,0,0,6"
-                                           Opacity="0.8"/>
-                                <TextBlock FontSize="32" FontWeight="ExtraBold"
+                                           HorizontalAlignment="Center" Margin="0,0,0,4"
+                                           Foreground="{Binding DebtStatusColor}"/>
+                                <TextBlock FontSize="28" FontWeight="ExtraBold"
                                            HorizontalAlignment="Center"
-                                           Text="{Binding LiveRemainingDebtUsd, StringFormat='{}{0:N2} $'}">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Foreground" Value="#888888"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding DebtStatusText}" Value="Zərər">
-                                                    <Setter Property="Foreground" Value="#C62828"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding DebtStatusText}" Value="Gəlir">
-                                                    <Setter Property="Foreground" Value="#2E7D32"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
+                                           Foreground="{Binding DebtStatusColor}"
+                                           Text="{Binding LiveBalanceDeltaUsd, StringFormat='{}{0:+#,##0.00;-#,##0.00;0.00} $'}"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>

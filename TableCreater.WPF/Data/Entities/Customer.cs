@@ -30,8 +30,19 @@ public class Customer
     public CustomerType Type { get; set; } = CustomerType.Active;
 
     /// <summary>
+    /// Müştərinin əsas cari balansı (USD).
+    /// Müsbət = müştərinin bizdə avansı/artığı var. Mənfi = müştərinin borcu var.
+    /// </summary>
+    public decimal BalanceUsd { get; set; } = 0m;
+
+    /// <summary>
     /// Navigation property: all transactions belonging to this customer.
     /// Configured with CASCADE DELETE in DbContext.
     /// </summary>
     public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+
+    /// <summary>
+    /// Navigation property: all balance audit transactions for this customer.
+    /// </summary>
+    public ICollection<CustomerBalanceHistory> BalanceHistories { get; set; } = new List<CustomerBalanceHistory>();
 }
