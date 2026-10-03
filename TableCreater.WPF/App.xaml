@@ -17,6 +17,7 @@
             <converters:NullToBoolConverter x:Key="NullToBoolConverter"/>
             <converters:NullToVisibilityConverter x:Key="NullToVisConverter"/>
             <converters:EnumToUpperConverter x:Key="EnumToUpperConverter"/>
+            <converters:CurrencyToSymbolConverter x:Key="CurrencyToSymbolConverter"/>
             <converters:ProfitLossToColorConverter x:Key="ProfitLossToColorConverter"/>
             <converters:ShipmentStatusToBackgroundConverter x:Key="ShipmentStatusToBgConverter"/>
             <converters:ShipmentStatusToForegroundConverter x:Key="ShipmentStatusToFgConverter"/>

@@ -38,27 +38,28 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
                     <!-- Customer Balance (Primary Card) -->
-                    <Border Grid.Column="0" Margin="0,0,6,0" Padding="18,14" Background="#F0FDFC" BorderBrush="#99F6E4" BorderThickness="1.5" CornerRadius="8">
+                    <Border Grid.Column="0" Margin="0,0,4,0" Padding="14,14" Background="#F0FDFC" BorderBrush="#99F6E4" BorderThickness="1.5" CornerRadius="8">
                         <StackPanel>
                             <TextBlock Text="Müştəri Balansı (USD)" FontSize="11" Foreground="#0F766E" FontWeight="Bold" Margin="0,0,0,6"/>
-                            <TextBlock Text="{Binding CustomerBalanceUsd, StringFormat='${0:N2}'}" FontSize="24" FontWeight="ExtraBold"
+                            <TextBlock Text="{Binding CustomerBalanceUsd, StringFormat='${0:N2}'}" FontSize="22" FontWeight="ExtraBold"
                                        Foreground="{Binding BalanceStatusColor}"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Transactions Count -->
-                    <Border Grid.Column="1" Margin="3,0" Padding="18,14" Background="#F0F7FF" BorderBrush="#BBDEFB" BorderThickness="1" CornerRadius="8">
+                    <Border Grid.Column="1" Margin="3,0" Padding="14,14" Background="#F0F7FF" BorderBrush="#BBDEFB" BorderThickness="1" CornerRadius="8">
                         <StackPanel>
                             <TextBlock Text="Tranzaksiyalar" FontSize="11" Foreground="#5C6BC0" FontWeight="Bold" Margin="0,0,0,6"/>
-                            <TextBlock Text="{Binding TransactionCount}" FontSize="24" FontWeight="Bold" Foreground="#1A237E"/>
+                            <TextBlock Text="{Binding TransactionCount}" FontSize="22" FontWeight="Bold" Foreground="#1A237E"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Total Expense -->
-                    <Border Grid.Column="2" Margin="3,0" Padding="18,14" Background="#FFF8E1" BorderBrush="#FFE082" BorderThickness="1" CornerRadius="8">
+                    <Border Grid.Column="2" Margin="3,0" Padding="14,14" Background="#FFF8E1" BorderBrush="#FFE082" BorderThickness="1" CornerRadius="8">
                         <StackPanel>
                             <TextBlock Text="Ümumi Xərc (USD)" FontSize="11" Foreground="#F57F17" FontWeight="Bold" Margin="0,0,0,6"/>
                             <TextBlock Text="{Binding TotalExpenseUsd, StringFormat='${0:N2}'}" FontSize="20" FontWeight="Bold" Foreground="#E65100"/>
@@ -66,15 +67,23 @@
                     </Border>
 
                     <!-- Total Paid -->
-                    <Border Grid.Column="3" Margin="3,0" Padding="18,14" Background="#E8F5E9" BorderBrush="#A5D6A7" BorderThickness="1" CornerRadius="8">
+                    <Border Grid.Column="3" Margin="3,0" Padding="14,14" Background="#E8F5E9" BorderBrush="#A5D6A7" BorderThickness="1" CornerRadius="8">
                         <StackPanel>
                             <TextBlock Text="Ümumi Ödəniş (USD)" FontSize="11" Foreground="#2E7D32" FontWeight="Bold" Margin="0,0,0,6"/>
                             <TextBlock Text="{Binding TotalPaidUsd, StringFormat='${0:N2}'}" FontSize="20" FontWeight="Bold" Foreground="#1B5E20"/>
                         </StackPanel>
                     </Border>
 
+                    <!-- Xərc + Qazanc (Billed) -->
+                    <Border Grid.Column="4" Margin="3,0" Padding="14,14" Background="#EEF2FF" BorderBrush="#C7D2FE" BorderThickness="1" CornerRadius="8">
+                        <StackPanel>
+                            <TextBlock Text="Xərc + Qazanc (USD)" FontSize="11" Foreground="#4338CA" FontWeight="Bold" Margin="0,0,0,6"/>
+                            <TextBlock Text="{Binding TotalBilledUsd, StringFormat='${0:N2}'}" FontSize="20" FontWeight="Bold" Foreground="#1A237E"/>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Gəlir (Benefit / Profit) -->
-                    <Border Grid.Column="4" Margin="6,0,0,0" Padding="18,14" Background="#F9F9F9" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="8">
+                    <Border Grid.Column="5" Margin="4,0,0,0" Padding="14,14" Background="#F9F9F9" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="8">
                         <StackPanel>
                             <TextBlock Text="Gəlir (USD)" FontSize="11" Foreground="#666" FontWeight="Bold" Margin="0,0,0,6"/>
                             <TextBlock Text="{Binding RemainingDebtUsd, StringFormat='${0:N2}'}" FontSize="20" FontWeight="Bold"
@@ -334,73 +343,122 @@
 
                         <DataGrid.Columns>
                             <!-- Tarix -->
-                            <DataGridTextColumn Header="Tarix" Binding="{Binding TransactionDate}" Width="90"/>
+                            <DataGridTextColumn Header="Tarix" Binding="{Binding TransactionDate}" Width="90">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                        <Setter Property="Foreground" Value="#475569"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
 
                             <!-- Məhsul -->
                             <DataGridTextColumn Header="Məhsul" Binding="{Binding ProductName}" Width="130">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="Foreground" Value="#1E293B"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
 
                             <!-- Göndərən Firma -->
-                            <DataGridTextColumn Header="Göndərən" Binding="{Binding SendingCompany}" Width="100"/>
+                            <DataGridTextColumn Header="Göndərən" Binding="{Binding SendingCompany}" Width="100">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                        <Setter Property="Foreground" Value="#475569"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
 
                             <!-- Qəbul Edən Firma -->
-                            <DataGridTextColumn Header="Qəbul Edən" Binding="{Binding ReceivingCompany}" Width="100"/>
+                            <DataGridTextColumn Header="Qəbul Edən" Binding="{Binding ReceivingCompany}" Width="100">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                        <Setter Property="Foreground" Value="#475569"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
 
                             <!-- Çəki -->
-                            <DataGridTextColumn Header="Çəki (T)" Binding="{Binding WeightTon, StringFormat='{}{0:N2}'}" Width="75"/>
+                            <DataGridTextColumn Header="Çəki (T)" Binding="{Binding WeightTonFormatted}" Width="75">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="Foreground" Value="#0F766E"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
 
                             <!-- Vahid Qiymət RUB -->
-                            <DataGridTextColumn Header="Qiymət/T (₽)" Binding="{Binding PricePerTonRub, StringFormat='{}{0:N0}'}" Width="90"/>
+                            <DataGridTextColumn Header="Qiymət/T (₽)" Binding="{Binding PricePerTonRubFormatted}" Width="95">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="Foreground" Value="#334155"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
 
                             <!-- Nəqliyyat Növü -->
-                            <DataGridTextColumn Header="Nəql." Binding="{Binding TransportType}" Width="65"/>
+                            <DataGridTextColumn Header="Nəql." Binding="{Binding TransportType}" Width="65">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                        <Setter Property="Foreground" Value="#475569"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
 
                             <!-- Sayı -->
-                            <DataGridTextColumn Header="Sayı" Binding="{Binding VehicleCount}" Width="50"/>
+                            <DataGridTextColumn Header="Sayı" Binding="{Binding VehicleCount}" Width="50">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="Foreground" Value="#334155"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
 
                             <!-- Nəqliyyat Qiyməti -->
-                            <DataGridTemplateColumn Header="Nəql. Qiym." Width="95">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock VerticalAlignment="Center">
-                                            <Run Text="{Binding PricePerVehicle, StringFormat='{}{0:N0}', Mode=OneWay}"/>
-                                            <Run Text=" "/>
-                                            <Run Text="{Binding TransportCurrency, Converter={StaticResource EnumToUpperConverter}, Mode=OneWay}" FontSize="10" Foreground="#888"/>
-                                        </TextBlock>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Nəql. Qiym." Binding="{Binding PricePerVehicleFormatted}" Width="95">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="Foreground" Value="#334155"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
 
                             <!-- Əlavə Xərc -->
-                            <DataGridTemplateColumn Header="Əlavə Xərc" Width="105">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock VerticalAlignment="Center" ToolTip="{Binding AdditionalExpenseDescription}">
-                                            <Run Text="{Binding AdditionalExpenseAmount, StringFormat='{}{0:N0}', Mode=OneWay}"/>
-                                            <Run Text=" "/>
-                                            <Run Text="{Binding AdditionalExpenseCurrency, Converter={StaticResource EnumToUpperConverter}, Mode=OneWay}" FontSize="10" Foreground="#888"/>
-                                        </TextBlock>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Əlavə Xərc" Binding="{Binding AdditionalExpenseFormatted}" Width="95">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="Foreground" Value="#D97706"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                        <Setter Property="ToolTip" Value="{Binding AdditionalExpenseDescription}"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
 
-                            <!-- Ödənilən Məbləğ + Valyuta -->
-                            <DataGridTemplateColumn Header="Ödəniş" Width="100">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <TextBlock VerticalAlignment="Center">
-                                            <Run Text="{Binding PaidAmount, StringFormat='{}{0:N0}', Mode=OneWay}"/>
-                                            <Run Text=" "/>
-                                            <Run Text="{Binding PaidCurrency, Converter={StaticResource EnumToUpperConverter}, Mode=OneWay}" FontSize="10" Foreground="#999"/>
-                                        </TextBlock>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
+                            <!-- Ödənilən Məbləğ -->
+                            <DataGridTextColumn Header="Ödəniş" Binding="{Binding PaidAmountFormatted}" Width="100">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="Foreground" Value="#166534"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
 
                             <!-- Ödəniş Statusu -->
                             <DataGridTemplateColumn Header="Ödəniş Statusu" Width="110">
@@ -438,8 +496,8 @@
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
 
-                            <!-- Hesablanan USD -->
-                            <DataGridTextColumn Header="Hesablanan (USD)" Binding="{Binding HistoricalCustomerBilledUsd, StringFormat='${0:N2}'}" Width="110">
+                            <!-- Xərc + Qazanc (keçmiş Hesablanan USD) -->
+                            <DataGridTextColumn Header="Xərc + Qazanc" Binding="{Binding HistoricalCustomerBilledUsd, StringFormat='${0:N2}'}" Width="115">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="FontWeight" Value="Bold"/>

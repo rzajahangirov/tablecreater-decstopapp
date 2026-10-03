@@ -178,8 +178,8 @@
                             <TextBlock Text="Nəqliyyat Qiyməti (hər vasitə)" FontSize="11" Foreground="#94A3B8" FontWeight="SemiBold" Margin="0,0,0,4"/>
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{Binding Transaction.PricePerVehicle, StringFormat='{}{0:N0}'}" FontSize="15" FontWeight="Bold" Foreground="#374151"/>
-                                <TextBlock Text="{Binding Transaction.TransportCurrency, Converter={StaticResource EnumToUpperConverter}}" 
-                                           FontSize="12" Foreground="#888" VerticalAlignment="Bottom" Margin="4,0,0,1"/>
+                                <TextBlock Text="{Binding Transaction.TransportCurrency, Converter={StaticResource CurrencyToSymbolConverter}}" 
+                                           FontSize="14" FontWeight="Bold" Foreground="#374151" VerticalAlignment="Center" Margin="2,0,0,0"/>
                             </StackPanel>
                         </StackPanel>
 
@@ -194,8 +194,8 @@
                             <TextBlock Text="Ton Başına Qazanc" FontSize="11" Foreground="#94A3B8" FontWeight="SemiBold" Margin="0,0,0,4"/>
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{Binding Transaction.ProfitPerTon, StringFormat='{}{0:N2}'}" FontSize="15" FontWeight="Bold" Foreground="#15803D"/>
-                                <TextBlock Text="{Binding Transaction.ProfitPerTonCurrency, Converter={StaticResource EnumToUpperConverter}}" 
-                                           FontSize="12" Foreground="#888" VerticalAlignment="Bottom" Margin="4,0,0,1"/>
+                                <TextBlock Text="{Binding Transaction.ProfitPerTonCurrency, Converter={StaticResource CurrencyToSymbolConverter}}" 
+                                           FontSize="14" FontWeight="Bold" Foreground="#15803D" VerticalAlignment="Center" Margin="2,0,0,0"/>
                             </StackPanel>
                         </StackPanel>
                     </Grid>
@@ -217,8 +217,8 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{Binding Transaction.AdditionalExpenseAmount, StringFormat='{}{0:N2}'}" 
                                            FontSize="15" FontWeight="Bold" Foreground="#E65100"/>
-                                <TextBlock Text="{Binding Transaction.AdditionalExpenseCurrency, Converter={StaticResource EnumToUpperConverter}}" 
-                                           FontSize="12" Foreground="#888" VerticalAlignment="Bottom" Margin="4,0,0,1"/>
+                                <TextBlock Text="{Binding Transaction.AdditionalExpenseCurrency, Converter={StaticResource CurrencyToSymbolConverter}}" 
+                                           FontSize="14" FontWeight="Bold" Foreground="#E65100" VerticalAlignment="Center" Margin="2,0,0,0"/>
                             </StackPanel>
                         </StackPanel>
 
@@ -281,10 +281,10 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Müştəriyə Hesablanan (USD) -->
+                        <!-- Xərc + Qazanc (USD) -->
                         <Border Grid.Row="0" Grid.Column="2" Background="#E3F2FD" CornerRadius="8" Padding="14,10" Margin="6,0,0,8">
                             <StackPanel>
-                                <TextBlock Text="Müştəriyə Hesablanan" FontSize="11" Foreground="#1565C0" FontWeight="Bold" Margin="0,0,0,4"/>
+                                <TextBlock Text="Xərc + Qazanc" FontSize="11" Foreground="#1565C0" FontWeight="Bold" Margin="0,0,0,4"/>
                                 <TextBlock Text="{Binding Transaction.HistoricalCustomerBilledUsd, StringFormat='${0:N2}'}" 
                                            FontSize="20" FontWeight="ExtraBold" Foreground="#0D47A1"/>
                             </StackPanel>
@@ -297,8 +297,8 @@
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="{Binding Transaction.PaidAmount, StringFormat='{}{0:N2}'}" 
                                                FontSize="16" FontWeight="Bold" Foreground="#374151"/>
-                                    <TextBlock Text="{Binding Transaction.PaidCurrency, Converter={StaticResource EnumToUpperConverter}}" 
-                                               FontSize="12" Foreground="#888" VerticalAlignment="Bottom" Margin="4,0,0,1"/>
+                                    <TextBlock Text="{Binding Transaction.PaidCurrency, Converter={StaticResource CurrencyToSymbolConverter}}" 
+                                               FontSize="14" FontWeight="Bold" Foreground="#374151" VerticalAlignment="Center" Margin="2,0,0,0"/>
                                 </StackPanel>
                                 <TextBlock Text="{Binding Transaction.PaidInUsd, StringFormat='(${0:N2} USD)'}" 
                                            FontSize="11" Foreground="#666" Margin="0,2,0,0"/>

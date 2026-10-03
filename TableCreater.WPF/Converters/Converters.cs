@@ -90,6 +90,30 @@ public class EnumToUpperConverter : IValueConverter
 }
 
 /// <summary>
+/// Converts PaymentCurrency enum or string to symbol ($ or ₽).
+/// </summary>
+public class CurrencyToSymbolConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is PaymentCurrency pc)
+        {
+            return pc == PaymentCurrency.Rub ? "₽" : "$";
+        }
+        if (value is string s)
+        {
+            return string.Equals(s, "Rub", StringComparison.OrdinalIgnoreCase) ? "₽" : "$";
+        }
+        return string.Empty;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
 /// Converts decimal amount to SolidColorBrush:
 /// Positive (> 0) → Dark Green, Negative (&lt; 0) → Crimson, Zero → Gray.
 /// </summary>

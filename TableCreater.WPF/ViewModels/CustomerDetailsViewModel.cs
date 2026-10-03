@@ -138,6 +138,9 @@ public partial class CustomerDetailsViewModel : ObservableObject
     private decimal _totalPaidUsd;
 
     [ObservableProperty]
+    private decimal _totalBilledUsd;
+
+    [ObservableProperty]
     private decimal _remainingDebtUsd;
 
     [ObservableProperty]
@@ -434,6 +437,7 @@ public partial class CustomerDetailsViewModel : ObservableObject
         var report = await _transactionService.CalculateCustomerExpenseAndIncome(CustomerId);
         TotalExpenseUsd = report.TotalExpenseUsd;
         TotalPaidUsd = report.TotalPaidUsd;
+        TotalBilledUsd = _allTransactions.Sum(t => t.HistoricalCustomerBilledUsd);
         RemainingDebtUsd = report.TotalBenefitUsd;
 
         if (RemainingDebtUsd < 0)

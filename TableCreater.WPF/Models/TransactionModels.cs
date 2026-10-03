@@ -178,6 +178,23 @@ public record TransactionReadResponse
         _ => PaymentStatus.ToString()
     };
 
+    // === UI Formatlanmış Dəyərlər (Xərc / Qazanc üslubunda) ===
+    public string PaidAmountFormatted => PaidAmount.HasValue
+        ? $"{PaidAmount.Value:N0}{(PaidCurrency == PaymentCurrency.Rub ? "₽" : "$")}"
+        : "0$";
+
+    public string PricePerVehicleFormatted => PricePerVehicle.HasValue && PricePerVehicle.Value > 0
+        ? $"{PricePerVehicle.Value:N0}{(TransportCurrency == PaymentCurrency.Rub ? "₽" : "$")}"
+        : "—";
+
+    public string AdditionalExpenseFormatted => AdditionalExpenseAmount.HasValue && AdditionalExpenseAmount.Value > 0
+        ? $"{AdditionalExpenseAmount.Value:N0}{(AdditionalExpenseCurrency == PaymentCurrency.Rub ? "₽" : "$")}"
+        : "—";
+
+    public string PricePerTonRubFormatted => $"{PricePerTonRub:N0} ₽";
+
+    public string WeightTonFormatted => $"{WeightTon:N2} T";
+
     // === Göndərmə Statusu və Tarixlər ===
     public ShipmentStatus ShipmentStatus { get; init; } = ShipmentStatus.Pending;
     public DateOnly? LoadedDate { get; init; }
