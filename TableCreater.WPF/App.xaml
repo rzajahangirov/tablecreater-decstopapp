@@ -30,6 +30,9 @@
             <converters:PaymentStatusToForegroundConverter x:Key="PaymentStatusToFgConverter"/>
             <converters:BalanceTypeToTextConverter x:Key="BalanceTypeToTextConverter"/>
             <converters:BalanceTypeToColorConverter x:Key="BalanceTypeToColorConverter"/>
+            <converters:CustomerTypeToTextConverter x:Key="CustomerTypeToTextConverter"/>
+            <converters:CustomerTypeToBackgroundConverter x:Key="CustomerTypeToBgConverter"/>
+            <converters:CustomerTypeToForegroundConverter x:Key="CustomerTypeToFgConverter"/>
 
             <!-- Status Card RadioButton Style (Unified for Dialog and Entry Page) -->
             <Style x:Key="StatusCardRadioButtonStyle" TargetType="RadioButton">

@@ -419,3 +419,69 @@ public class BalanceTypeToColorConverter : IValueConverter
     }
 }
 
+/// <summary>
+/// Converts CustomerType to Azerbaijani text (Aktiv / Deaktiv).
+/// </summary>
+public class CustomerTypeToTextConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is CustomerType type)
+        {
+            return type == CustomerType.Active ? "Aktiv" : "Deaktiv";
+        }
+        return value?.ToString() ?? string.Empty;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts CustomerType to a background brush for badges.
+/// </summary>
+public class CustomerTypeToBackgroundConverter : IValueConverter
+{
+    private static readonly System.Windows.Media.Brush ActiveBg = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(232, 245, 233));
+    private static readonly System.Windows.Media.Brush InactiveBg = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(241, 245, 249));
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is CustomerType type)
+        {
+            return type == CustomerType.Active ? ActiveBg : InactiveBg;
+        }
+        return ActiveBg;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+/// <summary>
+/// Converts CustomerType to a foreground brush for badges.
+/// </summary>
+public class CustomerTypeToForegroundConverter : IValueConverter
+{
+    private static readonly System.Windows.Media.Brush ActiveFg = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(46, 125, 50));
+    private static readonly System.Windows.Media.Brush InactiveFg = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 116, 139));
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is CustomerType type)
+        {
+            return type == CustomerType.Active ? ActiveFg : InactiveFg;
+        }
+        return ActiveFg;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        throw new NotImplementedException();
+    }
+}
+

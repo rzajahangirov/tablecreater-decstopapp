@@ -61,6 +61,35 @@ public partial class CustomerListPage : UserControl
         ViewModel?.CancelDialogCommand.Execute(null);
     }
 
+    private void BtnToggleStatus_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel?.ToggleStatusCommand.Execute(null);
+    }
+
+    private void MenuCustomerDetails_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel?.SelectedCustomer != null)
+        {
+            var mainWindow = Window.GetWindow(this) as MainWindow;
+            mainWindow?.NavigateToCustomerDetails(ViewModel.SelectedCustomer.Id);
+        }
+    }
+
+    private void MenuCustomerEdit_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel?.OpenEditDialogCommand.Execute(null);
+    }
+
+    private void MenuToggleStatus_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel?.ToggleStatusCommand.Execute(null);
+    }
+
+    private void MenuCustomerDelete_Click(object sender, RoutedEventArgs e)
+    {
+        BtnDelete_Click(sender, e);
+    }
+
     private void CustomerGrid_DoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (ViewModel?.SelectedCustomer != null)

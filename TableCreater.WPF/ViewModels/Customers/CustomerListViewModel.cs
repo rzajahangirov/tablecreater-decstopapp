@@ -48,6 +48,9 @@ public partial class CustomerListViewModel : ObservableObject
     private string _dialogPhone = string.Empty;
 
     [ObservableProperty]
+    private CustomerType _dialogType = CustomerType.Active;
+
+    [ObservableProperty]
     private bool _isDialogOpen;
 
     [ObservableProperty]
@@ -62,7 +65,13 @@ public partial class CustomerListViewModel : ObservableObject
     [ObservableProperty]
     private decimal _dialogInitialBalanceExchangeRate = 1.0m;
 
+    [ObservableProperty]
+    private string _statusFilter = "All"; // "All", "Active", "Inactive"
+
+    private List<CustomerReadResponse> _allLoadedCustomers = new();
+
     public PaymentCurrency[] PaymentCurrencies => Enum.GetValues<PaymentCurrency>();
+    public CustomerType[] CustomerTypes => Enum.GetValues<CustomerType>();
 
     // =========================================================================
     // COMMANDS
@@ -79,8 +88,8 @@ public partial class CustomerListViewModel : ObservableObject
             IsLoading = true;
             ErrorMessage = null;
 
-            var customers = await _customerService.GetAllCustomers();
-            Customers = new ObservableCollection<CustomerReadResponse>(customers);
+            _allLoadedCustomers = await _customerService.GetAllCustomers();
+            ApplyFilter();
         }
         catch (Exception ex)
         {
@@ -104,11 +113,11 @@ public partial class CustomerListViewModel : ObservableObject
             IsLoading = true;
             ErrorMessage = null;
 
-            var results = string.IsNullOrWhiteSpace(SearchKeyword)
+            _allLoadedCustomers = string.IsNullOrWhiteSpace(SearchKeyword)
                 ? await _customerService.GetAllCustomers()
                 : await _customerService.SearchCustomers(SearchKeyword);
 
-            Customers = new ObservableCollection<CustomerReadResponse>(results);
+            ApplyFilter();
         }
         catch (Exception ex)
         {
@@ -121,6 +130,31 @@ public partial class CustomerListViewModel : ObservableObject
     }
 
     /// <summary>
+    /// Applies the current StatusFilter to _allLoadedCustomers.
+    /// </summary>
+    public void ApplyFilter()
+    {
+        IEnumerable<CustomerReadResponse> filtered = _allLoadedCustomers;
+
+        if (StatusFilter == "Active")
+        {
+            filtered = filtered.Where(c => c.Type == CustomerType.Active);
+        }
+        else if (StatusFilter == "Inactive")
+        {
+            filtered = filtered.Where(c => c.Type == CustomerType.Inactive);
+        }
+
+        Customers = new ObservableCollection<CustomerReadResponse>(
+            filtered.OrderBy(c => c.Type == CustomerType.Active ? 0 : 1).ThenBy(c => c.Name));
+    }
+
+    partial void OnStatusFilterChanged(string value)
+    {
+        ApplyFilter();
+    }
+
+    /// <summary>
     /// Opens the "Add Customer" dialog with empty fields.
     /// </summary>
     [RelayCommand]
@@ -128,6 +162,7 @@ public partial class CustomerListViewModel : ObservableObject
     {
         DialogName = string.Empty;
         DialogPhone = string.Empty;
+        DialogType = CustomerType.Active;
         DialogInitialBalance = 0;
         DialogInitialBalanceCurrency = PaymentCurrency.Usd;
         DialogInitialBalanceExchangeRate = 1.0m;
@@ -145,6 +180,7 @@ public partial class CustomerListViewModel : ObservableObject
 
         DialogName = SelectedCustomer.Name;
         DialogPhone = SelectedCustomer.Phone;
+        DialogType = SelectedCustomer.Type;
         IsEditMode = true;
         IsDialogOpen = true;
     }
@@ -166,7 +202,8 @@ public partial class CustomerListViewModel : ObservableObject
                     new CustomerUpdateRequest
                     {
                         Name = DialogName,
-                        Phone = DialogPhone
+                        Phone = DialogPhone,
+                        Type = DialogType
                     });
             }
             else
@@ -223,23 +260,22 @@ public partial class CustomerListViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Toggles the selected customer's status between Active and Inactive.
+    /// Toggles customer status between Active and Inactive.
     /// </summary>
     [RelayCommand]
-    private async Task ToggleStatusAsync()
+    private async Task ToggleStatusAsync(CustomerReadResponse? customer = null)
     {
-        if (SelectedCustomer == null) return;
+        var target = customer ?? SelectedCustomer;
+        if (target == null) return;
 
         try
         {
             ErrorMessage = null;
+            var newStatus = target.Type == CustomerType.Active
+                ? CustomerType.Inactive
+                : CustomerType.Active;
 
-            // Determine new status by looking up current
-            var current = await _customerService.GetCustomerById(SelectedCustomer.Id);
-            // Toggle: we need to read the entity's actual type — for now toggle based on convention
-            // The read response doesn't include Type, so we'll get it from the service
-            // For simplicity, we'll alternate Active/Inactive
-            var customer = SelectedCustomer;
+            await _customerService.ChangeStatus(target.Id, newStatus);
             await LoadCustomersAsync();
         }
         catch (Exception ex)

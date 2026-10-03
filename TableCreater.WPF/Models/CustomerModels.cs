@@ -30,6 +30,7 @@ public record CustomerUpdateRequest
 {
     public string? Name { get; init; }
     public string? Phone { get; init; }
+    public CustomerType? Type { get; init; }
 }
 
 /// <summary>
@@ -41,6 +42,7 @@ public record CustomerReadResponse
     public string Name { get; init; } = string.Empty;
     public string Phone { get; init; } = string.Empty;
     public decimal BalanceUsd { get; init; }
+    public CustomerType Type { get; init; } = CustomerType.Active;
 }
 
 /// <summary>

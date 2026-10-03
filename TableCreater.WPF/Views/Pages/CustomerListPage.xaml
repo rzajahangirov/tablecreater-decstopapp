@@ -20,15 +20,10 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Search Bar -->
-            <Grid Grid.Column="0" Margin="0,0,12,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" MaxWidth="400"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
+            <!-- Search & Filter Bar -->
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,12,0">
                 <TextBox x:Name="TxtSearch"
-                         Grid.Column="0"
+                         Width="260"
                          ui:ControlHelper.PlaceholderText="Ad və ya telefon ilə axtar..."
                          Text="{Binding SearchKeyword, UpdateSourceTrigger=PropertyChanged}"
                          KeyDown="TxtSearch_KeyDown"
@@ -36,16 +31,23 @@
                          Padding="12,10"
                          BorderBrush="#D1D1D1"/>
 
-                <Button Grid.Column="1"
-                        Content="Axtar"
+                <Button Content="Axtar"
                         Click="BtnSearch_Click"
                         Margin="8,0,0,0"
-                        Padding="24,10"
+                        Padding="20,10"
                         Background="#005FB8"
                         Foreground="White"
                         BorderThickness="0"
                         Style="{StaticResource DefaultButtonStyle}"/>
-            </Grid>
+
+                <ComboBox SelectedValue="{Binding StatusFilter, Mode=TwoWay}"
+                          SelectedValuePath="Tag"
+                          Margin="12,0,0,0" Padding="12,8" FontSize="13" VerticalAlignment="Center">
+                    <ComboBoxItem Content="Hamısı (Aktiv əvvəl)" Tag="All" IsSelected="True"/>
+                    <ComboBoxItem Content="Yalnız Aktiv" Tag="Active"/>
+                    <ComboBoxItem Content="Yalnız Deaktiv" Tag="Inactive"/>
+                </ComboBox>
+            </StackPanel>
 
             <!-- Action Buttons -->
             <StackPanel Grid.Column="1" Orientation="Horizontal">
@@ -58,6 +60,22 @@
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="&#xE710;" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock Text="Yeni Müştəri" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button x:Name="BtnToggleStatus"
+                        Click="BtnToggleStatus_Click"
+                        Padding="14,10"
+                        Margin="0,0,8,0"
+                        Background="#F1F5F9"
+                        Foreground="#334155"
+                        BorderThickness="1"
+                        BorderBrush="#CBD5E1"
+                        ToolTip="Seçilmiş müştərinin Aktiv / Deaktiv statusunu dəyiş"
+                        IsEnabled="{Binding SelectedCustomer, Converter={StaticResource NullToBoolConverter}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE8AB;" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="Statusu Dəyiş" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
@@ -131,8 +149,18 @@
                     </Style>
                 </DataGrid.Resources>
 
+                <DataGrid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Detallara bax" Click="MenuCustomerDetails_Click"/>
+                        <MenuItem Header="Düzəliş et" Click="MenuCustomerEdit_Click"/>
+                        <MenuItem Header="Statusu Dəyiş" Click="MenuToggleStatus_Click"/>
+                        <Separator/>
+                        <MenuItem Header="Sil" Click="MenuCustomerDelete_Click" Foreground="#C62828"/>
+                    </ContextMenu>
+                </DataGrid.ContextMenu>
+
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="80">
+                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="70">
                          <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Padding" Value="16,0"/>
@@ -151,7 +179,7 @@
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
-                    <DataGridTextColumn Header="Telefon" Binding="{Binding Phone}" Width="200">
+                    <DataGridTextColumn Header="Telefon" Binding="{Binding Phone}" Width="180">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
                                 <Setter Property="Padding" Value="16,0"/>
@@ -160,7 +188,25 @@
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
-                    <DataGridTemplateColumn Header="Balans (USD)" Width="160">
+                    <!-- Status Column -->
+                    <DataGridTemplateColumn Header="Status" Width="110">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border CornerRadius="12" Padding="8,4" HorizontalAlignment="Left"
+                                        Background="{Binding Type, Converter={StaticResource CustomerTypeToBgConverter}}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Width="6" Height="6" Margin="0,0,6,0"
+                                                 Fill="{Binding Type, Converter={StaticResource CustomerTypeToFgConverter}}"/>
+                                        <TextBlock Text="{Binding Type, Converter={StaticResource CustomerTypeToTextConverter}}"
+                                                   FontSize="11" FontWeight="Bold"
+                                                   Foreground="{Binding Type, Converter={StaticResource CustomerTypeToFgConverter}}"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTemplateColumn Header="Balans (USD)" Width="150">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding BalanceUsd, StringFormat='${0:N2}'}"
@@ -233,6 +279,22 @@
                              FontSize="14" Padding="12" Margin="0,0,0,20"
                              BorderBrush="#D1D1D1"
                              ui:ControlHelper.PlaceholderText="Məs: +994 50 123 45 67"/>
+
+                    <!-- Status (Shown only on Edit) -->
+                    <StackPanel Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,20">
+                        <TextBlock Text="Status" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                        <ComboBox ItemsSource="{Binding CustomerTypes}"
+                                  SelectedItem="{Binding DialogType, Mode=TwoWay}"
+                                  HorizontalAlignment="Stretch"
+                                  FontSize="14" Padding="12,10"
+                                  BorderBrush="#D1D1D1">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Converter={StaticResource CustomerTypeToTextConverter}}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
 
                     <!-- Initial Balance (Shown only on Create) -->
                     <StackPanel Visibility="{Binding IsEditMode, Converter={StaticResource BoolToVisConverter}, ConverterParameter=Inverse}" Margin="0,0,0,24">

@@ -77,7 +77,8 @@ public class CustomerService : ICustomerService
     public async Task<List<CustomerReadResponse>> GetAllCustomers()
     {
         var customers = await _db.Customers
-            .OrderBy(c => c.Name)
+            .OrderBy(c => c.Type == CustomerType.Active ? 0 : 1)
+            .ThenBy(c => c.Name)
             .ToListAsync();
 
         return customers.Select(MapToReadResponse).ToList();
@@ -132,7 +133,8 @@ public class CustomerService : ICustomerService
         var results = await _db.Customers
             .Where(c => c.Name.ToLower().Contains(lowerKeyword)
                       || (c.Phone != null && c.Phone.ToLower().Contains(lowerKeyword)))
-            .OrderBy(c => c.Name)
+            .OrderBy(c => c.Type == CustomerType.Active ? 0 : 1)
+            .ThenBy(c => c.Name)
             .ToListAsync();
 
         return results.Select(MapToReadResponse).ToList();
@@ -156,6 +158,9 @@ public class CustomerService : ICustomerService
 
         if (request.Phone != null)
             entity.Phone = request.Phone;
+
+        if (request.Type.HasValue)
+            entity.Type = request.Type.Value;
 
         await _db.SaveChangesAsync();
 
@@ -190,7 +195,8 @@ public class CustomerService : ICustomerService
             Id = entity.Id,
             Name = entity.Name,
             Phone = entity.Phone ?? string.Empty,
-            BalanceUsd = entity.BalanceUsd
+            BalanceUsd = entity.BalanceUsd,
+            Type = entity.Type
         };
     }
 
