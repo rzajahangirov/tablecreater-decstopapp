@@ -3,18 +3,20 @@ using System.Windows;
 using System.Windows.Threading;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using SQLitePCL;
 using TableCreater.WPF.Data;
 using TableCreater.WPF.Services;
 using TableCreater.WPF.ViewModels;
 using TableCreater.WPF.ViewModels.Customers;
 using TableCreater.WPF.ViewModels.Transactions;
+using TableCreater.WPF.Views.Windows;
 
 namespace TableCreater.WPF;
 
 /// <summary>
 /// Application entry point with Dependency Injection container setup.
-/// Configures EF Core (SQLite), Services, and ViewModels per Section 8.2 of the spec.
-/// Includes global exception handling for production readiness.
+/// Configures EF Core (SQLite/SQLCipher), Services, and ViewModels.
+/// Shows PIN-based LoginWindow before MainWindow.
 /// </summary>
 public partial class App : Application
 {
@@ -26,9 +28,21 @@ public partial class App : Application
     /// </summary>
     public static IServiceProvider Services { get; private set; } = null!;
 
+    /// <summary>
+    /// Singleton SecurityService, initialized before DI container.
+    /// </summary>
+    public static ISecurityService Security { get; private set; } = null!;
+
+    private static string DbFilePath => Path.Combine(
+        AppDomain.CurrentDomain.BaseDirectory, "tablecreater.db");
+
     public App()
     {
-        Services = ConfigureServices();
+        // Initialize SQLCipher provider before anything else
+        Batteries_V2.Init();
+
+        // Create security service (reads/creates security.json)
+        Security = new SecurityService();
 
         // ─── Global Exception Handlers ───────────────────────────────
         DispatcherUnhandledException += OnDispatcherUnhandledException;
@@ -40,16 +54,33 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        // ─── Step 1: Show Login Window ───────────────────────────────
+        var loginWindow = new LoginWindow(Security);
+        bool? loginResult = loginWindow.ShowDialog();
+
+        if (loginResult != true || string.IsNullOrEmpty(Security.ActiveDek))
+        {
+            Shutdown();
+            return;
+        }
+
+        // ─── Step 2: Encrypt DB if still plain ──────────────────────
         try
         {
-            // Ensure the SQLite database directory exists
-            var dbPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "TableCreater");
-            if (!Directory.Exists(dbPath))
-                Directory.CreateDirectory(dbPath);
+            Security.EnsureDatabaseEncrypted(DbFilePath);
+        }
+        catch (Exception ex)
+        {
+            ShowFatalError("Baza Şifrələmə Xətası", ex.Message);
+            return;
+        }
 
-            // Ensure the SQLite database is created with the latest schema
+        // ─── Step 3: Build DI container with encrypted connection ────
+        Services = ConfigureServices();
+
+        try
+        {
+            // Ensure the database is created with the latest schema
             using var scope = Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Database.EnsureCreated();
@@ -61,14 +92,20 @@ public partial class App : Application
             var authService = Services.GetRequiredService<IAuthService>();
             await authService.SeedDefaultAdminIfEmpty();
 
-            // Auto-login the default admin for development
+            // Auto-login the default admin
             await authService.Login("admin@tablecreater.com", "admin123");
         }
         catch (Exception ex)
         {
-            ShowFatalError("Startup Error",
-                $"Failed to initialize the application:\n\n{ex.Message}");
+            ShowFatalError("Başlanğıc Xətası",
+                $"Tətbiqi işə salmaq mümkün olmadı:\n\n{ex.Message}");
+            return;
         }
+
+        // ─── Step 4: Show Main Window ───────────────────────────────
+        var mainWindow = new MainWindow();
+        MainWindow = mainWindow;
+        mainWindow.Show();
     }
 
     private static IServiceProvider ConfigureServices()
@@ -76,10 +113,12 @@ public partial class App : Application
         var services = new ServiceCollection();
 
         // ─── Database ────────────────────────────────────────────────
+        var connStr = Security.GetConnectionString(DbFilePath);
         services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlite("Data Source=tablecreater.db"));
+            options.UseSqlite(connStr));
 
         // ─── Services ────────────────────────────────────────────────
+        services.AddSingleton<ISecurityService>(Security);
         services.AddSingleton<IAuthService, AuthService>();
         services.AddScoped<ICustomerService, CustomerService>();
         services.AddScoped<ITransactionService, TransactionService>();
@@ -106,7 +145,7 @@ public partial class App : Application
         DispatcherUnhandledExceptionEventArgs e)
     {
         e.Handled = true;
-        ShowErrorDialog("Unexpected Error", e.Exception.Message);
+        ShowErrorDialog("Gözlənilməz Xəta", e.Exception.Message);
     }
 
     private void OnDomainUnhandledException(object sender,
@@ -114,7 +153,7 @@ public partial class App : Application
     {
         if (e.ExceptionObject is Exception ex)
         {
-            ShowFatalError("Critical Error", ex.Message);
+            ShowFatalError("Kritik Xəta", ex.Message);
         }
     }
 
@@ -123,8 +162,8 @@ public partial class App : Application
     {
         e.SetObserved();
         Dispatcher.Invoke(() =>
-            ShowErrorDialog("Background Error",
-                e.Exception?.InnerException?.Message ?? "An error occurred."));
+            ShowErrorDialog("Arxa Plan Xətası",
+                e.Exception?.InnerException?.Message ?? "Xəta baş verdi."));
     }
 
     /// <summary>
@@ -133,7 +172,7 @@ public partial class App : Application
     private static void ShowErrorDialog(string title, string message)
     {
         MessageBox.Show(
-            $"{message}\n\nPlease try again or restart the application.",
+            $"{message}\n\nZəhmət olmasa yenidən cəhd edin və ya proqramı yenidən başladın.",
             $"{AppName} — {title}",
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
@@ -145,7 +184,7 @@ public partial class App : Application
     private static void ShowFatalError(string title, string message)
     {
         MessageBox.Show(
-            $"{message}\n\nThe application will now close.",
+            $"{message}\n\nProqram bağlanacaq.",
             $"{AppName} — {title}",
             MessageBoxButton.OK,
             MessageBoxImage.Error);
