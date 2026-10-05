@@ -29,21 +29,18 @@ public partial class MainWindow
 
     private void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
-        // Set user info in the sidebar
-        var user = App.Services.GetRequiredService<IAuthService>().GetCurrentUser();
-        if (user != null)
-        {
-            TxtUserName.Text = $"{user.FirstName} {user.LastName}";
-            TxtUserEmail.Text = user.Email;
-        }
-
-        // Navigate to the default page (Customers)
-        NavigateToCustomers();
+        // Navigate to the default page (Dashboard)
+        NavigateToDashboard();
     }
 
     // =========================================================================
     // NAVIGATION EVENT HANDLERS
     // =========================================================================
+
+    private void BtnNavDashboard_Click(object sender, RoutedEventArgs e)
+    {
+        NavigateToDashboard();
+    }
 
     private void BtnNavCustomers_Click(object sender, RoutedEventArgs e)
     {
@@ -63,6 +60,8 @@ public partial class MainWindow
     private void BtnNavSettings_Click(object sender, RoutedEventArgs e)
     {
         TxtPageTitle.Text = "Tənzimləmələr və Haqqında";
+        SetActiveNavButton(BtnNavSettings);
+
         var vm = App.Services.GetRequiredService<SettingsViewModel>();
         var page = new SettingsPage { DataContext = vm };
         PageContent.Content = page;
@@ -78,9 +77,40 @@ public partial class MainWindow
     // HELPERS
     // =========================================================================
 
+    private void SetActiveNavButton(Button activeButton)
+    {
+        Button[] navButtons = [BtnNavDashboard, BtnNavCustomers, BtnNavNewTransaction, BtnNavReports, BtnNavSettings];
+        foreach (var btn in navButtons)
+        {
+            if (btn == activeButton)
+            {
+                btn.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xE6, 0xF0, 0xFA));
+                btn.FontWeight = FontWeights.SemiBold;
+            }
+            else
+            {
+                btn.Background = System.Windows.Media.Brushes.Transparent;
+                btn.FontWeight = FontWeights.Normal;
+            }
+        }
+    }
+
+    public void NavigateToDashboard()
+    {
+        TxtPageTitle.Text = "Dashboard";
+        SetActiveNavButton(BtnNavDashboard);
+
+        var vm = App.Services.GetRequiredService<DashboardViewModel>();
+        var page = new DashboardPage { DataContext = vm };
+        PageContent.Content = page;
+
+        vm.LoadDashboardCommand.Execute(null);
+    }
+
     public void NavigateToCustomers()
     {
         TxtPageTitle.Text = "Müştərilər";
+        SetActiveNavButton(BtnNavCustomers);
 
         var vm = App.Services.GetRequiredService<CustomerListViewModel>();
         var page = new CustomerListPage { DataContext = vm };
@@ -105,6 +135,7 @@ public partial class MainWindow
     public void NavigateToNewTransaction(long? presetCustomerId = null)
     {
         TxtPageTitle.Text = "Yeni Tranzaksiya";
+        SetActiveNavButton(BtnNavNewTransaction);
 
         var vm = App.Services.GetRequiredService<TransactionEntryViewModel>();
         if (presetCustomerId.HasValue)
@@ -147,6 +178,7 @@ public partial class MainWindow
     private void NavigateToReports()
     {
         TxtPageTitle.Text = "Hesabatlar";
+        SetActiveNavButton(BtnNavReports);
 
         var vm = App.Services.GetRequiredService<ReportsViewModel>();
         var page = new ReportsPage { DataContext = vm };

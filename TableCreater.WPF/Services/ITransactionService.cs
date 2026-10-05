@@ -19,4 +19,5 @@ public interface ITransactionService
     Task<TransactionEditFormData> GetTransactionForUpdate(long id);
     Task DeleteTransaction(long id);
     Task ExportCustomerTransactions(long customerId, string filePath);
+    Task<TransactionReadResponse> ToggleTransactionCompleted(long id);
 }

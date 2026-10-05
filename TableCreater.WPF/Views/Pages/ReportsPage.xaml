@@ -101,9 +101,12 @@
                         <!-- Quick Presets -->
                         <TextBlock Text="Sürətli Seçim:" FontSize="11" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,6"/>
                         <WrapPanel Margin="0,0,0,14">
+                            <Button Content="Bu Gün" Style="{StaticResource PresetButtonStyle}" Command="{Binding SetTodayCommand}"/>
+                            <Button Content="Bu Həftə" Style="{StaticResource PresetButtonStyle}" Command="{Binding SetThisWeekCommand}"/>
                             <Button Content="Bu Ay" Style="{StaticResource PresetButtonStyle}" Command="{Binding SetThisMonthCommand}"/>
                             <Button Content="Keçən Ay" Style="{StaticResource PresetButtonStyle}" Command="{Binding SetLastMonthCommand}"/>
                             <Button Content="Bu İl" Style="{StaticResource PresetButtonStyle}" Command="{Binding SetThisYearCommand}"/>
+                            <Button Content="Keçən İl" Style="{StaticResource PresetButtonStyle}" Command="{Binding SetLastYearCommand}"/>
                             <Button Content="Bütün Zamanlar" Style="{StaticResource PresetButtonStyle}" Command="{Binding SetAllTimeCommand}"/>
                         </WrapPanel>
 
@@ -144,7 +147,7 @@
                             <TextBlock Text="Müştəri üzrə Hesabat" FontSize="16" FontWeight="Bold" Foreground="#0F172A"/>
                         </StackPanel>
 
-                        <StackPanel Margin="0,0,0,24">
+                        <StackPanel Margin="0,0,0,14">
                             <TextBlock Text="Müştəri Seçin" FontSize="12" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,6"/>
                             <ComboBox ItemsSource="{Binding Customers}"
                                       SelectedItem="{Binding SelectedCustomer, Mode=TwoWay}"
@@ -154,7 +157,7 @@
                                       ui:ControlHelper.PlaceholderText="Müştəri axtarın və ya seçin..."/>
                         </StackPanel>
 
-                        <Grid Margin="0,12,0,0">
+                        <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="*"/>
@@ -178,9 +181,148 @@
                                 </Button.Resources>
                             </Button>
                         </Grid>
+
+                        <Button Content="📊 Bütün Müştərilərin Xülasəsi (Ümumi Hesabat)" Click="BtnAllCustomersSummary_Click"
+                                Padding="0,10" Background="#F1F5F9" Foreground="#334155" BorderBrush="#CBD5E1" BorderThickness="1"
+                                FontWeight="SemiBold" FontSize="13" Cursor="Hand" HorizontalAlignment="Stretch">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
                     </StackPanel>
                 </Border>
             </Grid>
+
+            <!-- ALL CUSTOMERS SUMMARY TABLE (Task 7.2) -->
+            <Border Visibility="{Binding IsAllCustomersSummaryView, Converter={StaticResource BoolToVisConverter}}"
+                    Background="White" CornerRadius="10" Padding="20" Margin="0,0,0,28"
+                    BorderBrush="#E2E8F0" BorderThickness="1">
+                <StackPanel>
+                    <Grid Margin="0,0,0,16">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="#005FB8"
+                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBlock Text="Bütün Müştərilər Üzrə Ümumi Maliyyə Xülasəsi" FontSize="18" FontWeight="Bold" Foreground="#0F172A"/>
+                        </StackPanel>
+                        <Border HorizontalAlignment="Right" Background="#EFF6FF" CornerRadius="12" Padding="10,4">
+                            <TextBlock Text="{Binding AllCustomersSummary.Count, StringFormat='{}{0} müştəri'}"
+                                       FontSize="12" FontWeight="Bold" Foreground="#2563EB"/>
+                        </Border>
+                    </Grid>
+
+                    <DataGrid ItemsSource="{Binding AllCustomersSummary}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              IsReadOnly="True"
+                              SelectionMode="Single"
+                              GridLinesVisibility="Horizontal"
+                              HorizontalGridLinesBrush="#F1F5F9"
+                              HeadersVisibility="Column"
+                              Background="Transparent"
+                              BorderThickness="0">
+
+                        <DataGrid.ColumnHeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#F8FAFC"/>
+                                <Setter Property="Foreground" Value="#64748B"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="FontSize" Value="12"/>
+                                <Setter Property="Padding" Value="12,10"/>
+                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                                <Setter Property="SeparatorVisibility" Value="Collapsed"/>
+                            </Style>
+                        </DataGrid.ColumnHeaderStyle>
+
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="Height" Value="42"/>
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderBrush" Value="#F1F5F9"/>
+                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#F8FAFC"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Müştəri" Binding="{Binding CustomerName}" Width="180">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="Foreground" Value="#0F172A"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTextColumn Header="Telefon" Binding="{Binding Phone}" Width="130">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#64748B"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTextColumn Header="Tranzaksiya" Binding="{Binding TransactionCount}" Width="90">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                        <Setter Property="Foreground" Value="#334155"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                        <Setter Property="HorizontalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTextColumn Header="Ümumi Xərc (USD)" Binding="{Binding TotalExpenseFormatted}" Width="140">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="Foreground" Value="#E65100"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTextColumn Header="Ümumi Ödəniş (USD)" Binding="{Binding TotalPaidFormatted}" Width="140">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="Foreground" Value="#059669"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTextColumn Header="Qazanc (USD)" Binding="{Binding TotalProfitFormatted}" Width="130">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                        <Setter Property="Foreground" Value="#15803D"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+
+                            <DataGridTextColumn Header="Cari Balans (USD)" Binding="{Binding BalanceFormatted}" Width="*">
+                                <DataGridTextColumn.ElementStyle>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                        <Setter Property="Foreground" Value="{Binding BalanceUsd, Converter={StaticResource ProfitLossToColorConverter}}"/>
+                                        <Setter Property="VerticalAlignment" Value="Center"/>
+                                    </Style>
+                                </DataGridTextColumn.ElementStyle>
+                            </DataGridTextColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
 
             <!-- RESULTS DASHBOARD -->
             <Border Visibility="{Binding HasReport, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,28">
@@ -371,8 +513,23 @@
                                         <Setter Property="Padding" Value="10,8"/>
                                         <Setter Property="BorderThickness" Value="0,0,0,1"/>
                                         <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                                        <Setter Property="SeparatorVisibility" Value="Collapsed"/>
                                     </Style>
                                 </DataGrid.ColumnHeaderStyle>
+
+                                <DataGrid.RowStyle>
+                                    <Style TargetType="DataGridRow">
+                                        <Setter Property="Height" Value="36"/>
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Setter Property="BorderBrush" Value="#F1F5F9"/>
+                                        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#F8FAFC"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </DataGrid.RowStyle>
 
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="#" Binding="{Binding Id}" Width="50"/>

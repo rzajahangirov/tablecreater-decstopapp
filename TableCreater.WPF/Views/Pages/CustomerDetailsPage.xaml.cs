@@ -136,6 +136,17 @@ public partial class CustomerDetailsPage : UserControl
     }
 
     /// <summary>
+    /// Toggle IsCompleted status for a transaction.
+    /// </summary>
+    private async void BtnToggleCompleted_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is long transactionId && ViewModel != null)
+        {
+            await ViewModel.ToggleTransactionCompletedCommand.ExecuteAsync(transactionId);
+        }
+    }
+
+    /// <summary>
     /// Smooth mouse wheel scrolling for the customer details page.
     /// </summary>
     private void MainScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)

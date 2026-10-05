@@ -51,9 +51,21 @@ public partial class App : Application
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
     }
 
+    private static readonly string CrashLogPath = Path.Combine(
+        AppDomain.CurrentDomain.BaseDirectory, "crash.log");
+
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        try
+        {
+            File.WriteAllText(CrashLogPath, $"[{DateTime.Now}] App starting...\n");
+        }
+        catch { }
+
+        // Prevent application from shutting down when LoginWindow closes
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         // ─── Step 1: Show Login Window ───────────────────────────────
         var loginWindow = new LoginWindow(Security);
@@ -65,13 +77,17 @@ public partial class App : Application
             return;
         }
 
+        try { File.AppendAllText(CrashLogPath, $"[{DateTime.Now}] Login OK. DEK length={Security.ActiveDek?.Length}\n"); } catch { }
+
         // ─── Step 2: Encrypt DB if still plain ──────────────────────
-        // This is non-fatal: if encryption migration fails, the app
-        // continues with the unencrypted DB. The method has its own
-        // internal error handling and logging.
         Security.EnsureDatabaseEncrypted(DbFilePath);
 
+        try { File.AppendAllText(CrashLogPath, $"[{DateTime.Now}] EnsureDatabaseEncrypted done. DB path={DbFilePath}, exists={File.Exists(DbFilePath)}\n"); } catch { }
+
         // ─── Step 3: Build DI container with encrypted connection ────
+        var connStr = Security.GetConnectionString(DbFilePath);
+        try { File.AppendAllText(CrashLogPath, $"[{DateTime.Now}] Connection string: {connStr}\n"); } catch { }
+
         Services = ConfigureServices();
 
         try
@@ -79,10 +95,16 @@ public partial class App : Application
             // Ensure the database is created with the latest schema
             using var scope = Services.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            try { File.AppendAllText(CrashLogPath, $"[{DateTime.Now}] Calling EnsureCreated...\n"); } catch { }
             db.Database.EnsureCreated();
+
+            try { File.AppendAllText(CrashLogPath, $"[{DateTime.Now}] EnsureCreated OK. Running migrations...\n"); } catch { }
 
             // Migrate schema if tables were created with an older structure
             MigrateDatabaseSchema(db);
+
+            try { File.AppendAllText(CrashLogPath, $"[{DateTime.Now}] Migrations OK. Seeding admin...\n"); } catch { }
 
             // Seed default admin user on first run
             var authService = Services.GetRequiredService<IAuthService>();
@@ -90,18 +112,40 @@ public partial class App : Application
 
             // Auto-login the default admin
             await authService.Login("admin@tablecreater.com", "admin123");
+
+            try { File.AppendAllText(CrashLogPath, $"[{DateTime.Now}] All startup steps OK!\n"); } catch { }
         }
         catch (Exception ex)
         {
+            // Write full error to crash log file
+            try
+            {
+                var fullError = $"[{DateTime.Now}] FATAL ERROR:\n{ex}\n";
+                if (ex.InnerException != null)
+                    fullError += $"\nInner: {ex.InnerException}\n";
+                File.AppendAllText(CrashLogPath, fullError);
+            }
+            catch { }
+
             ShowFatalError("Başlanğıc Xətası",
                 $"Tətbiqi işə salmaq mümkün olmadı:\n\n{ex.Message}");
             return;
         }
 
         // ─── Step 4: Show Main Window ───────────────────────────────
-        var mainWindow = new MainWindow();
-        MainWindow = mainWindow;
-        mainWindow.Show();
+        try
+        {
+            var mainWindow = new MainWindow();
+            MainWindow = mainWindow;
+            ShutdownMode = ShutdownMode.OnMainWindowClose;
+            mainWindow.Show();
+            try { File.AppendAllText(CrashLogPath, $"[{DateTime.Now}] MainWindow shown successfully!\n"); } catch { }
+        }
+        catch (Exception ex)
+        {
+            try { File.AppendAllText(CrashLogPath, $"[{DateTime.Now}] MainWindow display error:\n{ex}\n"); } catch { }
+            ShowFatalError("Pəncərə Xətası", ex.Message);
+        }
     }
 
     private static IServiceProvider ConfigureServices()
@@ -123,6 +167,7 @@ public partial class App : Application
 
         // ─── ViewModels ──────────────────────────────────────────────
         services.AddTransient<MainViewModel>();
+        services.AddTransient<DashboardViewModel>();
         services.AddTransient<CustomerListViewModel>();
         services.AddTransient<TransactionEntryViewModel>();
         services.AddTransient<ReportsViewModel>();
@@ -143,6 +188,7 @@ public partial class App : Application
         DispatcherUnhandledExceptionEventArgs e)
     {
         e.Handled = true;
+        try { File.AppendAllText(CrashLogPath, $"[{DateTime.Now}] DISPATCHER ERROR:\n{e.Exception}\n\n"); } catch { }
         ShowErrorDialog("Gözlənilməz Xəta", e.Exception.Message);
     }
 
@@ -151,6 +197,7 @@ public partial class App : Application
     {
         if (e.ExceptionObject is Exception ex)
         {
+            try { File.AppendAllText(CrashLogPath, $"[{DateTime.Now}] DOMAIN ERROR:\n{ex}\n\n"); } catch { }
             ShowFatalError("Kritik Xəta", ex.Message);
         }
     }
@@ -159,6 +206,7 @@ public partial class App : Application
         UnobservedTaskExceptionEventArgs e)
     {
         e.SetObserved();
+        try { File.AppendAllText(CrashLogPath, $"[{DateTime.Now}] TASK ERROR:\n{e.Exception}\n\n"); } catch { }
         Dispatcher.Invoke(() =>
             ShowErrorDialog("Arxa Plan Xətası",
                 e.Exception?.InnerException?.Message ?? "Xəta baş verdi."));
@@ -181,6 +229,8 @@ public partial class App : Application
     /// </summary>
     private static void ShowFatalError(string title, string message)
     {
+        // Write to stderr so we can see errors in terminal
+        Console.Error.WriteLine($"[FATAL] {title}: {message}");
         MessageBox.Show(
             $"{message}\n\nProqram bağlanacaq.",
             $"{AppName} — {title}",

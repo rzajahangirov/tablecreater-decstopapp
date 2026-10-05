@@ -485,3 +485,78 @@ public class CustomerTypeToForegroundConverter : IValueConverter
     }
 }
 
+/// <summary>
+/// Converts IsCompleted boolean to a background brush for completion badges.
+/// </summary>
+public class IsCompletedToBackgroundConverter : IValueConverter
+{
+    private static readonly System.Windows.Media.Brush CompletedBg = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(236, 253, 245)); // #ECFDF5
+    private static readonly System.Windows.Media.Brush IncompleteBg = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(241, 245, 249)); // #F1F5F9
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is true ? CompletedBg : IncompleteBg;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+}
+
+/// <summary>
+/// Converts IsCompleted boolean to a foreground brush for completion badges.
+/// </summary>
+public class IsCompletedToForegroundConverter : IValueConverter
+{
+    private static readonly System.Windows.Media.Brush CompletedFg = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(5, 150, 105)); // #059669
+    private static readonly System.Windows.Media.Brush IncompleteFg = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 116, 139)); // #64748B
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is true ? CompletedFg : IncompleteFg;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+}
+
+/// <summary>
+/// Converts IsCompleted boolean to display text ("Tamamlandı" / "Tamamla").
+/// </summary>
+public class IsCompletedToTextConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is true ? "Tamamlandı" : "Tamamla";
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+}
+
+/// <summary>
+/// Converts IsCompleted boolean to Segoe MDL2 Assets glyph (Checkmark vs Circle).
+/// </summary>
+public class IsCompletedToGlyphConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is true ? "\uE73E" : "\uEA3A"; // Checkmark vs Circle outline
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+}
+
+/// <summary>
+/// Converts IsCompleted boolean to DataGridRow background brush (light green for completed).
+/// </summary>
+public class IsCompletedToRowBackgroundConverter : IValueConverter
+{
+    private static readonly System.Windows.Media.Brush CompletedRowBg = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(30, 16, 185, 129)); // very soft green tint
+    private static readonly System.Windows.Media.Brush TransparentBg = System.Windows.Media.Brushes.Transparent;
+
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        return value is true ? CompletedRowBg : TransparentBg;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+}
+
+

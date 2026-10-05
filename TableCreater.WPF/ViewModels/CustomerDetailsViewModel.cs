@@ -252,6 +252,21 @@ public partial class CustomerDetailsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private async Task ToggleTransactionCompletedAsync(long transactionId)
+    {
+        try
+        {
+            ErrorMessage = null;
+            await _transactionService.ToggleTransactionCompleted(transactionId);
+            await RefreshTransactionsAndCards();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Tamamlanma statusunu dəyişmək mümkün olmadı: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
     public async Task RefreshDataAsync()
     {
         try

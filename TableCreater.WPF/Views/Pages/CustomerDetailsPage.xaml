@@ -326,7 +326,7 @@
                             </Style>
                             <Style TargetType="DataGridRow">
                                 <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Background" Value="{Binding IsCompleted, Converter={StaticResource IsCompletedToRowBgConverter}}"/>
                                 <Style.Triggers>
                                     <Trigger Property="IsSelected" Value="True">
                                         <Setter Property="Background" Value="#E3F2FD"/>
@@ -487,6 +487,32 @@
                                                        FontSize="11" FontWeight="Bold"
                                                        Foreground="{Binding PaymentStatus, Converter={StaticResource PaymentStatusToFgConverter}}"/>
                                         </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- Tamamlanma Statusu və Düyməsi -->
+                            <DataGridTemplateColumn Header="Tamamlanma" Width="110">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Click="BtnToggleCompleted_Click"
+                                                Tag="{Binding Id}"
+                                                Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand"
+                                                ToolTip="Tamamlanma statusunu dəyişmək üçün klikləyin">
+                                            <Border CornerRadius="12" Padding="8,4" HorizontalAlignment="Left"
+                                                    Background="{Binding IsCompleted, Converter={StaticResource IsCompletedToBgConverter}}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="{Binding IsCompleted, Converter={StaticResource IsCompletedToGlyphConverter}}"
+                                                               FontFamily="Segoe MDL2 Assets" FontSize="11" Margin="0,0,5,0"
+                                                               Foreground="{Binding IsCompleted, Converter={StaticResource IsCompletedToFgConverter}}"
+                                                               VerticalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding IsCompleted, Converter={StaticResource IsCompletedToTextConverter}}"
+                                                               FontSize="11" FontWeight="SemiBold"
+                                                               Foreground="{Binding IsCompleted, Converter={StaticResource IsCompletedToFgConverter}}"
+                                                               VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Button>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>

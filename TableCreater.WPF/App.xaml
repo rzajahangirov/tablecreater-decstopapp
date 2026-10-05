@@ -33,6 +33,11 @@
             <converters:CustomerTypeToTextConverter x:Key="CustomerTypeToTextConverter"/>
             <converters:CustomerTypeToBackgroundConverter x:Key="CustomerTypeToBgConverter"/>
             <converters:CustomerTypeToForegroundConverter x:Key="CustomerTypeToFgConverter"/>
+            <converters:IsCompletedToBackgroundConverter x:Key="IsCompletedToBgConverter"/>
+            <converters:IsCompletedToForegroundConverter x:Key="IsCompletedToFgConverter"/>
+            <converters:IsCompletedToTextConverter x:Key="IsCompletedToTextConverter"/>
+            <converters:IsCompletedToGlyphConverter x:Key="IsCompletedToGlyphConverter"/>
+            <converters:IsCompletedToRowBackgroundConverter x:Key="IsCompletedToRowBgConverter"/>
 
             <!-- Status Card RadioButton Style (Unified for Dialog and Entry Page) -->
             <Style x:Key="StatusCardRadioButtonStyle" TargetType="RadioButton">

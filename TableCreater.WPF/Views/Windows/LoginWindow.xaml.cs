@@ -77,7 +77,10 @@ public partial class LoginWindow : Window
             TxtVisiblePassword.Text = TxtPassword.Password;
             TxtPassword.Visibility = Visibility.Collapsed;
             TxtVisiblePassword.Visibility = Visibility.Visible;
-            IconTogglePassword.Text = "\uED1A"; // Eye closed or slash
+            IconTogglePassword.Text = "\uED1A";
+            IconTogglePassword.Foreground = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromRgb(0x02, 0x84, 0xC7));
+            BtnTogglePassword.ToolTip = "Kodu gizlə";
             TxtVisiblePassword.Focus();
             TxtVisiblePassword.CaretIndex = TxtVisiblePassword.Text.Length;
         }
@@ -86,7 +89,10 @@ public partial class LoginWindow : Window
             TxtPassword.Password = TxtVisiblePassword.Text;
             TxtVisiblePassword.Visibility = Visibility.Collapsed;
             TxtPassword.Visibility = Visibility.Visible;
-            IconTogglePassword.Text = "\uE7B3"; // Eye open
+            IconTogglePassword.Text = "\uE7B3";
+            IconTogglePassword.Foreground = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromRgb(0x94, 0xA3, 0xB8));
+            BtnTogglePassword.ToolTip = "Kodu göstər";
             TxtPassword.Focus();
         }
     }

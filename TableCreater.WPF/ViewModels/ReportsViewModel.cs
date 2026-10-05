@@ -9,6 +9,25 @@ using TableCreater.WPF.Services;
 namespace TableCreater.WPF.ViewModels;
 
 /// <summary>
+/// Summary item for all customers financial overview report (Task 7.2).
+/// </summary>
+public record CustomerFinancialSummaryItem
+{
+    public long CustomerId { get; init; }
+    public string CustomerName { get; init; } = string.Empty;
+    public string Phone { get; init; } = string.Empty;
+    public decimal TotalExpenseUsd { get; init; }
+    public decimal TotalPaidUsd { get; init; }
+    public decimal TotalProfitUsd { get; init; }
+    public decimal BalanceUsd { get; init; }
+    public int TransactionCount { get; init; }
+    public string TotalExpenseFormatted => $"${TotalExpenseUsd:N2}";
+    public string TotalPaidFormatted => $"${TotalPaidUsd:N2}";
+    public string TotalProfitFormatted => $"${TotalProfitUsd:N2}";
+    public string BalanceFormatted => $"${BalanceUsd:N2}";
+}
+
+/// <summary>
 /// ViewModel for the Financial Reports page.
 /// Implements aggregate reporting matching the new accounting engine and Excel export.
 /// </summary>
@@ -30,8 +49,8 @@ public partial class ReportsViewModel : ObservableObject
         _excelService = excelService;
 
         // Default date range: current month
-        FromDate = new DateOnly(DateTime.Today.Year, DateTime.Today.Month, 1);
-        ToDate = DateOnly.FromDateTime(DateTime.Today);
+        FromDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        ToDate = DateTime.Today;
     }
 
     public IExcelService ExcelService => _excelService;
@@ -42,17 +61,35 @@ public partial class ReportsViewModel : ObservableObject
     // =========================================================================
 
     [ObservableProperty]
-    private DateOnly _fromDate;
+    private DateTime? _fromDate;
 
     [ObservableProperty]
-    private DateOnly _toDate;
+    private DateTime? _toDate;
+
+    [RelayCommand]
+    private void SetToday()
+    {
+        var now = DateTime.Today;
+        FromDate = now;
+        ToDate = now;
+    }
+
+    [RelayCommand]
+    private void SetThisWeek()
+    {
+        var now = DateTime.Today;
+        int diff = (7 + (now.DayOfWeek - DayOfWeek.Monday)) % 7;
+        var startOfWeek = now.AddDays(-1 * diff);
+        FromDate = startOfWeek;
+        ToDate = now;
+    }
 
     [RelayCommand]
     private void SetThisMonth()
     {
         var now = DateTime.Today;
-        FromDate = new DateOnly(now.Year, now.Month, 1);
-        ToDate = DateOnly.FromDateTime(now);
+        FromDate = new DateTime(now.Year, now.Month, 1);
+        ToDate = now;
     }
 
     [RelayCommand]
@@ -61,23 +98,31 @@ public partial class ReportsViewModel : ObservableObject
         var now = DateTime.Today;
         var firstDayLastMonth = new DateTime(now.Year, now.Month, 1).AddMonths(-1);
         var lastDayLastMonth = new DateTime(now.Year, now.Month, 1).AddDays(-1);
-        FromDate = DateOnly.FromDateTime(firstDayLastMonth);
-        ToDate = DateOnly.FromDateTime(lastDayLastMonth);
+        FromDate = firstDayLastMonth;
+        ToDate = lastDayLastMonth;
     }
 
     [RelayCommand]
     private void SetThisYear()
     {
         var now = DateTime.Today;
-        FromDate = new DateOnly(now.Year, 1, 1);
-        ToDate = DateOnly.FromDateTime(now);
+        FromDate = new DateTime(now.Year, 1, 1);
+        ToDate = now;
+    }
+
+    [RelayCommand]
+    private void SetLastYear()
+    {
+        var now = DateTime.Today;
+        FromDate = new DateTime(now.Year - 1, 1, 1);
+        ToDate = new DateTime(now.Year - 1, 12, 31);
     }
 
     [RelayCommand]
     private void SetAllTime()
     {
-        FromDate = new DateOnly(2020, 1, 1);
-        ToDate = DateOnly.FromDateTime(DateTime.Today);
+        FromDate = new DateTime(2020, 1, 1);
+        ToDate = DateTime.Today;
     }
 
     // =========================================================================
@@ -225,6 +270,60 @@ public partial class ReportsViewModel : ObservableObject
     private string? _successMessage;
 
     // =========================================================================
+    // ALL CUSTOMERS SUMMARY (Task 7.2)
+    // =========================================================================
+
+    [ObservableProperty]
+    private ObservableCollection<CustomerFinancialSummaryItem> _allCustomersSummary = new();
+
+    [ObservableProperty]
+    private bool _isAllCustomersSummaryView;
+
+    [RelayCommand]
+    public async Task GenerateAllCustomersSummaryAsync()
+    {
+        try
+        {
+            IsLoading = true;
+            ErrorMessage = null;
+            SuccessMessage = null;
+
+            var customers = await _customerService.GetAllCustomers();
+            var summaryList = new List<CustomerFinancialSummaryItem>();
+
+            foreach (var c in customers)
+            {
+                var report = await _transactionService.CalculateCustomerExpenseAndIncome(c.Id);
+                summaryList.Add(new CustomerFinancialSummaryItem
+                {
+                    CustomerId = c.Id,
+                    CustomerName = c.Name,
+                    Phone = c.Phone,
+                    TotalExpenseUsd = report.TotalExpenseUsd,
+                    TotalPaidUsd = report.TotalPaidUsd,
+                    TotalProfitUsd = report.TotalUserProfitUsd,
+                    BalanceUsd = c.BalanceUsd,
+                    TransactionCount = (int)report.TransactionCount
+                });
+            }
+
+            AllCustomersSummary = new ObservableCollection<CustomerFinancialSummaryItem>(summaryList);
+            IsAllCustomersSummaryView = true;
+            HasReport = false;
+            ReportTypeTitle = "Bütün Müştərilər Üzrə Ümumi Maliyyə Xülasəsi";
+            SuccessMessage = $"Bütün müştərilərin xülasəsi hazırlandı ({customers.Count} müştəri).";
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    // =========================================================================
     // COMMANDS
     // =========================================================================
 
@@ -258,16 +357,32 @@ public partial class ReportsViewModel : ObservableObject
             ErrorMessage = null;
             SuccessMessage = null;
 
-            var report = await _transactionService.CalculateExpenseAndIncome(FromDate, ToDate);
-            var transactions = await _transactionService.GetTransactionsByDateRange(FromDate, ToDate);
+            if (!FromDate.HasValue || !ToDate.HasValue)
+            {
+                ErrorMessage = "Zəhmət olmasa başlanğıc və son tarixləri seçin.";
+                return;
+            }
+
+            if (ToDate.Value < FromDate.Value)
+            {
+                ErrorMessage = "Son tarix başlanğıc tarixindən əvvəl ola bilməz.";
+                return;
+            }
+
+            var fromDateOnly = DateOnly.FromDateTime(FromDate.Value);
+            var toDateOnly = DateOnly.FromDateTime(ToDate.Value);
+
+            var report = await _transactionService.CalculateExpenseAndIncome(fromDateOnly, toDateOnly);
+            var transactions = await _transactionService.GetTransactionsByDateRange(fromDateOnly, toDateOnly);
 
             _allReportTransactions = transactions;
             FilterReportTransactions();
 
-            ReportTypeTitle = $"Tarix Aralığı: {FromDate:dd.MM.yyyy} — {ToDate:dd.MM.yyyy}";
+            IsAllCustomersSummaryView = false;
+            ReportTypeTitle = $"Tarix Aralığı: {fromDateOnly:dd.MM.yyyy} — {toDateOnly:dd.MM.yyyy}";
             ApplyReport(report);
 
-            SuccessMessage = $"Hesabat yaradıldı: {FromDate:dd.MM.yyyy} – {ToDate:dd.MM.yyyy} ({report.TransactionCount} tranzaksiya)";
+            SuccessMessage = $"Hesabat yaradıldı: {fromDateOnly:dd.MM.yyyy} – {toDateOnly:dd.MM.yyyy} ({report.TransactionCount} tranzaksiya)";
         }
         catch (Exception ex)
         {
@@ -304,6 +419,7 @@ public partial class ReportsViewModel : ObservableObject
             _allReportTransactions = transactions;
             FilterReportTransactions();
 
+            IsAllCustomersSummaryView = false;
             ReportTypeTitle = $"Müştəri Hesabatı: {SelectedCustomer.Name}";
             ApplyReport(report);
 

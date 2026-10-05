@@ -17,6 +17,7 @@ namespace TableCreater.WPF.Services;
 public class TransactionService : ITransactionService
 {
     private readonly AppDbContext _db;
+    private readonly IExcelService? _excelService;
 
     /// <summary>
     /// Directory where document attachments are stored.
@@ -27,9 +28,10 @@ public class TransactionService : ITransactionService
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "TableCreater", "uploads");
 
-    public TransactionService(AppDbContext db)
+    public TransactionService(AppDbContext db, IExcelService? excelService = null)
     {
         _db = db;
+        _excelService = excelService;
 
         // Ensure the uploads directory exists on service construction
         if (!Directory.Exists(UploadsDirectory))
@@ -272,6 +274,20 @@ public class TransactionService : ITransactionService
         return MapToReadResponse(entity, entity.Customer.Name);
     }
 
+    /// <inheritdoc />
+    public async Task<TransactionReadResponse> ToggleTransactionCompleted(long id)
+    {
+        var entity = await _db.Transactions
+            .Include(t => t.Customer)
+            .FirstOrDefaultAsync(t => t.Id == id)
+            ?? throw new InvalidOperationException($"Transaction not found (id={id})");
+
+        entity.IsCompleted = !entity.IsCompleted;
+        await _db.SaveChangesAsync();
+
+        return MapToReadResponse(entity, entity.Customer.Name);
+    }
+
     // =========================================================================
     // T6 — GET TRANSACTION FOR UPDATE (EDIT FORM)
     // Mapped from: TransactionService.getTransactionForUpdate(Long)
@@ -351,21 +367,15 @@ public class TransactionService : ITransactionService
     /// <inheritdoc />
     public async Task ExportCustomerTransactions(long customerId, string filePath)
     {
-        // Full implementation will use ClosedXML in Step 6.
-        // For now, validate the customer exists and that transactions are available.
         var customer = await _db.Customers.FindAsync(customerId)
             ?? throw new InvalidOperationException($"Customer not found (id={customerId})");
 
-        var transactions = await _db.Transactions
-            .Where(t => t.CustomerId == customerId)
-            .OrderByDescending(t => t.TransactionDate)
-            .ToListAsync();
+        var hasTransactions = await _db.Transactions.AnyAsync(t => t.CustomerId == customerId);
+        if (!hasTransactions)
+            throw new InvalidOperationException("İxrac ediləcək heç bir tranzaksiya yoxdur.");
 
-        if (transactions.Count == 0)
-            throw new InvalidOperationException("No transactions to export.");
-
-        // TODO: Step 6 — Implement ClosedXML export here.
-        await Task.CompletedTask;
+        var excel = _excelService ?? new ExcelService(_db);
+        await excel.ExportToExcel(customerId, filePath);
     }
 
     // =========================================================================

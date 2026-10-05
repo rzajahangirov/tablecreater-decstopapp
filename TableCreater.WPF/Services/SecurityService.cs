@@ -164,113 +164,16 @@ public class SecurityService : ISecurityService
 
     public void EnsureDatabaseEncrypted(string dbFilePath)
     {
-        if (!File.Exists(dbFilePath))
-            return; // EF Core will create it encrypted on first access
-
-        if (string.IsNullOrEmpty(_activeDek))
-            return;
-
-        try
-        {
-            // Check if file is unencrypted (starts with ASCII "SQLite format 3")
-            bool isPlaintext;
-            using (var fs = new FileStream(dbFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            {
-                byte[] header = new byte[16];
-                int bytesRead = fs.Read(header, 0, 16);
-                if (bytesRead >= 15)
-                {
-                    string headerStr = Encoding.ASCII.GetString(header, 0, 15);
-                    isPlaintext = headerStr.StartsWith("SQLite format 3");
-                }
-                else
-                {
-                    return; // File too small
-                }
-            }
-
-            if (!isPlaintext)
-            {
-                // Already encrypted — nothing to do
-                return;
-            }
-
-            // ─── Migrate plain → encrypted ──────────────────────────────────
-            // Strategy: Open plain DB, attach a NEW encrypted DB, export, swap files.
-            string tempEncryptedPath = Path.Combine(
-                Path.GetDirectoryName(dbFilePath) ?? ".",
-                $"enc_temp_{Guid.NewGuid():N}.db");
-
-            if (File.Exists(tempEncryptedPath))
-                File.Delete(tempEncryptedPath);
-
-            // Open the PLAIN (unencrypted) database
-            using (var plainConn = new SqliteConnection($"Data Source={dbFilePath};"))
-            {
-                plainConn.Open();
-
-                // Attach a new encrypted database with the DEK as key
-                // The key must be a hex string prefixed with "x'" for raw key mode
-                using (var attachCmd = plainConn.CreateCommand())
-                {
-                    attachCmd.CommandText = $"ATTACH DATABASE @encPath AS encrypted KEY @key;";
-                    attachCmd.Parameters.AddWithValue("@encPath", tempEncryptedPath);
-                    attachCmd.Parameters.AddWithValue("@key", _activeDek);
-                    attachCmd.ExecuteNonQuery();
-                }
-
-                // Export all data from main to encrypted
-                using (var exportCmd = plainConn.CreateCommand())
-                {
-                    exportCmd.CommandText = "SELECT sqlcipher_export('encrypted');";
-                    exportCmd.ExecuteNonQuery();
-                }
-
-                // Detach
-                using (var detachCmd = plainConn.CreateCommand())
-                {
-                    detachCmd.CommandText = "DETACH DATABASE encrypted;";
-                    detachCmd.ExecuteNonQuery();
-                }
-            }
-
-            // Verify the encrypted file can be opened with the DEK
-            using (var verifyConn = new SqliteConnection($"Data Source={tempEncryptedPath};Password={_activeDek};"))
-            {
-                verifyConn.Open();
-                using var verifyCmd = verifyConn.CreateCommand();
-                verifyCmd.CommandText = "SELECT count(*) FROM sqlite_master;";
-                var result = verifyCmd.ExecuteScalar();
-                if (result == null || Convert.ToInt32(result) < 0)
-                {
-                    throw new InvalidOperationException("Encrypted DB verification failed.");
-                }
-            }
-
-            // Create a safety backup of the original unencrypted DB before replacing
-            string bakPath = dbFilePath + ".unencrypted.bak";
-            File.Copy(dbFilePath, bakPath, overwrite: true);
-
-            // Replace original with encrypted version
-            File.Copy(tempEncryptedPath, dbFilePath, overwrite: true);
-            File.Delete(tempEncryptedPath);
-        }
-        catch (Exception ex)
-        {
-            // If migration fails, log and keep going with unencrypted DB
-            System.Diagnostics.Debug.WriteLine($"DB Encryption migration note: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"Stack: {ex.StackTrace}");
-        }
+        // v1.0: DB encryption disabled.
+        // PIN-based authentication still protects application access.
+        // DB encryption will be implemented in v2.0 with proper SQLCipher integration.
     }
 
     public string GetConnectionString(string dbFilePath)
     {
-        if (!string.IsNullOrEmpty(_activeDek) && IsFileEncrypted(dbFilePath))
-        {
-            return $"Data Source={dbFilePath};Password={_activeDek};";
-        }
-
-        return $"Data Source={dbFilePath};";
+        // v1.0: Always use plain (unencrypted) connection.
+        // Security is provided by PIN-based app access control.
+        return $"Data Source={dbFilePath}";
     }
 
     /// <summary>

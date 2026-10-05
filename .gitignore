@@ -12,3 +12,7 @@
 
 # Large publish output binaries (>100MB blocked by GitHub)
 **/publish/
+publish_test/
+SqlCipherTest/
+**/scratch/
+*.log

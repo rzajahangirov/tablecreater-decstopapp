@@ -53,6 +53,9 @@ public partial class ReportsPage : UserControl
         dialog.ShowDialog();
     }
 
+    private void BtnAllCustomersSummary_Click(object sender, RoutedEventArgs e)
+        => ViewModel?.GenerateAllCustomersSummaryCommand.Execute(null);
+
     private void BtnExportReportExcel_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel == null || ViewModel.AllReportTransactions.Count == 0)
