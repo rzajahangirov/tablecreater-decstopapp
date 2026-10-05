@@ -40,14 +40,34 @@ public class SecurityService : ISecurityService
 
     public SecurityService()
     {
-        var dir = Path.Combine(
+        var appDirFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "security.json");
+        var localAppDataFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TableCreater");
+            "TableCreater", "security.json");
 
-        if (!Directory.Exists(dir))
-            Directory.CreateDirectory(dir);
+        // Prefer portable app directory
+        if (File.Exists(appDirFile))
+        {
+            _securityFilePath = appDirFile;
+        }
+        // If it exists in LocalApplicationData from previous runs, migrate it to app directory
+        else if (File.Exists(localAppDataFile))
+        {
+            try
+            {
+                File.Copy(localAppDataFile, appDirFile, overwrite: true);
+                _securityFilePath = appDirFile;
+            }
+            catch
+            {
+                _securityFilePath = localAppDataFile;
+            }
+        }
+        else
+        {
+            _securityFilePath = appDirFile;
+        }
 
-        _securityFilePath = Path.Combine(dir, "security.json");
         EnsureEnvelopeInitialized();
     }
 

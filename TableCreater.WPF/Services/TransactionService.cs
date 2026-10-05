@@ -21,12 +21,10 @@ public class TransactionService : ITransactionService
 
     /// <summary>
     /// Directory where document attachments are stored.
-    /// Replaces Java's "uploads/" directory with a local app-data folder.
+    /// Uses application base directory for 100% portable isolation.
     /// </summary>
     private static readonly string UploadsDirectory =
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TableCreater", "uploads");
+        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "uploads");
 
     public TransactionService(AppDbContext db, IExcelService? excelService = null)
     {
@@ -36,6 +34,25 @@ public class TransactionService : ITransactionService
         // Ensure the uploads directory exists on service construction
         if (!Directory.Exists(UploadsDirectory))
             Directory.CreateDirectory(UploadsDirectory);
+
+        // Migrate any existing files from LocalApplicationData to portable uploads
+        try
+        {
+            var oldUploads = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "TableCreater", "uploads");
+
+            if (Directory.Exists(oldUploads))
+            {
+                foreach (var file in Directory.GetFiles(oldUploads))
+                {
+                    var dest = Path.Combine(UploadsDirectory, Path.GetFileName(file));
+                    if (!File.Exists(dest))
+                        File.Copy(file, dest, overwrite: true);
+                }
+            }
+        }
+        catch { }
     }
 
     // =========================================================================
