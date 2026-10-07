@@ -161,15 +161,6 @@
                 </DataGrid.ContextMenu>
 
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="70">
-                         <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Padding" Value="16,0"/>
-                                <Setter Property="VerticalAlignment" Value="Center"/>
-                            </Style>
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
-
                     <DataGridTextColumn Header="Müştəri Adı" Binding="{Binding Name}" Width="*">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
@@ -330,10 +321,10 @@
                         </Grid>
 
                         <StackPanel Visibility="{Binding DialogInitialBalanceCurrency, Converter={StaticResource EnumEqualsToVisConverter}, ConverterParameter=Rub}">
-                            <TextBlock Text="RUB / USD Məzənnəsi (1 RUB = ? USD)" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,6" Foreground="#555"/>
+                            <TextBlock Text="Məzənnə (1 USD = ? RUB)" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,6" Foreground="#555"/>
                             <ui:NumberBox Value="{Binding DialogInitialBalanceExchangeRate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                           SpinButtonPlacementMode="Compact"
-                                          Minimum="0"
+                                          Minimum="0.01" SmallChange="1"
                                           HorizontalAlignment="Stretch" Padding="8,6"/>
                         </StackPanel>
                     </StackPanel>

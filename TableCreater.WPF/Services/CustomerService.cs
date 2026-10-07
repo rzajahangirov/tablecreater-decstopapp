@@ -34,7 +34,7 @@ public class CustomerService : ICustomerService
         if (request.InitialBalance.HasValue && request.InitialBalance.Value != 0)
         {
             initialBalanceUsd = request.InitialBalanceCurrency == PaymentCurrency.Rub
-                ? request.InitialBalance.Value * request.InitialExchangeRate
+                ? (request.InitialExchangeRate > 0 ? request.InitialBalance.Value / request.InitialExchangeRate : 0m)
                 : request.InitialBalance.Value;
         }
 
@@ -210,9 +210,9 @@ public class CustomerService : ICustomerService
         var entity = await _db.Customers.FindAsync(id)
             ?? throw new InvalidOperationException("Customer not found");
 
-        // Convert amount to USD
+        // Convert amount to USD (Rate: 1 USD = X RUB => RUB / Rate = USD)
         decimal amountUsd = request.Currency == PaymentCurrency.Rub
-            ? request.Amount * request.ExchangeRate
+            ? (request.ExchangeRate > 0 ? request.Amount / request.ExchangeRate : 0m)
             : request.Amount;
 
         decimal delta;
@@ -274,8 +274,9 @@ public class CustomerService : ICustomerService
                 else
                 {
                     decimal rawPaid = h.Transaction.PaidAmount ?? 0m;
+                    decimal rate = h.Transaction.HistoricalExchangeRate;
                     paidUsd = h.Transaction.PaidCurrency == PaymentCurrency.Rub
-                        ? rawPaid * h.Transaction.HistoricalExchangeRate
+                        ? (rate > 0 ? rawPaid / rate : 0m)
                         : rawPaid;
                 }
             }

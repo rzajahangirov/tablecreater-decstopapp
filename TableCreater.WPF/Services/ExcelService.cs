@@ -544,7 +544,7 @@ public class ExcelService : IExcelService
     {
         decimal paidAmount = entity.PaidAmount ?? 0m;
         decimal paidInUsd = entity.PaidCurrency == PaymentCurrency.Rub
-            ? paidAmount * entity.HistoricalExchangeRate
+            ? (entity.HistoricalExchangeRate > 0 ? paidAmount / entity.HistoricalExchangeRate : 0m)
             : paidAmount;
 
         return new TransactionReadResponse

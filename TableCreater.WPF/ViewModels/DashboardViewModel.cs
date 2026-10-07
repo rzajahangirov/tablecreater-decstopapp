@@ -119,7 +119,7 @@ public partial class DashboardViewModel : ObservableObject
             {
                 if (t.PaymentStatus == PaymentStatus.Unpaid) return 0m;
                 decimal paid = t.PaidAmount ?? 0m;
-                return t.PaidCurrency == PaymentCurrency.Rub ? paid * t.HistoricalExchangeRate : paid;
+                return t.PaidCurrency == PaymentCurrency.Rub ? (t.HistoricalExchangeRate > 0 ? paid / t.HistoricalExchangeRate : 0m) : paid;
             });
 
             // 3. Top 10 recent transactions
@@ -171,7 +171,7 @@ public partial class DashboardViewModel : ObservableObject
         if (entity.PaymentStatus != PaymentStatus.Unpaid && entity.PaidAmount.HasValue)
         {
             paidInUsd = entity.PaidCurrency == PaymentCurrency.Rub
-                ? entity.PaidAmount.Value * entity.HistoricalExchangeRate
+                ? (entity.HistoricalExchangeRate > 0 ? entity.PaidAmount.Value / entity.HistoricalExchangeRate : 0m)
                 : entity.PaidAmount.Value;
         }
 

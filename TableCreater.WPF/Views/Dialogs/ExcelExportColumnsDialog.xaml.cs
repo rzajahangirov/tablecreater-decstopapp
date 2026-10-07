@@ -163,7 +163,7 @@ public partial class ExcelExportColumnsDialog : Window
         AddOption("AdditionalExpenseAmount", "Əlavə Xərc Məbləği", "💰 Əlavə Xərclər və Məzənnə", isDefault: true);
         AddOption("AdditionalExpenseCurrency", "Əlavə Xərc Valyutası", "💰 Əlavə Xərclər və Məzənnə", isDefault: false);
         AddOption("AdditionalExpenseDescription", "Əlavə Xərc Təsviri / Qeyd", "💰 Əlavə Xərclər və Məzənnə", isDefault: true);
-        AddOption("HistoricalExchangeRate", "Məzənnə (RUB / USD)", "💰 Əlavə Xərclər və Məzənnə", isDefault: true);
+        AddOption("HistoricalExchangeRate", "Məzənnə (USD / RUB)", "💰 Əlavə Xərclər və Məzənnə", isDefault: true);
 
         // 4. Maliyyə və Hesablaşma
         AddOption("HistoricalTotalExpenseUsd", "Ümumi Xərc (USD)", "📊 Maliyyə və Hesablaşma", isDefault: true);

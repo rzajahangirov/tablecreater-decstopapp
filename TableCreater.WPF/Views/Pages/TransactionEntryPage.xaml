@@ -131,10 +131,10 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="2" Margin="10,0,0,0">
-                            <TextBlock Text="Məzənnə (RUB→USD) *" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                            <TextBlock Text="Məzənnə (1 USD = ? RUB) *" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
                             <ui:NumberBox Value="{Binding HistoricalExchangeRate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                           SpinButtonPlacementMode="Compact"
-                                          Minimum="0.0001" SmallChange="0.001"
+                                          Minimum="0.01" SmallChange="1"
                                           HorizontalAlignment="Stretch" Padding="8,6"/>
                         </StackPanel>
                     </Grid>

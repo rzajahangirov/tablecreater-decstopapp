@@ -411,14 +411,15 @@ public class TransactionService : ITransactionService
     /// Must be called before every save (create or update).
     ///
     /// Algorithm (updated with ProfitPerTon & Balance Delta):
+    /// NOTE: HistoricalExchangeRate = "1 USD = X RUB", so RUB / Rate = USD
     ///
     /// 1. GoodsCostRub  = WeightTon × PricePerTonRub
-    /// 2. GoodsCostUsd  = GoodsCostRub × HistoricalExchangeRate
+    /// 2. GoodsCostUsd  = GoodsCostRub / HistoricalExchangeRate
     /// 3. TransportRaw  = PricePerVehicle × VehicleCount
-    /// 4. TransportUsd  = (TransportCurrency==RUB) ? TransportRaw × Rate : TransportRaw
-    /// 5. AdditionalExpUsd = (AdditionalExpenseCurrency==RUB) ? Amount × Rate : Amount
+    /// 4. TransportUsd  = (TransportCurrency==RUB) ? TransportRaw / Rate : TransportRaw
+    /// 5. AdditionalExpUsd = (AdditionalExpenseCurrency==RUB) ? Amount / Rate : Amount
     /// 6. TotalExpense   = GoodsCostUsd + TransportCostUsd + AdditionalExpenseUsd
-    /// 7. PaidInUsd      = (PaidCurrency==RUB) ? PaidAmount × Rate : PaidAmount
+    /// 7. PaidInUsd      = (PaidCurrency==RUB) ? PaidAmount / Rate : PaidAmount
     /// 8. RemainingDebt  = PaidInUsd − TotalExpense
     /// 9. UserProfitUsd  = WeightTon × ProfitPerTon (converted to USD if RUB)
     /// 10. CustomerBilledUsd = TotalExpense + UserProfitUsd
@@ -432,7 +433,7 @@ public class TransactionService : ITransactionService
 
         // ── Step 1 & 2: Goods Cost ──────────────────────────────────────────
         decimal goodsCostRub = entity.WeightTon * entity.PricePerTonRub;
-        decimal goodsCostUsd = goodsCostRub * rate;
+        decimal goodsCostUsd = rate > 0 ? goodsCostRub / rate : 0m;
 
         // ── Step 3 & 4: Transport Cost ──────────────────────────────────────
         decimal pricePerVehicle = entity.PricePerVehicle ?? 0m;
@@ -440,8 +441,8 @@ public class TransactionService : ITransactionService
         decimal totalTransportRaw = pricePerVehicle * vehicleCount;
 
         decimal transportCostUsd = entity.TransportCurrency == PaymentCurrency.Rub
-            ? totalTransportRaw * rate    // RUB → USD conversion
-            : totalTransportRaw;          // Already in USD
+            ? (rate > 0 ? totalTransportRaw / rate : 0m)    // RUB → USD conversion
+            : totalTransportRaw;                             // Already in USD
 
         // ── Step 5: Additional Expense ──────────────────────────────────────
         decimal additionalExpenseUsd = 0m;
@@ -449,7 +450,7 @@ public class TransactionService : ITransactionService
         {
             decimal addAmount = entity.AdditionalExpenseAmount.Value;
             additionalExpenseUsd = (entity.AdditionalExpenseCurrency == PaymentCurrency.Rub)
-                ? addAmount * rate
+                ? (rate > 0 ? addAmount / rate : 0m)
                 : addAmount;
         }
 
@@ -459,7 +460,7 @@ public class TransactionService : ITransactionService
         // ── Step 7: Paid Amount in USD ──────────────────────────────────────
         decimal paidAmount = entity.PaidAmount ?? 0m;
         decimal paidInUsd = entity.PaidCurrency == PaymentCurrency.Rub
-            ? paidAmount * rate
+            ? (rate > 0 ? paidAmount / rate : 0m)
             : paidAmount;
 
         // ── Step 8: Remaining Debt (USD) ────────────────────────────────────
@@ -467,7 +468,7 @@ public class TransactionService : ITransactionService
 
         // ── Step 9: User Profit (USD) ───────────────────────────────────────
         decimal profitPerTonUsd = entity.ProfitPerTonCurrency == PaymentCurrency.Rub
-            ? entity.ProfitPerTon * rate
+            ? (rate > 0 ? entity.ProfitPerTon / rate : 0m)
             : entity.ProfitPerTon;
         entity.HistoricalUserProfitUsd = entity.WeightTon * profitPerTonUsd;
 
@@ -518,8 +519,9 @@ public class TransactionService : ITransactionService
             return 0m;
 
         decimal paidAmount = t.PaidAmount ?? 0m;
+        decimal rate = t.HistoricalExchangeRate;
         return t.PaidCurrency == PaymentCurrency.Rub
-            ? paidAmount * t.HistoricalExchangeRate
+            ? (rate > 0 ? paidAmount / rate : 0m)
             : paidAmount;
     }
 
@@ -531,8 +533,9 @@ public class TransactionService : ITransactionService
         if (!t.AdditionalExpenseAmount.HasValue || t.AdditionalExpenseAmount.Value <= 0)
             return 0m;
 
+        decimal rate = t.HistoricalExchangeRate;
         return (t.AdditionalExpenseCurrency == PaymentCurrency.Rub)
-            ? t.AdditionalExpenseAmount.Value * t.HistoricalExchangeRate
+            ? (rate > 0 ? t.AdditionalExpenseAmount.Value / rate : 0m)
             : t.AdditionalExpenseAmount.Value;
     }
 

@@ -185,8 +185,8 @@
 
                         <!-- Məzənnə -->
                         <StackPanel Grid.Row="1" Grid.Column="1" Margin="6,0,6,0">
-                            <TextBlock Text="Məzənnə (1 RUB = ? USD)" FontSize="11" Foreground="#94A3B8" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                            <TextBlock Text="{Binding Transaction.HistoricalExchangeRate, StringFormat='{}{0:N6}'}" FontSize="15" FontWeight="Bold" Foreground="#374151"/>
+                            <TextBlock Text="Məzənnə (1 USD = ? RUB)" FontSize="11" Foreground="#94A3B8" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding Transaction.HistoricalExchangeRate, StringFormat='{}{0:N2} RUB'}" FontSize="15" FontWeight="Bold" Foreground="#374151"/>
                         </StackPanel>
 
                         <!-- Ton Başına Qazanc -->

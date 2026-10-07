@@ -268,20 +268,20 @@ public partial class TransactionEntryViewModel : ObservableObject
     {
         decimal rate = HistoricalExchangeRate > 0 ? HistoricalExchangeRate : 1m;
 
-        // Step 1 & 2: Goods Cost
+        // Step 1 & 2: Goods Cost (rate = 1 USD = X RUB, so RUB / rate = USD)
         LiveGoodsCostRub = WeightTon * PricePerTonRub;
-        LiveGoodsCostUsd = LiveGoodsCostRub * rate;
+        LiveGoodsCostUsd = LiveGoodsCostRub / rate;
 
         // Step 3 & 4: Transport Cost — manual currency selection
         LiveTransportCostRaw = PricePerVehicle * VehicleCount;
         LiveTransportCostUsd = TransportCurrency == PaymentCurrency.Rub
-            ? LiveTransportCostRaw * rate    // RUB → USD
+            ? LiveTransportCostRaw / rate    // RUB → USD
             : LiveTransportCostRaw;          // Already USD
 
         // Step 5: Additional Expense
         LiveAdditionalExpenseUsd = AdditionalExpenseAmount > 0
             ? (AdditionalExpenseCurrency == PaymentCurrency.Rub
-                ? AdditionalExpenseAmount * rate
+                ? AdditionalExpenseAmount / rate
                 : AdditionalExpenseAmount)
             : 0m;
 
@@ -290,7 +290,7 @@ public partial class TransactionEntryViewModel : ObservableObject
 
         // Step 7: Paid in USD
         LivePaidInUsd = PaidCurrency == PaymentCurrency.Rub
-            ? PaidAmount * rate              // RUB → USD
+            ? PaidAmount / rate              // RUB → USD
             : PaidAmount;                    // Already USD
 
         // Step 8: Remaining Debt
@@ -298,7 +298,7 @@ public partial class TransactionEntryViewModel : ObservableObject
 
         // Step 9: User Profit (ton başına qazanc)
         decimal profitPerTonUsd = ProfitPerTonCurrency == PaymentCurrency.Rub
-            ? ProfitPerTon * rate
+            ? ProfitPerTon / rate
             : ProfitPerTon;
         LiveUserProfitUsd = WeightTon * profitPerTonUsd;
 
