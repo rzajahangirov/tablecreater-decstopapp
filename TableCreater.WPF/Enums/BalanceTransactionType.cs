@@ -38,5 +38,10 @@ public enum BalanceTransactionType
     /// <summary>
     /// Balansın birbaşa düzəlişi (Yeni balans təyin etmə).
     /// </summary>
-    Adjustment
+    Adjustment,
+
+    /// <summary>
+    /// Valyutalar arası köçürmə (USD <-> RUB).
+    /// </summary>
+    Transfer
 }

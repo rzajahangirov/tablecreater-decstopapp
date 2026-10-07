@@ -160,6 +160,12 @@ public partial class CustomerDetailsViewModel : ObservableObject
     [ObservableProperty]
     private string _balanceStatusColor = "#888888";
 
+    [ObservableProperty]
+    private decimal _customerBalanceRub;
+
+    [ObservableProperty]
+    private string _balanceRubStatusColor = "#888888";
+
     // =========================================================================
     // BALANCE ADJUSTMENT FIELDS
     // =========================================================================
@@ -179,14 +185,44 @@ public partial class CustomerDetailsViewModel : ObservableObject
     [ObservableProperty]
     private BalanceTransactionType _adjustmentType = BalanceTransactionType.ManualDeposit;
 
+    [ObservableProperty]
+    private string _transferPreview = string.Empty;
+
     public BalanceTransactionType[] ManualBalanceTypes => new[]
     {
         BalanceTransactionType.ManualDeposit,
         BalanceTransactionType.ManualWithdrawal,
-        BalanceTransactionType.Adjustment
+        BalanceTransactionType.Adjustment,
+        BalanceTransactionType.Transfer
     };
 
     public PaymentCurrency[] PaymentCurrencies => Enum.GetValues<PaymentCurrency>();
+
+    partial void OnAdjustmentAmountChanged(decimal value) => UpdateTransferPreview();
+    partial void OnAdjustmentExchangeRateChanged(decimal value) => UpdateTransferPreview();
+    partial void OnAdjustmentCurrencyChanged(PaymentCurrency value) => UpdateTransferPreview();
+    partial void OnAdjustmentTypeChanged(BalanceTransactionType value) => UpdateTransferPreview();
+
+    private void UpdateTransferPreview()
+    {
+        if (AdjustmentType != BalanceTransactionType.Transfer)
+        {
+            TransferPreview = string.Empty;
+            return;
+        }
+
+        decimal rate = AdjustmentExchangeRate > 0 ? AdjustmentExchangeRate : 1.0m;
+        if (AdjustmentCurrency == PaymentCurrency.Usd)
+        {
+            decimal rubIn = AdjustmentAmount * rate;
+            TransferPreview = $"Köçürmə (USD → RUB): {AdjustmentAmount:N2} USD çıxılacaq ➔ {rubIn:N2} RUB mədaxil olunacaq (Məzənnə: {rate:N2})";
+        }
+        else
+        {
+            decimal usdIn = rate > 0 ? AdjustmentAmount / rate : 0m;
+            TransferPreview = $"Köçürmə (RUB → USD): {AdjustmentAmount:N2} RUB çıxılacaq ➔ ${usdIn:N2} mədaxil olunacaq (Məzənnə: {rate:N2})";
+        }
+    }
 
     // =========================================================================
     // UI STATE
@@ -217,6 +253,7 @@ public partial class CustomerDetailsViewModel : ObservableObject
             CustomerName = customer.Name;
             CustomerPhone = customer.Phone;
             CustomerBalanceUsd = customer.BalanceUsd;
+            CustomerBalanceRub = customer.BalanceRub;
             UpdateBalanceColor();
 
             await RefreshTransactionsAndCards();
@@ -285,6 +322,7 @@ public partial class CustomerDetailsViewModel : ObservableObject
     }
 
     public ITransactionService TransactionService => _transactionService;
+    public List<CustomerBalanceHistoryResponse> AllBalanceHistories => _allBalanceHistories;
 
     [RelayCommand]
     private async Task AdjustBalanceAsync()
@@ -312,11 +350,13 @@ public partial class CustomerDetailsViewModel : ObservableObject
 
             var updated = await _customerService.AdjustBalance(CustomerId, request);
             CustomerBalanceUsd = updated.BalanceUsd;
+            CustomerBalanceRub = updated.BalanceRub;
             UpdateBalanceColor();
 
             // Reset fields
             AdjustmentAmount = 0;
             AdjustmentDescription = string.Empty;
+            UpdateTransferPreview();
 
             SuccessMessage = "Balans uğurla yeniləndi!";
 
@@ -382,7 +422,7 @@ public partial class CustomerDetailsViewModel : ObservableObject
             if (saveDialog.ShowDialog() != true) return;
 
             IsLoading = true;
-            await _excelService.ExportBalanceHistoryToExcel(CustomerId, saveDialog.FileName, BalanceHistories);
+            await _excelService.ExportBalanceHistoryToExcel(CustomerId, saveDialog.FileName, null, BalanceHistories);
 
             SuccessMessage = $"Balans tarixçəsi uğurla ixrac edildi: {saveDialog.FileName}";
 
@@ -479,6 +519,16 @@ public partial class CustomerDetailsViewModel : ObservableObject
         ApplyTransactionFilters();
     }
 
+    [ObservableProperty]
+    private PaymentCurrency? _bhFilterKassa = null;
+
+    public PaymentCurrency?[] BhKassaFilterOptions => new PaymentCurrency?[]
+    {
+        null,
+        PaymentCurrency.Usd,
+        PaymentCurrency.Rub
+    };
+
     [RelayCommand]
     private void ApplyBalanceHistoryFilters()
     {
@@ -490,7 +540,43 @@ public partial class CustomerDetailsViewModel : ObservableObject
     {
         BhFilterDateFrom = null;
         BhFilterDateTo = null;
+        BhFilterKassa = null;
         ExecuteBalanceHistoryFilter();
+    }
+
+    [RelayCommand]
+    private async Task DeleteBalanceHistoryAsync(long historyId)
+    {
+        try
+        {
+            var res = System.Windows.MessageBox.Show(
+                "Bu balans əməliyyatını silmək istədiyinizə əminsiniz?\nƏməliyyatın məbləği müştərinin balansına geri qaytarılacaq.",
+                "Əməliyyatı Sil",
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Question);
+
+            if (res != System.Windows.MessageBoxResult.Yes) return;
+
+            IsLoading = true;
+            ErrorMessage = null;
+            SuccessMessage = null;
+
+            var updated = await _customerService.DeleteBalanceHistory(historyId);
+            CustomerBalanceUsd = updated.BalanceUsd;
+            CustomerBalanceRub = updated.BalanceRub;
+            UpdateBalanceColor();
+
+            SuccessMessage = "Balans əməliyyatı uğurla silindi və məbləğ bərpa edildi.";
+            await LoadBalanceHistoryAsync();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Əməliyyatı silmək mümkün olmadı: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     // =========================================================================
@@ -522,6 +608,7 @@ public partial class CustomerDetailsViewModel : ObservableObject
         // Refresh balance after transactions change
         var customer = await _customerService.GetCustomerById(CustomerId);
         CustomerBalanceUsd = customer.BalanceUsd;
+        CustomerBalanceRub = customer.BalanceRub;
         UpdateBalanceColor();
     }
 
@@ -533,6 +620,13 @@ public partial class CustomerDetailsViewModel : ObservableObject
             BalanceStatusColor = "#2E7D32"; // Green — avansı var
         else
             BalanceStatusColor = "#888888"; // Gray — balans
+
+        if (CustomerBalanceRub < 0)
+            BalanceRubStatusColor = "#C62828"; // Red — borcu var
+        else if (CustomerBalanceRub > 0)
+            BalanceRubStatusColor = "#2E7D32"; // Green — avansı var
+        else
+            BalanceRubStatusColor = "#888888"; // Gray — balans
     }
 
     private void UpdateTransactionStatistics()
@@ -554,6 +648,10 @@ public partial class CustomerDetailsViewModel : ObservableObject
         {
             // Include the entire end date
             filtered = filtered.Where(h => h.CreatedAt < BhFilterDateTo.Value.Date.AddDays(1));
+        }
+        if (BhFilterKassa.HasValue)
+        {
+            filtered = filtered.Where(h => h.Currency == BhFilterKassa.Value);
         }
 
         // Default sort: newest first

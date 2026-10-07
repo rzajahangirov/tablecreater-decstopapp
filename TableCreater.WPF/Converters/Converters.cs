@@ -382,6 +382,7 @@ public class BalanceTypeToTextConverter : IValueConverter
                 BalanceTransactionType.ManualDeposit => "Mədaxil (Artırma)",
                 BalanceTransactionType.ManualWithdrawal => "Məxaric (Çıxarış)",
                 BalanceTransactionType.Adjustment => "Düzəliş",
+                BalanceTransactionType.Transfer => "Valyuta Köçürməsi",
                 _ => type.ToString()
             };
         }
@@ -407,6 +408,7 @@ public class BalanceTypeToColorConverter : IValueConverter
             {
                 BalanceTransactionType.ManualDeposit or BalanceTransactionType.Initial => System.Windows.Media.Brushes.DarkGreen,
                 BalanceTransactionType.ManualWithdrawal or BalanceTransactionType.TransactionCharge => System.Windows.Media.Brushes.Crimson,
+                BalanceTransactionType.Transfer => System.Windows.Media.Brushes.DarkOrange,
                 _ => System.Windows.Media.Brushes.SteelBlue
             };
         }

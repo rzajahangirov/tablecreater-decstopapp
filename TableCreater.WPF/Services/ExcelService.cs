@@ -249,6 +249,7 @@ public class ExcelService : IExcelService
     public async Task ExportBalanceHistoryToExcel(
         long customerId,
         string filePath,
+        IEnumerable<string>? selectedColumnIds = null,
         IEnumerable<CustomerBalanceHistoryResponse>? specificHistories = null)
     {
         var customer = await _db.Customers.FindAsync(customerId)
@@ -273,17 +274,32 @@ public class ExcelService : IExcelService
                 TransactionId = e.TransactionId,
                 CreatedAt = e.CreatedAt,
                 Type = e.Type,
+                Currency = e.Currency,
+                Amount = e.Amount != 0 ? e.Amount : e.AmountUsd,
+                BalanceAfter = e.BalanceAfter != 0 ? e.BalanceAfter : e.BalanceAfterUsd,
                 AmountUsd = e.AmountUsd,
                 BalanceAfterUsd = e.BalanceAfterUsd,
+                RelatedHistoryId = e.RelatedHistoryId,
                 Description = e.Description
             }).ToList();
+        }
+
+        var allDefinitions = GetBalanceHistoryColumnDefinitions();
+        var selectedSet = selectedColumnIds != null
+            ? new HashSet<string>(selectedColumnIds, StringComparer.OrdinalIgnoreCase)
+            : new HashSet<string>(allDefinitions.Where(d => d.IsDefault).Select(d => d.Id), StringComparer.OrdinalIgnoreCase);
+
+        var activeColumns = allDefinitions.Where(d => selectedSet.Contains(d.Id)).ToList();
+        if (activeColumns.Count == 0)
+        {
+            activeColumns = allDefinitions;
         }
 
         using var workbook = new XLWorkbook();
         var ws = workbook.Worksheets.Add("Balans Tarixçəsi");
         ws.ShowGridLines = true;
 
-        // ── Brand Header Block ──────────────────────────────────────
+        // ── Brand Header Block (Rows 1-5) ───────────────────────────
         ws.Cell("A1").Value = "Müştəri:";
         ws.Cell("B1").Value = customer.Name;
         ws.Cell("B1").Style.Font.Bold = true;
@@ -293,7 +309,7 @@ public class ExcelService : IExcelService
         ws.Cell("A2").Value = "Əlaqə nömrəsi:";
         ws.Cell("B2").Value = string.IsNullOrWhiteSpace(customer.Phone) ? "—" : customer.Phone;
 
-        ws.Cell("A3").Value = "Cari Balans:";
+        ws.Cell("A3").Value = "Cari Balans (USD):";
         ws.Cell("B3").Value = (double)customer.BalanceUsd;
         ws.Cell("B3").Style.NumberFormat.Format = "$#,##0.00";
         ws.Cell("B3").Style.Font.Bold = true;
@@ -301,29 +317,27 @@ public class ExcelService : IExcelService
             ? XLColor.FromArgb(46, 125, 50)
             : XLColor.FromArgb(198, 40, 40);
 
-        ws.Cell("A4").Value = "Hesabat tarixi:";
-        ws.Cell("B4").Value = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+        ws.Cell("A4").Value = "Cari Balans (RUB):";
+        ws.Cell("B4").Value = (double)customer.BalanceRub;
+        ws.Cell("B4").Style.NumberFormat.Format = "#,##0.00 ₽";
+        ws.Cell("B4").Style.Font.Bold = true;
+        ws.Cell("B4").Style.Font.FontColor = customer.BalanceRub >= 0
+            ? XLColor.FromArgb(46, 125, 50)
+            : XLColor.FromArgb(198, 40, 40);
 
-        ws.Range("A1:A4").Style.Font.Bold = true;
-        ws.Range("A1:A4").Style.Font.FontColor = XLColor.FromArgb(71, 85, 105);
+        ws.Cell("A5").Value = "Hesabat tarixi:";
+        ws.Cell("B5").Value = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
 
-        // ── Table Column Headers (Row 6) ────────────────────────────
-        string[] headers =
+        ws.Range("A1:A5").Style.Font.Bold = true;
+        ws.Range("A1:A5").Style.Font.FontColor = XLColor.FromArgb(71, 85, 105);
+
+        // ── Table Column Headers (Row 7) ────────────────────────────
+        int headerRow = 7;
+        for (int c = 0; c < activeColumns.Count; c++)
         {
-            "№",
-            "Tarix və Saat",
-            "Əməliyyat Növü",
-            "Məbləğ (USD)",
-            "Balansdan Sonra (USD)",
-            "Tranzaksiya ID",
-            "Təsvir / Qeyd"
-        };
-
-        int headerRow = 6;
-        for (int i = 0; i < headers.Length; i++)
-        {
-            var cell = ws.Cell(headerRow, i + 1);
-            cell.Value = headers[i];
+            var colDef = activeColumns[c];
+            var cell = ws.Cell(headerRow, c + 1);
+            cell.Value = colDef.Header;
             cell.Style.Font.Bold = true;
             cell.Style.Font.FontSize = 11;
             cell.Style.Font.FontColor = XLColor.White;
@@ -337,7 +351,6 @@ public class ExcelService : IExcelService
 
         // ── Data Rows ───────────────────────────────────────────────
         int startRow = headerRow + 1;
-        decimal totalNetDelta = 0;
 
         for (int i = 0; i < list.Count; i++)
         {
@@ -349,105 +362,87 @@ public class ExcelService : IExcelService
             bool isEven = i % 2 == 1;
             var rowBg = isEven ? XLColor.FromArgb(248, 250, 252) : XLColor.White;
 
-            string typeText = item.Type switch
+            for (int c = 0; c < activeColumns.Count; c++)
             {
-                BalanceTransactionType.Initial => "İlkin Balans",
-                BalanceTransactionType.TransactionCharge => "Tranzaksiya Xərci",
-                BalanceTransactionType.TransactionUpdate => "Tranzaksiya Düzəlişi",
-                BalanceTransactionType.TransactionRollback => "Tranzaksiya Ləğvi",
-                BalanceTransactionType.ManualDeposit => "Mədaxil (Artırma)",
-                BalanceTransactionType.ManualWithdrawal => "Məxaric (Çıxarış)",
-                BalanceTransactionType.Adjustment => "Düzəliş",
-                _ => item.Type.ToString()
-            };
+                var colDef = activeColumns[c];
+                var cell = ws.Cell(rowIdx, c + 1);
+                var val = colDef.GetValue(item, i);
 
-            ws.Cell(rowIdx, 1).Value = i + 1;
-            ws.Cell(rowIdx, 1).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                SetCellValue(cell, val);
 
-            ws.Cell(rowIdx, 2).Value = item.CreatedAt.ToString("yyyy-MM-dd HH:mm");
-            ws.Cell(rowIdx, 2).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                if (!string.IsNullOrEmpty(colDef.NumberFormat) && val is double or decimal)
+                {
+                    cell.Style.NumberFormat.Format = colDef.NumberFormat;
+                }
 
-            ws.Cell(rowIdx, 3).Value = typeText;
-            ws.Cell(rowIdx, 3).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-
-            var amountCell = ws.Cell(rowIdx, 4);
-            amountCell.Value = (double)item.AmountUsd;
-            amountCell.Style.NumberFormat.Format = "$#,##0.00";
-            amountCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-            amountCell.Style.Font.Bold = true;
-            amountCell.Style.Font.FontColor = item.AmountUsd >= 0
-                ? XLColor.FromArgb(46, 125, 50)
-                : XLColor.FromArgb(198, 40, 40);
-
-            var afterCell = ws.Cell(rowIdx, 5);
-            afterCell.Value = (double)item.BalanceAfterUsd;
-            afterCell.Style.NumberFormat.Format = "$#,##0.00";
-            afterCell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-            afterCell.Style.Font.Bold = true;
-
-            ws.Cell(rowIdx, 6).Value = item.TransactionId.HasValue ? $"#{item.TransactionId.Value}" : "—";
-            ws.Cell(rowIdx, 6).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-
-            ws.Cell(rowIdx, 7).Value = string.IsNullOrWhiteSpace(item.Description) ? "—" : item.Description;
-            ws.Cell(rowIdx, 7).Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Left;
-
-            for (int c = 1; c <= headers.Length; c++)
-            {
-                var cell = ws.Cell(rowIdx, c);
+                cell.Style.Alignment.Horizontal = colDef.Alignment;
+                cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
                 cell.Style.Fill.BackgroundColor = rowBg;
                 cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                 cell.Style.Border.OutsideBorderColor = XLColor.FromArgb(226, 232, 240);
-                cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-            }
 
-            totalNetDelta += item.AmountUsd;
-        }
-
-        // ── Summary Row ─────────────────────────────────────────────
-        int summaryRow = startRow + list.Count;
-        var sumRow = ws.Row(summaryRow);
-        sumRow.Height = 24;
-
-        for (int c = 1; c <= headers.Length; c++)
-        {
-            var cell = ws.Cell(summaryRow, c);
-            cell.Style.Font.Bold = true;
-            cell.Style.Fill.BackgroundColor = XLColor.FromArgb(241, 245, 249);
-            cell.Style.Border.TopBorder = XLBorderStyleValues.Thin;
-            cell.Style.Border.TopBorderColor = XLColor.FromArgb(148, 163, 184);
-            cell.Style.Border.BottomBorder = XLBorderStyleValues.Double;
-            cell.Style.Border.BottomBorderColor = XLColor.FromArgb(15, 23, 42);
-            cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
-
-            if (c == 1)
-            {
-                cell.Value = "CƏM DƏYİŞİM";
-                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
-            }
-            else if (c == 4)
-            {
-                cell.Value = (double)totalNetDelta;
-                cell.Style.NumberFormat.Format = "$#,##0.00";
-                cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
-                cell.Style.Font.FontColor = totalNetDelta >= 0
-                    ? XLColor.FromArgb(46, 125, 50)
-                    : XLColor.FromArgb(198, 40, 40);
-            }
-            else
-            {
-                cell.Value = string.Empty;
+                if (colDef.Id == "Amount" && val is double amtVal)
+                {
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Font.FontColor = amtVal >= 0
+                        ? XLColor.FromArgb(46, 125, 50)
+                        : XLColor.FromArgb(198, 40, 40);
+                }
             }
         }
 
         // Auto-fit columns
-        ws.Columns().AdjustToContents(headerRow, summaryRow);
-        for (int c = 1; c <= headers.Length; c++)
+        int endRow = startRow + list.Count;
+        if (list.Count > 0)
         {
-            if (ws.Column(c).Width < 12) ws.Column(c).Width = 12;
-            if (ws.Column(c).Width > 50) ws.Column(c).Width = 50;
+            ws.Columns().AdjustToContents(headerRow, endRow);
+            for (int c = 1; c <= activeColumns.Count; c++)
+            {
+                if (ws.Column(c).Width < 12) ws.Column(c).Width = 12;
+                if (ws.Column(c).Width > 50) ws.Column(c).Width = 50;
+            }
         }
 
         workbook.SaveAs(filePath);
+    }
+
+    public static List<BalanceHistoryColumnDef> GetBalanceHistoryColumnDefinitions()
+    {
+        return new List<BalanceHistoryColumnDef>
+        {
+            new() { Id = "Index", Header = "№", Group = "Əsas", IsDefault = true, GetValue = (h, i) => i + 1, Alignment = XLAlignmentHorizontalValues.Center },
+            new() { Id = "CreatedAt", Header = "Tarix və Saat", Group = "Əsas", IsDefault = true, GetValue = (h, i) => h.CreatedAt.ToString("yyyy-MM-dd HH:mm"), Alignment = XLAlignmentHorizontalValues.Center },
+            new() { Id = "Currency", Header = "Kassa", Group = "Əsas", IsDefault = true, GetValue = (h, i) => h.KassaName, Alignment = XLAlignmentHorizontalValues.Center },
+            new() { Id = "Type", Header = "Əməliyyat Növü", Group = "Əsas", IsDefault = true, GetValue = (h, i) => FormatBalanceType(h.Type), Alignment = XLAlignmentHorizontalValues.Left },
+            new() { Id = "Amount", Header = "Dəyişiklik Məbləği", Group = "Məbləğlər", IsDefault = true, GetValue = (h, i) => (double)(h.Amount != 0 ? h.Amount : h.AmountUsd), NumberFormat = "#,##0.00", Alignment = XLAlignmentHorizontalValues.Right },
+            new() { Id = "BalanceAfter", Header = "Yekun Balans", Group = "Məbləğlər", IsDefault = true, GetValue = (h, i) => (double)(h.BalanceAfter != 0 ? h.BalanceAfter : h.BalanceAfterUsd), NumberFormat = "#,##0.00", Alignment = XLAlignmentHorizontalValues.Right },
+            new() { Id = "TransactionId", Header = "Tranzaksiya ID", Group = "Əlaqə", IsDefault = true, GetValue = (h, i) => h.TransactionId.HasValue ? $"#{h.TransactionId.Value}" : "—", Alignment = XLAlignmentHorizontalValues.Center },
+            new() { Id = "Description", Header = "Təsvir / Qeyd", Group = "Əlaqə", IsDefault = true, GetValue = (h, i) => string.IsNullOrWhiteSpace(h.Description) ? "—" : h.Description, Alignment = XLAlignmentHorizontalValues.Left }
+        };
+    }
+
+    private static string FormatBalanceType(BalanceTransactionType type) => type switch
+    {
+        BalanceTransactionType.Initial => "İlkin Balans",
+        BalanceTransactionType.TransactionCharge => "Tranzaksiya Xərci",
+        BalanceTransactionType.TransactionUpdate => "Tranzaksiya Düzəlişi",
+        BalanceTransactionType.TransactionRollback => "Tranzaksiya Ləğvi",
+        BalanceTransactionType.ManualDeposit => "Mədaxil (Artırma)",
+        BalanceTransactionType.ManualWithdrawal => "Məxaric (Çıxarış)",
+        BalanceTransactionType.Adjustment => "Düzəliş",
+        BalanceTransactionType.Transfer => "Valyuta Köçürməsi",
+        _ => type.ToString()
+    };
+
+    public class BalanceHistoryColumnDef
+    {
+        public string Id { get; init; } = string.Empty;
+        public string Header { get; init; } = string.Empty;
+        public string Group { get; init; } = string.Empty;
+        public bool IsDefault { get; init; } = true;
+        public Func<CustomerBalanceHistoryResponse, int, object?> GetValue { get; init; } = (_, _) => null;
+        public string? NumberFormat { get; init; }
+        public XLAlignmentHorizontalValues Alignment { get; init; } = XLAlignmentHorizontalValues.Left;
     }
 
     // =========================================================================

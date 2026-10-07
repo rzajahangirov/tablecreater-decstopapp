@@ -503,6 +503,9 @@ public class TransactionService : ITransactionService
             TransactionId = transactionId,
             CreatedAt = DateTime.UtcNow,
             Type = type,
+            Currency = PaymentCurrency.Usd,
+            Amount = deltaUsd,
+            BalanceAfter = customer.BalanceUsd,
             AmountUsd = deltaUsd,
             BalanceAfterUsd = customer.BalanceUsd,
             Description = description

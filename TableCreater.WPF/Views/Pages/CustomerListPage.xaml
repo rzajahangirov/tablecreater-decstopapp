@@ -198,11 +198,23 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTemplateColumn Header="Balans (USD)" Width="150">
+                    <DataGridTemplateColumn Header="Balans (USD)" Width="140">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding BalanceUsd, StringFormat='${0:N2}'}"
                                            Foreground="{Binding BalanceUsd, Converter={StaticResource ProfitLossToColorConverter}}"
+                                           FontWeight="Bold"
+                                           Padding="16,0"
+                                           VerticalAlignment="Center"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTemplateColumn Header="Balans (RUB)" Width="140">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding BalanceRub, StringFormat='{}{0:N2} ₽'}"
+                                           Foreground="{Binding BalanceRub, Converter={StaticResource ProfitLossToColorConverter}}"
                                            FontWeight="Bold"
                                            Padding="16,0"
                                            VerticalAlignment="Center"/>

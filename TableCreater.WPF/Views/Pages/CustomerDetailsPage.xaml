@@ -40,54 +40,64 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Customer Balance (Primary Card) -->
-                    <Border Grid.Column="0" Margin="0,0,4,0" Padding="14,14" Background="#F0FDFC" BorderBrush="#99F6E4" BorderThickness="1.5" CornerRadius="8">
+                    <!-- Customer Balance USD (Primary Card) -->
+                    <Border Grid.Column="0" Margin="0,0,3,0" Padding="12,12" Background="#F0FDFC" BorderBrush="#99F6E4" BorderThickness="1.5" CornerRadius="8">
                         <StackPanel>
-                            <TextBlock Text="Müştəri Balansı (USD)" FontSize="11" Foreground="#0F766E" FontWeight="Bold" Margin="0,0,0,6"/>
-                            <TextBlock Text="{Binding CustomerBalanceUsd, StringFormat='${0:N2}'}" FontSize="22" FontWeight="ExtraBold"
+                            <TextBlock Text="Balans (USD)" FontSize="11" Foreground="#0F766E" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding CustomerBalanceUsd, StringFormat='${0:N2}'}" FontSize="18" FontWeight="ExtraBold"
                                        Foreground="{Binding BalanceStatusColor}"/>
                         </StackPanel>
                     </Border>
 
-                    <!-- Transactions Count -->
-                    <Border Grid.Column="1" Margin="3,0" Padding="14,14" Background="#F0F7FF" BorderBrush="#BBDEFB" BorderThickness="1" CornerRadius="8">
+                    <!-- Customer Balance RUB (Primary Card) -->
+                    <Border Grid.Column="1" Margin="3,0" Padding="12,12" Background="#FFF7ED" BorderBrush="#FFEDD5" BorderThickness="1.5" CornerRadius="8">
                         <StackPanel>
-                            <TextBlock Text="Tranzaksiyalar" FontSize="11" Foreground="#5C6BC0" FontWeight="Bold" Margin="0,0,0,6"/>
-                            <TextBlock Text="{Binding TransactionCount}" FontSize="22" FontWeight="Bold" Foreground="#1A237E"/>
+                            <TextBlock Text="Balans (RUB)" FontSize="11" Foreground="#C2410C" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding CustomerBalanceRub, StringFormat='{}{0:N2} ₽'}" FontSize="18" FontWeight="ExtraBold"
+                                       Foreground="{Binding BalanceRubStatusColor}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Transactions Count -->
+                    <Border Grid.Column="2" Margin="3,0" Padding="12,12" Background="#F0F7FF" BorderBrush="#BBDEFB" BorderThickness="1" CornerRadius="8">
+                        <StackPanel>
+                            <TextBlock Text="Tranzaksiyalar" FontSize="11" Foreground="#5C6BC0" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding TransactionCount}" FontSize="18" FontWeight="Bold" Foreground="#1A237E"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Total Expense -->
-                    <Border Grid.Column="2" Margin="3,0" Padding="14,14" Background="#FFF8E1" BorderBrush="#FFE082" BorderThickness="1" CornerRadius="8">
+                    <Border Grid.Column="3" Margin="3,0" Padding="12,12" Background="#FFF8E1" BorderBrush="#FFE082" BorderThickness="1" CornerRadius="8">
                         <StackPanel>
-                            <TextBlock Text="Ümumi Xərc (USD)" FontSize="11" Foreground="#F57F17" FontWeight="Bold" Margin="0,0,0,6"/>
-                            <TextBlock Text="{Binding TotalExpenseUsd, StringFormat='${0:N2}'}" FontSize="20" FontWeight="Bold" Foreground="#E65100"/>
+                            <TextBlock Text="Ümumi Xərc (USD)" FontSize="11" Foreground="#F57F17" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding TotalExpenseUsd, StringFormat='${0:N2}'}" FontSize="18" FontWeight="Bold" Foreground="#E65100"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Total Paid -->
-                    <Border Grid.Column="3" Margin="3,0" Padding="14,14" Background="#E8F5E9" BorderBrush="#A5D6A7" BorderThickness="1" CornerRadius="8">
+                    <Border Grid.Column="4" Margin="3,0" Padding="12,12" Background="#E8F5E9" BorderBrush="#A5D6A7" BorderThickness="1" CornerRadius="8">
                         <StackPanel>
-                            <TextBlock Text="Ümumi Ödəniş (USD)" FontSize="11" Foreground="#2E7D32" FontWeight="Bold" Margin="0,0,0,6"/>
-                            <TextBlock Text="{Binding TotalPaidUsd, StringFormat='${0:N2}'}" FontSize="20" FontWeight="Bold" Foreground="#1B5E20"/>
+                            <TextBlock Text="Ümumi Ödəniş (USD)" FontSize="11" Foreground="#2E7D32" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding TotalPaidUsd, StringFormat='${0:N2}'}" FontSize="18" FontWeight="Bold" Foreground="#1B5E20"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Xərc + Qazanc (Billed) -->
-                    <Border Grid.Column="4" Margin="3,0" Padding="14,14" Background="#EEF2FF" BorderBrush="#C7D2FE" BorderThickness="1" CornerRadius="8">
+                    <Border Grid.Column="5" Margin="3,0" Padding="12,12" Background="#EEF2FF" BorderBrush="#C7D2FE" BorderThickness="1" CornerRadius="8">
                         <StackPanel>
-                            <TextBlock Text="Xərc + Qazanc (USD)" FontSize="11" Foreground="#4338CA" FontWeight="Bold" Margin="0,0,0,6"/>
-                            <TextBlock Text="{Binding TotalBilledUsd, StringFormat='${0:N2}'}" FontSize="20" FontWeight="Bold" Foreground="#1A237E"/>
+                            <TextBlock Text="Xərc + Qazanc (USD)" FontSize="11" Foreground="#4338CA" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding TotalBilledUsd, StringFormat='${0:N2}'}" FontSize="18" FontWeight="Bold" Foreground="#1A237E"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Gəlir (Benefit / Profit) -->
-                    <Border Grid.Column="5" Margin="4,0,0,0" Padding="14,14" Background="#F9F9F9" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="8">
+                    <Border Grid.Column="6" Margin="3,0,0,0" Padding="12,12" Background="#F9F9F9" BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="8">
                         <StackPanel>
-                            <TextBlock Text="Gəlir (USD)" FontSize="11" Foreground="#666" FontWeight="Bold" Margin="0,0,0,6"/>
-                            <TextBlock Text="{Binding RemainingDebtUsd, StringFormat='${0:N2}'}" FontSize="20" FontWeight="Bold"
+                            <TextBlock Text="Gəlir (USD)" FontSize="11" Foreground="#666" FontWeight="Bold" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding RemainingDebtUsd, StringFormat='${0:N2}'}" FontSize="18" FontWeight="Bold"
                                        Foreground="{Binding DebtStatusColor}"/>
                         </StackPanel>
                     </Border>
@@ -633,7 +643,7 @@
                     </DataGrid>
                 </Border>
 
-                <!-- BALANS ƏMƏLİYYATLARI (Manual Deposit / Withdrawal / Adjustment) -->
+                <!-- BALANS ƏMƏLİYYATLARI (Manual Deposit / Withdrawal / Adjustment / Transfer) -->
                 <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="18,14" Margin="0,0,0,20">
                     <StackPanel>
                         <Grid Margin="0,0,0,12">
@@ -643,18 +653,22 @@
                             </Grid.ColumnDefinitions>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="&#xE8C7;" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="#005FB8" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Balans Əməliyyatı (Mədaxil / Məxaric / Düzəliş)" FontSize="15" FontWeight="Bold" Foreground="#1E293B" VerticalAlignment="Center"/>
+                                <TextBlock Text="Balans Əməliyyatı (Mədaxil / Məxaric / Düzəliş / Köçürmə)" FontSize="15" FontWeight="Bold" Foreground="#1E293B" VerticalAlignment="Center"/>
                             </StackPanel>
-                            <TextBlock Grid.Column="1" Text="{Binding CustomerBalanceUsd, StringFormat='Cari Balans: ${0:N2}'}"
-                                       FontSize="14" FontWeight="Bold" Foreground="{Binding BalanceStatusColor}" VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding CustomerBalanceUsd, StringFormat='USD: ${0:N2}'}"
+                                           FontSize="13" FontWeight="Bold" Foreground="{Binding BalanceStatusColor}" Margin="0,0,14,0"/>
+                                <TextBlock Text="{Binding CustomerBalanceRub, StringFormat='RUB: {0:N2} ₽'}"
+                                           FontSize="13" FontWeight="Bold" Foreground="{Binding BalanceRubStatusColor}"/>
+                            </StackPanel>
                         </Grid>
 
                         <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="140"/>
-                                <ColumnDefinition Width="110"/>
-                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="170"/>
+                                <ColumnDefinition Width="130"/>
+                                <ColumnDefinition Width="130"/>
+                                <ColumnDefinition Width="170"/>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
@@ -673,31 +687,45 @@
                                 </ComboBox>
                             </StackPanel>
 
-                            <!-- Məbləğ -->
+                            <!-- Kassa / Valyuta -->
                             <StackPanel Grid.Column="1" Margin="4,0,8,0">
+                                <TextBlock Text="Kassa (Hesab)" FontSize="12" FontWeight="SemiBold" Foreground="#64748B" Margin="0,0,0,4"/>
+                                <ComboBox ItemsSource="{Binding PaymentCurrencies}"
+                                          SelectedItem="{Binding AdjustmentCurrency, Mode=TwoWay}"
+                                          HorizontalAlignment="Stretch" Padding="8,6" FontSize="13">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock>
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="{Binding Converter={StaticResource EnumToUpperConverter}}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding}" Value="{x:Static enums:PaymentCurrency.Usd}">
+                                                                <Setter Property="Text" Value="USD Kassası"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding}" Value="{x:Static enums:PaymentCurrency.Rub}">
+                                                                <Setter Property="Text" Value="RUB Kassası"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <!-- Məbləğ -->
+                            <StackPanel Grid.Column="2" Margin="4,0,8,0">
                                 <TextBlock Text="Məbləğ" FontSize="12" FontWeight="SemiBold" Foreground="#64748B" Margin="0,0,0,4"/>
                                 <ui:NumberBox Value="{Binding AdjustmentAmount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                               SpinButtonPlacementMode="Compact" Minimum="0"
                                               HorizontalAlignment="Stretch" Padding="8,6"/>
                             </StackPanel>
 
-                            <!-- Valyuta -->
-                            <StackPanel Grid.Column="2" Margin="4,0,8,0">
-                                <TextBlock Text="Valyuta" FontSize="12" FontWeight="SemiBold" Foreground="#64748B" Margin="0,0,0,4"/>
-                                <ComboBox ItemsSource="{Binding PaymentCurrencies}"
-                                          SelectedItem="{Binding AdjustmentCurrency, Mode=TwoWay}"
-                                          HorizontalAlignment="Stretch" Padding="8,6" FontSize="13">
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding Converter={StaticResource EnumToUpperConverter}}"/>
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
-                            </StackPanel>
-
-                            <!-- Məzənnə (RUB olduqda) -->
+                            <!-- Məzənnə (Valyuta Köçürməsi olduqda aktiv) -->
                             <StackPanel Grid.Column="3" Margin="4,0,8,0"
-                                        Visibility="{Binding AdjustmentCurrency, Converter={StaticResource EnumEqualsToVisConverter}, ConverterParameter=Rub}">
+                                        Visibility="{Binding AdjustmentType, Converter={StaticResource EnumEqualsToVisConverter}, ConverterParameter=Transfer}">
                                 <TextBlock Text="Məzənnə (1 USD = ? RUB)" FontSize="12" FontWeight="SemiBold" Foreground="#64748B" Margin="0,0,0,4"/>
                                 <ui:NumberBox Value="{Binding AdjustmentExchangeRate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                               SpinButtonPlacementMode="Compact" Minimum="0.01" SmallChange="1"
@@ -722,6 +750,18 @@
                                 </StackPanel>
                             </Button>
                         </Grid>
+
+                        <!-- Transfer Preview Info Banner -->
+                        <Border Visibility="{Binding TransferPreview, Converter={StaticResource NullToVisConverter}}"
+                                Background="#FEF3C7" BorderBrush="#F59E0B" BorderThickness="1"
+                                CornerRadius="6" Padding="12,8" Margin="0,10,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE8AB;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#D97706"
+                                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <TextBlock Text="{Binding TransferPreview}" FontSize="12.5" FontWeight="SemiBold" Foreground="#92400E"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </Border>
 
@@ -732,9 +772,9 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" Text="📜 Balans Tarixçəsi (Ledger)" FontSize="18" FontWeight="Bold" Foreground="#222" VerticalAlignment="Center"/>
-                    <Button Grid.Column="1" Command="{Binding ExportBalanceHistoryToExcelCommand}"
+                    <Button Grid.Column="1" Click="BtnExportBalanceHistoryExcel_Click"
                             Padding="14,8" Background="#107C41" Foreground="White" BorderThickness="0" Cursor="Hand"
-                            ToolTip="Balans tarixçəsini Excel (.xlsx) olaraq ixrac et">
+                            ToolTip="Balans tarixçəsini seçilmiş əməliyyat və sütunlarla Excel-ə ixrac et">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#xE8B5;" FontFamily="Segoe MDL2 Assets" VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <TextBlock Text="Balans Tarixçəsini Excel-ə İxrac Et" FontWeight="SemiBold" VerticalAlignment="Center"/>
@@ -748,9 +788,11 @@
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="140"/>
                             <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="140"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="140"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
@@ -768,8 +810,38 @@
                         <DatePicker Grid.Column="3" SelectedDate="{Binding BhFilterDateTo, Mode=TwoWay}" 
                                     FontSize="12" Margin="0,0,12,0" VerticalAlignment="Center"/>
 
+                        <!-- Kassa Filter -->
+                        <TextBlock Grid.Column="4" Text="Kassa:" FontSize="12" Foreground="#64748B" 
+                                   FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <ComboBox Grid.Column="5" ItemsSource="{Binding BhKassaFilterOptions}"
+                                  SelectedItem="{Binding BhFilterKassa, Mode=TwoWay}"
+                                  FontSize="12" Margin="0,0,12,0" VerticalAlignment="Center" Padding="8,5">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock>
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="{Binding Converter={StaticResource EnumToUpperConverter}}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                                                        <Setter Property="Text" Value="Hamısı"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding}" Value="{x:Static enums:PaymentCurrency.Usd}">
+                                                        <Setter Property="Text" Value="USD Kassası"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding}" Value="{x:Static enums:PaymentCurrency.Rub}">
+                                                        <Setter Property="Text" Value="RUB Kassası"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
                         <!-- Apply Filter -->
-                        <Button Grid.Column="5" Command="{Binding ApplyBalanceHistoryFiltersCommand}"
+                        <Button Grid.Column="7" Command="{Binding ApplyBalanceHistoryFiltersCommand}"
                                 Padding="12,6" Background="#005FB8" Foreground="White" 
                                 BorderThickness="0" VerticalAlignment="Center" Cursor="Hand" Margin="0,0,4,0"
                                 ToolTip="Filtrləri tətbiq et">
@@ -781,7 +853,7 @@
                         </Button>
 
                         <!-- Clear Filter -->
-                        <Button Grid.Column="6" Command="{Binding ClearBalanceHistoryFiltersCommand}"
+                        <Button Grid.Column="8" Command="{Binding ClearBalanceHistoryFiltersCommand}"
                                 Padding="12,6" Background="Transparent" Foreground="#64748B" 
                                 BorderBrush="#CBD5E1" BorderThickness="1" VerticalAlignment="Center" Cursor="Hand"
                                 ToolTip="Filtrləri təmizlə">
@@ -804,7 +876,7 @@
                               HorizontalGridLinesBrush="#F0F0F0"
                               BorderThickness="0"
                               FontSize="12"
-                              RowHeight="38"
+                              RowHeight="40"
                               ColumnHeaderHeight="36"
                               Background="Transparent"
                               HorizontalScrollBarVisibility="Auto">
@@ -822,33 +894,72 @@
 
                         <DataGrid.Columns>
                             <!-- Tarix -->
-                            <DataGridTextColumn Header="Tarix" Binding="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}" Width="130">
+                            <DataGridTextColumn Header="Tarix" Binding="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}" Width="125">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
-                                        <Setter Property="Padding" Value="12,0"/>
+                                        <Setter Property="Padding" Value="10,0"/>
                                         <Setter Property="VerticalAlignment" Value="Center"/>
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
 
+                            <!-- Kassa (USD / RUB badge) -->
+                            <DataGridTemplateColumn Header="Kassa" Width="95">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Border CornerRadius="4" Padding="6,2" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Background" Value="#F1F5F9"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Currency}" Value="{x:Static enums:PaymentCurrency.Usd}">
+                                                            <Setter Property="Background" Value="#E0F2FE"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Currency}" Value="{x:Static enums:PaymentCurrency.Rub}">
+                                                            <Setter Property="Background" Value="#FFEDD5"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                            <TextBlock FontWeight="Bold" FontSize="11" VerticalAlignment="Center">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="{Binding KassaName}"/>
+                                                        <Setter Property="Foreground" Value="#475569"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding Currency}" Value="{x:Static enums:PaymentCurrency.Usd}">
+                                                                <Setter Property="Foreground" Value="#0369A1"/>
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding Currency}" Value="{x:Static enums:PaymentCurrency.Rub}">
+                                                                <Setter Property="Foreground" Value="#C2410C"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Border>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
                             <!-- Əməliyyat Növü -->
-                            <DataGridTemplateColumn Header="Əməliyyat Növü" Width="170">
+                            <DataGridTemplateColumn Header="Əməliyyat Növü" Width="150">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBlock Text="{Binding Type, Converter={StaticResource BalanceTypeToTextConverter}}"
                                                    Foreground="{Binding Type, Converter={StaticResource BalanceTypeToColorConverter}}"
                                                    FontWeight="SemiBold"
-                                                   Padding="12,0"
+                                                   Padding="8,0"
                                                    VerticalAlignment="Center"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
 
                             <!-- Müştəri Ödənişi (tranzaksiya vasitəsilə olduqda) -->
-                            <DataGridTemplateColumn Header="Müştəri Ödənişi" Width="120">
+                            <DataGridTemplateColumn Header="Müştəri Ödənişi" Width="110">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBlock Padding="12,0" VerticalAlignment="Center" FontWeight="SemiBold">
+                                        <TextBlock Padding="8,0" VerticalAlignment="Center" FontWeight="SemiBold">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Text" Value="—"/>
@@ -867,26 +978,26 @@
                             </DataGridTemplateColumn>
 
                             <!-- Dəyişiklik Məbləği -->
-                            <DataGridTemplateColumn Header="Məbləğ (USD)" Width="130">
+                            <DataGridTemplateColumn Header="Dəyişiklik" Width="120">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding AmountUsd, StringFormat='${0:+#,##0.00;-#,##0.00;0.00}'}"
-                                                   Foreground="{Binding AmountUsd, Converter={StaticResource ProfitLossToColorConverter}}"
+                                        <TextBlock Text="{Binding FormattedAmount}"
+                                                   Foreground="{Binding Amount, Converter={StaticResource ProfitLossToColorConverter}}"
                                                    FontWeight="Bold"
-                                                   Padding="12,0"
+                                                   Padding="8,0"
                                                    VerticalAlignment="Center"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
 
                             <!-- Əməliyyatdan Sonrakı Balans -->
-                            <DataGridTemplateColumn Header="Yekun Balans" Width="130">
+                            <DataGridTemplateColumn Header="Yekun Balans" Width="125">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding BalanceAfterUsd, StringFormat='${0:N2}'}"
-                                                   Foreground="{Binding BalanceAfterUsd, Converter={StaticResource ProfitLossToColorConverter}}"
+                                        <TextBlock Text="{Binding FormattedBalanceAfter}"
+                                                   Foreground="{Binding BalanceAfter, Converter={StaticResource ProfitLossToColorConverter}}"
                                                    FontWeight="Bold"
-                                                   Padding="12,0"
+                                                   Padding="8,0"
                                                    VerticalAlignment="Center"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
@@ -896,12 +1007,28 @@
                             <DataGridTextColumn Header="Qeyd / Təsvir" Binding="{Binding Description}" Width="*">
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
-                                        <Setter Property="Padding" Value="12,0"/>
+                                        <Setter Property="Padding" Value="8,0"/>
                                         <Setter Property="VerticalAlignment" Value="Center"/>
                                         <Setter Property="Foreground" Value="#555"/>
                                     </Style>
                                 </DataGridTextColumn.ElementStyle>
                             </DataGridTextColumn>
+
+                            <!-- Səhv Əməliyyatı Sil (Reversible Delete) -->
+                            <DataGridTemplateColumn Header="Sil" Width="60">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Command="{Binding DataContext.DeleteBalanceHistoryCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                                CommandParameter="{Binding Id}"
+                                                Visibility="{Binding CanDelete, Converter={StaticResource BoolToVisConverter}}"
+                                                Background="Transparent" BorderThickness="0"
+                                                Padding="4" Cursor="Hand" HorizontalAlignment="Center"
+                                                ToolTip="Bu səhv əməliyyatı sil və məbləği balansa bərpa et">
+                                            <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#C62828"/>
+                                        </Button>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Border>

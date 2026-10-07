@@ -39,15 +39,35 @@ public class CustomerBalanceHistory
     public BalanceTransactionType Type { get; set; }
 
     /// <summary>
-    /// Balansa edilən dəyişiklik məbləği (USD).
+    /// Əməliyyatın aid olduğu kassa / valyuta (USD və ya RUB).
+    /// </summary>
+    public PaymentCurrency Currency { get; set; } = PaymentCurrency.Usd;
+
+    /// <summary>
+    /// Əməliyyatın yerli valyutadakı məbləği (USD və ya RUB).
     /// Müsbət = balans artır, mənfi = balans azalır.
+    /// </summary>
+    public decimal Amount { get; set; }
+
+    /// <summary>
+    /// Bu əməliyyatdan dərhal sonrakı müştərinin qalıq balansı (həmin kassa/valyuta üzrə).
+    /// </summary>
+    public decimal BalanceAfter { get; set; }
+
+    /// <summary>
+    /// Balansa edilən dəyişiklik məbləği (USD ekvivalenti və ya köhnə USD sahəsi).
     /// </summary>
     public decimal AmountUsd { get; set; }
 
     /// <summary>
-    /// Bu əməliyyatdan dərhal sonrakı müştərinin qalıq balansı (USD).
+    /// Bu əməliyyatdan dərhal sonrakı müştərinin USD qalıq balansı.
     /// </summary>
     public decimal BalanceAfterUsd { get; set; }
+
+    /// <summary>
+    /// Valyuta köçürməsi zamanı qarşı tərəfin əməliyyat ID-si (əlaqəli tarixçə qeydi).
+    /// </summary>
+    public long? RelatedHistoryId { get; set; }
 
     /// <summary>
     /// Əməliyyat haqqında izahat və ya istifadəçi qeydi.
@@ -55,3 +75,4 @@ public class CustomerBalanceHistory
     [MaxLength(1000)]
     public string? Description { get; set; }
 }
+

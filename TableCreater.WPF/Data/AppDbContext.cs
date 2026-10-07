@@ -67,6 +67,10 @@ public class AppDbContext : DbContext
             entity.Property(c => c.BalanceUsd)
                   .HasColumnType("REAL")
                   .HasDefaultValue(0m);
+
+            entity.Property(c => c.BalanceRub)
+                  .HasColumnType("REAL")
+                  .HasDefaultValue(0m);
         });
 
         // =====================================================================
@@ -159,10 +163,13 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<CustomerBalanceHistory>(entity =>
         {
             entity.Property(h => h.Type).HasConversion<string>();
+            entity.Property(h => h.Currency).HasConversion<string>().HasDefaultValue(PaymentCurrency.Usd);
             entity.Property(h => h.CreatedAt)
                   .HasConversion(
                       v => v.ToString("o"),
                       v => DateTime.Parse(v));
+            entity.Property(h => h.Amount).HasColumnType("REAL").HasDefaultValue(0m);
+            entity.Property(h => h.BalanceAfter).HasColumnType("REAL").HasDefaultValue(0m);
             entity.Property(h => h.AmountUsd).HasColumnType("REAL");
             entity.Property(h => h.BalanceAfterUsd).HasColumnType("REAL");
 

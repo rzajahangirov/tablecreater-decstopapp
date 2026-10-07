@@ -36,6 +36,12 @@ public class Customer
     public decimal BalanceUsd { get; set; } = 0m;
 
     /// <summary>
+    /// Müştərinin Rubl balansı (RUB).
+    /// Müsbət = avans, Mənfi = borc.
+    /// </summary>
+    public decimal BalanceRub { get; set; } = 0m;
+
+    /// <summary>
     /// Navigation property: all transactions belonging to this customer.
     /// Configured with CASCADE DELETE in DbContext.
     /// </summary>
