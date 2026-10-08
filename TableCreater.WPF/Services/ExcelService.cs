@@ -498,7 +498,9 @@ public class ExcelService : IExcelService
             new() { Id = "PaidAmount", Header = "Ödənilən Məbləğ", GetValue = (t, i) => (double)(t.PaidAmount ?? 0), NumberFormat = "#,##0.00", Alignment = XLAlignmentHorizontalValues.Right },
             new() { Id = "PaidCurrency", Header = "Ödəniş Valyutası", GetValue = (t, i) => t.PaidCurrency.ToString().ToUpperInvariant(), Alignment = XLAlignmentHorizontalValues.Center },
             new() { Id = "PaidInUsd", Header = "Ödəniş (USD)", GetValue = (t, i) => (double)t.PaidInUsd, NumberFormat = "$#,##0.00", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.PaidInUsd },
-            new() { Id = "PaymentStatus", Header = "Ödəniş Statusu", GetValue = (t, i) => t.PaymentStatus == PaymentStatus.Paid ? "Ödənilib" : "Ödənilməyib", Alignment = XLAlignmentHorizontalValues.Center },
+            new() { Id = "PaidFromUsdAmount", Header = "Kassadan Ödəniş (USD)", GetValue = (t, i) => (double)(t.PaidFromUsdAmount ?? 0), NumberFormat = "$#,##0.00", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.PaidFromUsdAmount ?? 0m },
+            new() { Id = "PaidFromRubAmount", Header = "Kassadan Ödəniş (RUB)", GetValue = (t, i) => (double)(t.PaidFromRubAmount ?? 0), NumberFormat = "#,##0.00 ₽", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.PaidFromRubAmount ?? 0m },
+            new() { Id = "PaymentStatus", Header = "Ödəniş Statusu", GetValue = (t, i) => t.PaymentStatusDisplay, Alignment = XLAlignmentHorizontalValues.Center },
             new() { Id = "HistoricalBalanceDeltaUsd", Header = "Balans Təsiri (USD)", GetValue = (t, i) => (double)t.HistoricalBalanceDeltaUsd, NumberFormat = "$#,##0.00", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.HistoricalBalanceDeltaUsd },
             new() { Id = "ShipmentStatus", Header = "Göndərmə Statusu", GetValue = (t, i) => t.ShipmentStatusDisplay, Alignment = XLAlignmentHorizontalValues.Center },
             new() { Id = "LoadedDate", Header = "Yüklənmə Tarixi", GetValue = (t, i) => t.LoadedDate.HasValue ? t.LoadedDate.Value.ToString("yyyy-MM-dd") : "—", Alignment = XLAlignmentHorizontalValues.Center },
@@ -537,10 +539,21 @@ public class ExcelService : IExcelService
 
     private static TransactionReadResponse MapEntityToReadResponse(Transaction entity, string customerName)
     {
-        decimal paidAmount = entity.PaidAmount ?? 0m;
-        decimal paidInUsd = entity.PaidCurrency == PaymentCurrency.Rub
-            ? (entity.HistoricalExchangeRate > 0 ? paidAmount / entity.HistoricalExchangeRate : 0m)
-            : paidAmount;
+        decimal paidInUsd = 0m;
+        if (entity.PaymentStatus == PaymentStatus.PaidFromBalance)
+        {
+            decimal usdPart = entity.PaidFromUsdAmount ?? 0m;
+            decimal rubPart = entity.PaidFromRubAmount ?? 0m;
+            decimal rate = entity.HistoricalExchangeRate;
+            paidInUsd = usdPart + (rate > 0 ? rubPart / rate : 0m);
+        }
+        else if (entity.PaymentStatus != PaymentStatus.Unpaid)
+        {
+            decimal paidAmount = entity.PaidAmount ?? 0m;
+            paidInUsd = entity.PaidCurrency == PaymentCurrency.Rub
+                ? (entity.HistoricalExchangeRate > 0 ? paidAmount / entity.HistoricalExchangeRate : 0m)
+                : paidAmount;
+        }
 
         return new TransactionReadResponse
         {
@@ -566,6 +579,8 @@ public class ExcelService : IExcelService
             PaidInUsd = paidInUsd,
             IsCompleted = entity.IsCompleted,
             PaymentStatus = entity.PaymentStatus,
+            PaidFromUsdAmount = entity.PaidFromUsdAmount,
+            PaidFromRubAmount = entity.PaidFromRubAmount,
             ProfitPerTon = entity.ProfitPerTon,
             ProfitPerTonCurrency = entity.ProfitPerTonCurrency,
             HistoricalUserProfitUsd = entity.HistoricalUserProfitUsd,

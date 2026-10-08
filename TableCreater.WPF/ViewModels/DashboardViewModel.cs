@@ -118,6 +118,13 @@ public partial class DashboardViewModel : ObservableObject
             MonthlyPaidUsd = monthlyTx.Sum(t =>
             {
                 if (t.PaymentStatus == PaymentStatus.Unpaid) return 0m;
+                if (t.PaymentStatus == PaymentStatus.PaidFromBalance)
+                {
+                    decimal usdPart = t.PaidFromUsdAmount ?? 0m;
+                    decimal rubPart = t.PaidFromRubAmount ?? 0m;
+                    decimal rate = t.HistoricalExchangeRate;
+                    return usdPart + (rate > 0 ? rubPart / rate : 0m);
+                }
                 decimal paid = t.PaidAmount ?? 0m;
                 return t.PaidCurrency == PaymentCurrency.Rub ? (t.HistoricalExchangeRate > 0 ? paid / t.HistoricalExchangeRate : 0m) : paid;
             });
@@ -168,7 +175,14 @@ public partial class DashboardViewModel : ObservableObject
     private static TransactionReadResponse MapToReadResponse(Transaction entity, string customerName)
     {
         decimal paidInUsd = 0m;
-        if (entity.PaymentStatus != PaymentStatus.Unpaid && entity.PaidAmount.HasValue)
+        if (entity.PaymentStatus == PaymentStatus.PaidFromBalance)
+        {
+            decimal usdPart = entity.PaidFromUsdAmount ?? 0m;
+            decimal rubPart = entity.PaidFromRubAmount ?? 0m;
+            decimal rate = entity.HistoricalExchangeRate;
+            paidInUsd = usdPart + (rate > 0 ? rubPart / rate : 0m);
+        }
+        else if (entity.PaymentStatus != PaymentStatus.Unpaid && entity.PaidAmount.HasValue)
         {
             paidInUsd = entity.PaidCurrency == PaymentCurrency.Rub
                 ? (entity.HistoricalExchangeRate > 0 ? entity.PaidAmount.Value / entity.HistoricalExchangeRate : 0m)
@@ -200,6 +214,8 @@ public partial class DashboardViewModel : ObservableObject
             PaidInUsd = paidInUsd,
             IsCompleted = entity.IsCompleted,
             PaymentStatus = entity.PaymentStatus,
+            PaidFromUsdAmount = entity.PaidFromUsdAmount,
+            PaidFromRubAmount = entity.PaidFromRubAmount,
             ProfitPerTon = entity.ProfitPerTon,
             ProfitPerTonCurrency = entity.ProfitPerTonCurrency,
             HistoricalUserProfitUsd = entity.HistoricalUserProfitUsd,

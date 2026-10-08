@@ -432,6 +432,13 @@ public class CustomerService : ICustomerService
                 {
                     paidUsd = 0m;
                 }
+                else if (h.Transaction.PaymentStatus == PaymentStatus.PaidFromBalance)
+                {
+                    decimal usdPart = h.Transaction.PaidFromUsdAmount ?? 0m;
+                    decimal rubPart = h.Transaction.PaidFromRubAmount ?? 0m;
+                    decimal rate = h.Transaction.HistoricalExchangeRate;
+                    paidUsd = usdPart + (rate > 0 ? rubPart / rate : 0m);
+                }
                 else
                 {
                     decimal rawPaid = h.Transaction.PaidAmount ?? 0m;

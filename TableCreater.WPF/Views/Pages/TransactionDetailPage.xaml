@@ -294,14 +294,28 @@
                         <Border Grid.Row="1" Grid.Column="0" Background="#FAFAFA" CornerRadius="8" Padding="14,10" Margin="0,0,6,0">
                             <StackPanel>
                                 <TextBlock Text="Ödənilən Məbləğ" FontSize="11" Foreground="#94A3B8" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{Binding Transaction.PaidAmount, StringFormat='{}{0:N2}'}" 
-                                               FontSize="16" FontWeight="Bold" Foreground="#374151"/>
-                                    <TextBlock Text="{Binding Transaction.PaidCurrency, Converter={StaticResource CurrencyToSymbolConverter}}" 
-                                               FontSize="14" FontWeight="Bold" Foreground="#374151" VerticalAlignment="Center" Margin="2,0,0,0"/>
+                                <StackPanel Visibility="{Binding Transaction.PaymentStatus, Converter={StaticResource EnumEqualsToVisConverter}, ConverterParameter=PaidFromBalance}">
+                                    <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="#1E293B">
+                                        <Run Text="USD: $"/><Run Text="{Binding Transaction.PaidFromUsdAmount, StringFormat='{}{0:N2}'}"/>
+                                        <Run Text=" | RUB: "/><Run Text="{Binding Transaction.PaidFromRubAmount, StringFormat='{}{0:N2} ₽'}"/>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding Transaction.PaidInUsd, StringFormat='(Ümumi: ${0:N2})'}" 
+                                               FontSize="11" Foreground="#0284C7" Margin="0,2,0,0"/>
                                 </StackPanel>
-                                <TextBlock Text="{Binding Transaction.PaidInUsd, StringFormat='(${0:N2} USD)'}" 
-                                           FontSize="11" Foreground="#666" Margin="0,2,0,0"/>
+                                <StackPanel Visibility="{Binding Transaction.PaymentStatus, Converter={StaticResource EnumEqualsToVisConverter}, ConverterParameter=Paid}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Transaction.PaidAmount, StringFormat='{}{0:N2}'}" 
+                                                   FontSize="16" FontWeight="Bold" Foreground="#374151"/>
+                                        <TextBlock Text="{Binding Transaction.PaidCurrency, Converter={StaticResource CurrencyToSymbolConverter}}" 
+                                                   FontSize="14" FontWeight="Bold" Foreground="#374151" VerticalAlignment="Center" Margin="2,0,0,0"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding Transaction.PaidInUsd, StringFormat='(${0:N2} USD)'}" 
+                                               FontSize="11" Foreground="#666" Margin="0,2,0,0"/>
+                                </StackPanel>
+                                <StackPanel Visibility="{Binding Transaction.PaymentStatus, Converter={StaticResource EnumEqualsToVisConverter}, ConverterParameter=Unpaid}">
+                                    <TextBlock Text="0.00 $" FontSize="16" FontWeight="Bold" Foreground="#94A3B8"/>
+                                    <TextBlock Text="(Ödəniş edilməyib)" FontSize="11" Foreground="#BE123C" Margin="0,2,0,0"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 

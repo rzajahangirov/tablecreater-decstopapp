@@ -5,8 +5,10 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Media;
 using Microsoft.Win32;
+using TableCreater.WPF.Enums;
 using TableCreater.WPF.Models;
 using TableCreater.WPF.Services;
 
@@ -14,7 +16,7 @@ namespace TableCreater.WPF.Views.Dialogs;
 
 /// <summary>
 /// Two-step wizard dialog for Excel export:
-///   Step 1 — Select which transactions to export (individual checkboxes)
+///   Step 1 — Select which transactions to export (with in-dialog filtering & checkboxes)
 ///   Step 2 — Select which columns to include in the export
 /// </summary>
 public partial class ExcelExportColumnsDialog : Window
@@ -28,8 +30,10 @@ public partial class ExcelExportColumnsDialog : Window
 
     // Wrapper for mutable IsSelected binding in DataGrid
     private readonly ObservableCollection<TransactionExportItem> _exportItems = new();
+    private readonly ICollectionView _txView;
 
     private int _currentStep = 1;
+    private bool _isLoaded;
 
     /// <summary>
     /// Constructor for the two-step Excel export wizard.
@@ -60,10 +64,14 @@ public partial class ExcelExportColumnsDialog : Window
             _exportItems.Add(new TransactionExportItem(tx) { IsSelectedForExport = true });
         }
 
-        TxSelectionGrid.ItemsSource = _exportItems;
+        _txView = CollectionViewSource.GetDefaultView(_exportItems);
+        _txView.Filter = FilterTxPredicate;
+        TxSelectionGrid.ItemsSource = _txView;
 
         InitializeColumnOptions();
         SetupStep1UI();
+        _isLoaded = true;
+        UpdateTxSelectionSummary();
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -73,55 +81,113 @@ public partial class ExcelExportColumnsDialog : Window
     private void SetupStep1UI()
     {
         int total = _exportItems.Count;
-        TxtSubtitle.Text = $"{_customerName} — {total} tranzaksiya mövcuddur";
-        TxtTotalTxCount.Text = $" / {total}";
+        if (TxtSubtitle != null)
+            TxtSubtitle.Text = $"{_customerName} — {total} tranzaksiya mövcuddur";
 
-        if (_filteredTransactions != null && _filteredTransactions.Count < _allTransactions.Count)
+        // If a subset was passed from outside, select those by default
+        if (_filteredTransactions != null && _filteredTransactions.Count > 0 && _filteredTransactions.Count < _allTransactions.Count)
         {
-            BtnFilteredText.Text = $"Filtrlənmişləri Seç ({_filteredTransactions.Count})";
+            var filteredIds = new HashSet<long>(_filteredTransactions.Select(t => t.Id));
+            foreach (var item in _exportItems)
+            {
+                item.IsSelectedForExport = filteredIds.Contains(item.Transaction.Id);
+            }
         }
-        else
+    }
+
+    private bool FilterTxPredicate(object obj)
+    {
+        if (obj is not TransactionExportItem item) return false;
+        var tx = item.Transaction;
+
+        // Date From
+        if (DpFilterFrom?.SelectedDate.HasValue == true)
         {
-            // Hide "Select Filtered" if no filter is active
-            BtnFilteredText.Text = "Filtrlənmişləri Seç";
+            var filterFrom = DateOnly.FromDateTime(DpFilterFrom.SelectedDate.Value);
+            if (tx.TransactionDate < filterFrom) return false;
         }
 
+        // Date To
+        if (DpFilterTo?.SelectedDate.HasValue == true)
+        {
+            var filterTo = DateOnly.FromDateTime(DpFilterTo.SelectedDate.Value);
+            if (tx.TransactionDate > filterTo) return false;
+        }
+
+        // Payment status
+        if (CmbFilterPayment?.SelectedItem is ComboBoxItem payItem && payItem.Tag is string payTag && payTag != "All")
+        {
+            if (payTag == "Paid" && tx.PaymentStatus != PaymentStatus.Paid) return false;
+            if (payTag == "PaidFromBalance" && tx.PaymentStatus != PaymentStatus.PaidFromBalance) return false;
+            if (payTag == "Unpaid" && tx.PaymentStatus != PaymentStatus.Unpaid) return false;
+        }
+
+        // Search text
+        if (!string.IsNullOrWhiteSpace(TxtFilterSearch?.Text))
+        {
+            string q = TxtFilterSearch.Text.Trim();
+            bool match = (tx.ProductName?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false)
+                         || (tx.SendingCompany?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false)
+                         || (tx.ReceivingCompany?.Contains(q, StringComparison.OrdinalIgnoreCase) ?? false)
+                         || tx.Id.ToString().Contains(q);
+            if (!match) return false;
+        }
+
+        return true;
+    }
+
+    private void FilterInput_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_isLoaded || _txView == null) return;
+        _txView.Refresh();
         UpdateTxSelectionSummary();
     }
 
-    private void UpdateTxSelectionSummary()
+    private void FilterSearch_TextChanged(object sender, TextChangedEventArgs e)
     {
-        var selected = _exportItems.Where(x => x.IsSelectedForExport).ToList();
-        int count = selected.Count;
+        if (!_isLoaded || _txView == null) return;
+        _txView.Refresh();
+        UpdateTxSelectionSummary();
+    }
 
-        TxtSelectedTxCount.Text = count.ToString();
+    private void BtnClearFilter_Click(object sender, RoutedEventArgs e)
+    {
+        if (DpFilterFrom != null) DpFilterFrom.SelectedDate = null;
+        if (DpFilterTo != null) DpFilterTo.SelectedDate = null;
+        if (CmbFilterPayment != null) CmbFilterPayment.SelectedIndex = 0;
+        if (TxtFilterSearch != null) TxtFilterSearch.Text = string.Empty;
+        if (_isLoaded && _txView != null)
+        {
+            _txView.Refresh();
+            UpdateTxSelectionSummary();
+        }
+    }
 
-        decimal totalBilled = selected.Sum(x => x.Transaction.HistoricalCustomerBilledUsd);
-        decimal totalPaid = selected.Sum(x => x.Transaction.PaidInUsd);
-        decimal totalWeight = selected.Sum(x => x.Transaction.WeightTon);
+    private void BtnSelectFilteredTx_Click(object sender, RoutedEventArgs e)
+    {
+        if (_txView == null) return;
+        foreach (var obj in _txView)
+        {
+            if (obj is TransactionExportItem item) item.IsSelectedForExport = true;
+        }
+        TxSelectionGrid.Items.Refresh();
+        UpdateTxSelectionSummary();
+    }
 
-        TxtSelectedBilled.Text = $"${totalBilled:N2}";
-        TxtSelectedPaid.Text = $"${totalPaid:N2}";
-        TxtSelectedWeight.Text = $"{totalWeight:N2} T";
-
-        TxtError.Text = string.Empty;
+    private void BtnDeselectFilteredTx_Click(object sender, RoutedEventArgs e)
+    {
+        if (_txView == null) return;
+        foreach (var obj in _txView)
+        {
+            if (obj is TransactionExportItem item) item.IsSelectedForExport = false;
+        }
+        TxSelectionGrid.Items.Refresh();
+        UpdateTxSelectionSummary();
     }
 
     private void BtnSelectAllTx_Click(object sender, RoutedEventArgs e)
     {
         foreach (var item in _exportItems) item.IsSelectedForExport = true;
-        TxSelectionGrid.Items.Refresh();
-        UpdateTxSelectionSummary();
-    }
-
-    private void BtnSelectFilteredTx_Click(object sender, RoutedEventArgs e)
-    {
-        if (_filteredTransactions == null) return;
-        var filteredIds = new HashSet<long>(_filteredTransactions.Select(t => t.Id));
-        foreach (var item in _exportItems)
-        {
-            item.IsSelectedForExport = filteredIds.Contains(item.Transaction.Id);
-        }
         TxSelectionGrid.Items.Refresh();
         UpdateTxSelectionSummary();
     }
@@ -133,9 +199,87 @@ public partial class ExcelExportColumnsDialog : Window
         UpdateTxSelectionSummary();
     }
 
+    private void BtnInvertSelectionTx_Click(object sender, RoutedEventArgs e)
+    {
+        if (_txView == null) return;
+        foreach (var obj in _txView)
+        {
+            if (obj is TransactionExportItem item) item.IsSelectedForExport = !item.IsSelectedForExport;
+        }
+        TxSelectionGrid.Items.Refresh();
+        UpdateTxSelectionSummary();
+    }
+
+    private void HeaderTxCheckBox_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is CheckBox chk && _txView != null)
+        {
+            bool targetState = chk.IsChecked == true;
+            foreach (var obj in _txView)
+            {
+                if (obj is TransactionExportItem item) item.IsSelectedForExport = targetState;
+            }
+            TxSelectionGrid.Items.Refresh();
+            UpdateTxSelectionSummary();
+        }
+    }
+
     private void TxCheckBox_Changed(object sender, RoutedEventArgs e)
     {
         UpdateTxSelectionSummary();
+    }
+
+    private void UpdateTxSelectionSummary()
+    {
+        if (!_isLoaded) return;
+
+        var selected = _exportItems.Where(x => x.IsSelectedForExport).ToList();
+        int total = _exportItems.Count;
+        int count = selected.Count;
+        int visibleCount = _txView?.Cast<object>().Count() ?? total;
+        int selectedVisible = _txView?.OfType<TransactionExportItem>().Count(x => x.IsSelectedForExport) ?? count;
+
+        if (TxtSelectedTxCount != null)
+            TxtSelectedTxCount.Text = count.ToString();
+
+        if (TxtTotalTxCount != null)
+        {
+            TxtTotalTxCount.Text = visibleCount == total
+                ? $" / {total}"
+                : $" / {total} (Göstərilən: {visibleCount})";
+        }
+
+        decimal totalBilled = selected.Sum(x => x.Transaction.HistoricalCustomerBilledUsd);
+        decimal totalPaid = selected.Sum(x => x.Transaction.PaidInUsd);
+        decimal totalWeight = selected.Sum(x => x.Transaction.WeightTon);
+
+        if (TxtSelectedBilled != null)
+            TxtSelectedBilled.Text = $"${totalBilled:N2}";
+
+        if (TxtSelectedPaid != null)
+            TxtSelectedPaid.Text = $"${totalPaid:N2}";
+
+        if (TxtSelectedWeight != null)
+            TxtSelectedWeight.Text = $"{totalWeight:N2} T";
+
+        if (ChkSelectAllTxHeader != null)
+        {
+            if (visibleCount == 0 || selectedVisible == 0)
+            {
+                ChkSelectAllTxHeader.IsChecked = false;
+            }
+            else if (selectedVisible == visibleCount)
+            {
+                ChkSelectAllTxHeader.IsChecked = true;
+            }
+            else
+            {
+                ChkSelectAllTxHeader.IsChecked = null;
+            }
+        }
+
+        if (TxtError != null)
+            TxtError.Text = string.Empty;
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -174,6 +318,8 @@ public partial class ExcelExportColumnsDialog : Window
         AddOption("PaidAmount", "Ödənilən Məbləğ", "📊 Maliyyə və Hesablaşma", isDefault: true);
         AddOption("PaidCurrency", "Ödəniş Valyutası", "📊 Maliyyə və Hesablaşma", isDefault: false);
         AddOption("PaidInUsd", "Ödəniş (USD ekvivalenti)", "📊 Maliyyə və Hesablaşma", isDefault: true);
+        AddOption("PaidFromUsdAmount", "Kassadan Ödəniş (USD)", "📊 Maliyyə və Hesablaşma", isDefault: false);
+        AddOption("PaidFromRubAmount", "Kassadan Ödəniş (RUB)", "📊 Maliyyə və Hesablaşma", isDefault: false);
         AddOption("PaymentStatus", "Ödəniş Statusu", "📊 Maliyyə və Hesablaşma", isDefault: true);
         AddOption("HistoricalBalanceDeltaUsd", "Balans Təsiri (USD)", "📊 Maliyyə və Hesablaşma", isDefault: true);
 

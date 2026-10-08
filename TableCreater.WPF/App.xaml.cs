@@ -258,6 +258,8 @@ public partial class App : Application
             "ALTER TABLE Transactions ADD COLUMN IsInTransitAutoDates INTEGER NOT NULL DEFAULT 1;",
             "ALTER TABLE Customers ADD COLUMN BalanceUsd REAL NOT NULL DEFAULT 0;",
             "ALTER TABLE Transactions ADD COLUMN PaymentStatus TEXT NOT NULL DEFAULT 'Paid';",
+            "ALTER TABLE Transactions ADD COLUMN PaidFromUsdAmount REAL;",
+            "ALTER TABLE Transactions ADD COLUMN PaidFromRubAmount REAL;",
             "ALTER TABLE Transactions ADD COLUMN ProfitPerTon REAL NOT NULL DEFAULT 0;",
             "ALTER TABLE Transactions ADD COLUMN ProfitPerTonCurrency TEXT NOT NULL DEFAULT 'Usd';",
             "ALTER TABLE Transactions ADD COLUMN HistoricalUserProfitUsd REAL NOT NULL DEFAULT 0;",

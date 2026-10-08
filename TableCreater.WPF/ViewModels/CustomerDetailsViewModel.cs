@@ -85,6 +85,7 @@ public partial class CustomerDetailsViewModel : ObservableObject
     {
         null,
         PaymentStatus.Paid,
+        PaymentStatus.PaidFromBalance,
         PaymentStatus.Unpaid
     };
 
@@ -632,7 +633,7 @@ public partial class CustomerDetailsViewModel : ObservableObject
     private void UpdateTransactionStatistics()
     {
         // Statistics are based on ALL transactions (not filtered), to give full picture
-        PaidTransactionCount = _allTransactions.Count(t => t.PaymentStatus == PaymentStatus.Paid);
+        PaidTransactionCount = _allTransactions.Count(t => t.PaymentStatus == PaymentStatus.Paid || t.PaymentStatus == PaymentStatus.PaidFromBalance);
         UnpaidTransactionCount = _allTransactions.Count(t => t.PaymentStatus == PaymentStatus.Unpaid);
     }
 

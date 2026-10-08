@@ -85,15 +85,82 @@
             <!-- ════════════ STEP 1: History Selection ════════════ -->
             <Grid x:Name="PanelStep1">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>  <!-- Quick Actions -->
+                    <RowDefinition Height="Auto"/>  <!-- In-dialog Filter Bar -->
+                    <RowDefinition Height="Auto"/>  <!-- Quick Actions & Counters -->
                     <RowDefinition Height="*"/>     <!-- DataGrid -->
                     <RowDefinition Height="Auto"/>  <!-- Summary -->
                 </Grid.RowDefinitions>
 
-                <!-- Quick Action Buttons -->
-                <Border Grid.Row="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="18,10">
+                <!-- 1. IN-DIALOG FILTER BAR -->
+                <Border Grid.Row="0" Background="#F1F5F9" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="16,8">
                     <Grid>
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/> <!-- Tarixdən label -->
+                            <ColumnDefinition Width="135"/>  <!-- DpFilterFrom -->
+                            <ColumnDefinition Width="Auto"/> <!-- Tarixə label -->
+                            <ColumnDefinition Width="135"/>  <!-- DpFilterTo -->
+                            <ColumnDefinition Width="Auto"/> <!-- Kassa label -->
+                            <ColumnDefinition Width="120"/>  <!-- CmbFilterKassa -->
+                            <ColumnDefinition Width="Auto"/> <!-- Növ label -->
+                            <ColumnDefinition Width="145"/>  <!-- CmbFilterType -->
+                            <ColumnDefinition Width="*"/>    <!-- Spacer -->
+                            <ColumnDefinition Width="Auto"/> <!-- BtnClearFilter -->
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Tarixdən -->
+                        <TextBlock Grid.Column="0" Text="Tarixdən:" FontSize="12" Foreground="#475569" 
+                                   FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <DatePicker Grid.Column="1" x:Name="DpFilterFrom" FontSize="12" Margin="0,0,12,0" 
+                                    VerticalAlignment="Center" SelectedDateChanged="FilterInput_Changed"/>
+
+                        <!-- Tarixə -->
+                        <TextBlock Grid.Column="2" Text="Tarixə:" FontSize="12" Foreground="#475569" 
+                                   FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <DatePicker Grid.Column="3" x:Name="DpFilterTo" FontSize="12" Margin="0,0,12,0" 
+                                    VerticalAlignment="Center" SelectedDateChanged="FilterInput_Changed"/>
+
+                        <!-- Kassa -->
+                        <TextBlock Grid.Column="4" Text="Kassa:" FontSize="12" Foreground="#475569" 
+                                   FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <ComboBox Grid.Column="5" x:Name="CmbFilterKassa" FontSize="12" Margin="0,0,12,0" 
+                                  VerticalAlignment="Center" Padding="8,4" SelectionChanged="FilterInput_Changed">
+                            <ComboBoxItem Content="Hamısı" Tag="All" IsSelected="True"/>
+                            <ComboBoxItem Content="USD Kassası" Tag="Usd"/>
+                            <ComboBoxItem Content="RUB Kassası" Tag="Rub"/>
+                        </ComboBox>
+
+                        <!-- Növ -->
+                        <TextBlock Grid.Column="6" Text="Növ:" FontSize="12" Foreground="#475569" 
+                                   FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <ComboBox Grid.Column="7" x:Name="CmbFilterType" FontSize="12" Margin="0,0,12,0" 
+                                  VerticalAlignment="Center" Padding="8,4" SelectionChanged="FilterInput_Changed">
+                            <ComboBoxItem Content="Hamısı" Tag="All" IsSelected="True"/>
+                            <ComboBoxItem Content="Mədaxil" Tag="Medaxil"/>
+                            <ComboBoxItem Content="Məxaric" Tag="Mexaric"/>
+                            <ComboBoxItem Content="Düzəliş" Tag="Duzelis"/>
+                            <ComboBoxItem Content="USD ➔ RUB Transfer" Tag="TransferToRub"/>
+                            <ComboBoxItem Content="RUB ➔ USD Transfer" Tag="TransferToUsd"/>
+                            <ComboBoxItem Content="Silinmə" Tag="Silinme"/>
+                        </ComboBox>
+
+                        <!-- Təmizlə Button -->
+                        <Button Grid.Column="9" Click="BtnClearFilter_Click"
+                                Padding="10,5" Background="White" Foreground="#64748B" 
+                                BorderBrush="#CBD5E1" BorderThickness="1" Cursor="Hand">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE894;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                <TextBlock Text="Filtrləri Sıfırla" FontSize="11"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- 2. QUICK ACTION BUTTONS & COUNTERS -->
+                <Border Grid.Row="1" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="16,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
@@ -101,41 +168,66 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <Button Grid.Column="0" Click="BtnSelectAll_Click"
-                                Padding="10,5" Background="#F1F5F9" Foreground="#1E293B" BorderThickness="0" Margin="0,0,6,0" Cursor="Hand">
+                        <!-- Filtrlənmişləri Seç -->
+                        <Button Grid.Column="0" Click="BtnSelectFiltered_Click"
+                                Padding="10,5" Background="#E0F2FE" Foreground="#0369A1" BorderThickness="0" Margin="0,0,6,0" Cursor="Hand"
+                                ToolTip="Hal-hazırda filtrlənmiş bütün əməliyyatları seç">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE71C;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#0284C7"/>
+                                <TextBlock Text="Filtrlənmişləri Seç" FontWeight="Bold" FontSize="11"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Filtrlənmişləri Ləğv Et -->
+                        <Button Grid.Column="1" Click="BtnDeselectFiltered_Click"
+                                Padding="10,5" Background="#F1F5F9" Foreground="#64748B" BorderThickness="0" Margin="0,0,6,0" Cursor="Hand"
+                                ToolTip="Filtrlənmiş əməliyyatların seçimini ləğv et">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#94A3B8"/>
+                                <TextBlock Text="Filtrlənənləri Ləğv Et" FontWeight="SemiBold" FontSize="11"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Hamısını Seç -->
+                        <Button Grid.Column="2" Click="BtnSelectAll_Click"
+                                Padding="10,5" Background="#F0FDF4" Foreground="#15803D" BorderThickness="0" Margin="0,0,6,0" Cursor="Hand"
+                                ToolTip="Bütün əməliyyatları seç">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#107C41"/>
                                 <TextBlock Text="Hamısını Seç" FontWeight="SemiBold" FontSize="11"/>
                             </StackPanel>
                         </Button>
 
-                        <Button Grid.Column="1" Click="BtnDeselectAll_Click"
-                                Padding="10,5" Background="#F1F5F9" Foreground="#1E293B" BorderThickness="0" Margin="0,0,6,0" Cursor="Hand">
+                        <!-- Seçimi Təmizlə -->
+                        <Button Grid.Column="3" Click="BtnDeselectAll_Click"
+                                Padding="10,5" Background="#FEF2F2" Foreground="#B91C1C" BorderThickness="0" Margin="0,0,6,0" Cursor="Hand"
+                                ToolTip="Bütün seçimləri sıfırla">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#C62828"/>
-                                <TextBlock Text="Seçimi Təmizlə" FontWeight="SemiBold" FontSize="11"/>
+                                <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#DC2626"/>
+                                <TextBlock Text="Seçimi Sıfırla" FontWeight="SemiBold" FontSize="11"/>
                             </StackPanel>
                         </Button>
 
-                        <Button Grid.Column="2" Click="BtnInvertSelection_Click"
-                                Padding="10,5" Background="#F1F5F9" Foreground="#1E293B" BorderThickness="0" Cursor="Hand">
+                        <!-- Tərsinə Çevir -->
+                        <Button Grid.Column="4" Click="BtnInvertSelection_Click"
+                                Padding="10,5" Background="#F1F5F9" Foreground="#475569" BorderThickness="0" Cursor="Hand">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE8AB;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#4338CA"/>
-                                <TextBlock Text="Seçimi Tərsinə Çevir" FontWeight="SemiBold" FontSize="11"/>
+                                <TextBlock Text="&#xE8AB;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#6366F1"/>
+                                <TextBlock Text="Tərsinə Çevir" FontWeight="SemiBold" FontSize="11"/>
                             </StackPanel>
                         </Button>
 
                         <!-- Selection Counter -->
-                        <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="Seçilmiş: " FontSize="13" Foreground="#64748B"/>
-                            <TextBlock x:Name="TxtSelectedCount" Text="0" FontSize="14" FontWeight="Bold" Foreground="#107C41"/>
-                            <TextBlock x:Name="TxtTotalCount" Text=" / 0" FontSize="13" Foreground="#64748B"/>
+                        <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Seçilmiş: " FontSize="12.5" Foreground="#64748B"/>
+                            <TextBlock x:Name="TxtSelectedCount" Text="0" FontSize="13.5" FontWeight="Bold" Foreground="#107C41"/>
+                            <TextBlock x:Name="TxtTotalCount" Text=" / 0" FontSize="12.5" Foreground="#64748B"/>
                         </StackPanel>
                     </Grid>
                 </Border>
 
-                <!-- History Selection DataGrid -->
-                <DataGrid Grid.Row="1" x:Name="HistorySelectionGrid"
+                <!-- 3. HISTORY SELECTION DATAGRID -->
+                <DataGrid Grid.Row="2" x:Name="HistorySelectionGrid"
                           AutoGenerateColumns="False"
                           CanUserAddRows="False"
                           CanUserDeleteRows="False"
@@ -146,28 +238,38 @@
                           HorizontalGridLinesBrush="#E2E8F0"
                           BorderThickness="0"
                           FontSize="12"
-                          RowHeight="36"
-                          ColumnHeaderHeight="34"
+                          RowHeight="38"
+                          ColumnHeaderHeight="36"
                           Background="White">
 
                     <DataGrid.Resources>
                         <Style TargetType="DataGridColumnHeader">
                             <Setter Property="Background" Value="#F8FAFC"/>
                             <Setter Property="Foreground" Value="#475569"/>
-                            <Setter Property="Padding" Value="10,0"/>
+                            <Setter Property="Padding" Value="8,0"/>
                             <Setter Property="FontWeight" Value="SemiBold"/>
                             <Setter Property="BorderThickness" Value="0,0,0,1"/>
                             <Setter Property="BorderBrush" Value="#E2E8F0"/>
                         </Style>
+                        <Style TargetType="DataGridCell">
+                            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                        </Style>
                     </DataGrid.Resources>
 
                     <DataGrid.Columns>
-                        <!-- Checkbox -->
+                        <!-- Checkbox Column with Header CheckBox -->
                         <DataGridTemplateColumn Width="46" CanUserResize="False">
+                            <DataGridTemplateColumn.Header>
+                                <CheckBox x:Name="ChkSelectAllHeader"
+                                          Style="{StaticResource DataGridCheckBoxStyle}"
+                                          ToolTip="Hamısını seç / ləğv et"
+                                          Click="HeaderCheckBox_Click"/>
+                            </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <CheckBox IsChecked="{Binding IsSelectedForExport, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                              HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    <CheckBox Style="{StaticResource DataGridCheckBoxStyle}"
+                                              IsChecked="{Binding IsSelectedForExport, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                               Click="HistoryCheckBox_Changed"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
@@ -261,8 +363,8 @@
                     </DataGrid.Columns>
                 </DataGrid>
 
-                <!-- Summary Bar -->
-                <Border Grid.Row="2" Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="0,1,0,0" Padding="18,8">
+                <!-- 4. SUMMARY BAR -->
+                <Border Grid.Row="3" Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="0,1,0,0" Padding="18,8">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>

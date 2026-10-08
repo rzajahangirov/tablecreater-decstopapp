@@ -120,6 +120,67 @@
             <Style TargetType="ComboBox" BasedOn="{StaticResource DefaultComboBoxStyle}">
                 <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             </Style>
+            <!-- Modern DataGrid Selection CheckBox Style -->
+            <Style x:Key="DataGridCheckBoxStyle" TargetType="CheckBox">
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="HorizontalAlignment" Value="Center"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="MinWidth" Value="0"/>
+                <Setter Property="MinHeight" Value="0"/>
+                <Setter Property="Width" Value="18"/>
+                <Setter Property="Height" Value="18"/>
+                <Setter Property="Margin" Value="0"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="CheckBox">
+                            <Border x:Name="Bd"
+                                    Width="18" Height="18"
+                                    CornerRadius="4"
+                                    Background="#FFFFFF"
+                                    BorderBrush="#94A3B8"
+                                    BorderThickness="1.5">
+                                <Path x:Name="CheckGlyph"
+                                      Data="M 3.5 8.5 L 7 12 L 14.5 4.5"
+                                      Stroke="#FFFFFF"
+                                      StrokeThickness="2"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"
+                                      Visibility="Collapsed"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#107C41"/>
+                                    <Setter TargetName="Bd" Property="Background" Value="#F0FDF4"/>
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="Bd" Property="Background" Value="#107C41"/>
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#107C41"/>
+                                    <Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible"/>
+                                </Trigger>
+                                <MultiTrigger>
+                                    <MultiTrigger.Conditions>
+                                        <Condition Property="IsChecked" Value="True"/>
+                                        <Condition Property="IsMouseOver" Value="True"/>
+                                    </MultiTrigger.Conditions>
+                                    <Setter TargetName="Bd" Property="Background" Value="#0D6836"/>
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#0D6836"/>
+                                </MultiTrigger>
+                                <Trigger Property="IsChecked" Value="{x:Null}">
+                                    <Setter TargetName="Bd" Property="Background" Value="#107C41"/>
+                                    <Setter TargetName="Bd" Property="BorderBrush" Value="#107C41"/>
+                                    <Setter TargetName="CheckGlyph" Property="Visibility" Value="Visible"/>
+                                    <Setter TargetName="CheckGlyph" Property="Data" Value="M 4 9 L 14 9"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

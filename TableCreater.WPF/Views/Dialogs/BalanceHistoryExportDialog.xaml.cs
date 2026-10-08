@@ -4,8 +4,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Media;
 using Microsoft.Win32;
+using TableCreater.WPF.Enums;
 using TableCreater.WPF.Models;
 using TableCreater.WPF.Services;
 
@@ -13,7 +15,7 @@ namespace TableCreater.WPF.Views.Dialogs;
 
 /// <summary>
 /// Two-step wizard dialog for Balance History Excel export:
-///   Step 1 — Select which balance operations to export (individual checkboxes)
+///   Step 1 — Select which balance operations to export (with in-dialog filtering & checkboxes)
 ///   Step 2 — Select which columns to include in the export
 /// </summary>
 public partial class BalanceHistoryExportDialog : Window
@@ -25,7 +27,9 @@ public partial class BalanceHistoryExportDialog : Window
     private readonly List<ExportColumnOption> _columnOptions = new();
 
     private readonly ObservableCollection<BalanceHistoryExportItem> _exportItems = new();
+    private readonly ICollectionView _historyView;
     private int _currentStep = 1;
+    private bool _isLoaded;
 
     public BalanceHistoryExportDialog(
         long customerId,
@@ -45,25 +49,92 @@ public partial class BalanceHistoryExportDialog : Window
             _exportItems.Add(new BalanceHistoryExportItem(h) { IsSelectedForExport = true });
         }
 
-        HistorySelectionGrid.ItemsSource = _exportItems;
+        _historyView = CollectionViewSource.GetDefaultView(_exportItems);
+        _historyView.Filter = FilterHistoryPredicate;
+        HistorySelectionGrid.ItemsSource = _historyView;
 
         InitializeColumnOptions();
         SetupStep1UI();
+        _isLoaded = true;
+        UpdateSelectionSummary();
     }
 
     private void SetupStep1UI()
     {
         int total = _exportItems.Count;
-        TxtSubtitle.Text = $"{_customerName} — {total} balans əməliyyatı mövcuddur";
-        TxtTotalCount.Text = $" / {total}";
+        if (TxtSubtitle != null)
+            TxtSubtitle.Text = $"{_customerName} — {total} balans əməliyyatı mövcuddur";
+    }
+
+    private bool FilterHistoryPredicate(object obj)
+    {
+        if (obj is not BalanceHistoryExportItem item) return false;
+        var h = item.History;
+
+        // Date From
+        if (DpFilterFrom?.SelectedDate.HasValue == true && h.CreatedAt.Date < DpFilterFrom.SelectedDate.Value.Date)
+            return false;
+
+        // Date To
+        if (DpFilterTo?.SelectedDate.HasValue == true && h.CreatedAt.Date > DpFilterTo.SelectedDate.Value.Date)
+            return false;
+
+        // Kassa
+        if (CmbFilterKassa?.SelectedItem is ComboBoxItem kassaItem && kassaItem.Tag is string kassaTag && kassaTag != "All")
+        {
+            if (kassaTag == "Usd" && h.Currency != PaymentCurrency.Usd) return false;
+            if (kassaTag == "Rub" && h.Currency != PaymentCurrency.Rub) return false;
+        }
+
+        // Type
+        if (CmbFilterType?.SelectedItem is ComboBoxItem typeItem && typeItem.Tag is string typeTag && typeTag != "All")
+        {
+            if (typeTag != h.Type.ToString()) return false;
+        }
+
+        return true;
+    }
+
+    private void FilterInput_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_isLoaded || _historyView == null) return;
+        _historyView.Refresh();
         UpdateSelectionSummary();
     }
 
-    private void UpdateSelectionSummary()
+    private void BtnClearFilter_Click(object sender, RoutedEventArgs e)
     {
-        int count = _exportItems.Count(x => x.IsSelectedForExport);
-        TxtSelectedCount.Text = count.ToString();
-        TxtError.Text = string.Empty;
+        if (DpFilterFrom != null) DpFilterFrom.SelectedDate = null;
+        if (DpFilterTo != null) DpFilterTo.SelectedDate = null;
+        if (CmbFilterKassa != null) CmbFilterKassa.SelectedIndex = 0;
+        if (CmbFilterType != null) CmbFilterType.SelectedIndex = 0;
+        if (_isLoaded && _historyView != null)
+        {
+            _historyView.Refresh();
+            UpdateSelectionSummary();
+        }
+    }
+
+    private void BtnSelectFiltered_Click(object sender, RoutedEventArgs e)
+    {
+        if (_historyView == null) return;
+        foreach (var obj in _historyView)
+        {
+            if (obj is BalanceHistoryExportItem item) item.IsSelectedForExport = true;
+        }
+        HistorySelectionGrid.Items.Refresh();
+        UpdateSelectionSummary();
+    }
+
+    private void BtnDeselectFiltered_Click(object sender, RoutedEventArgs e)
+    {
+        if (_historyView == null) return;
+        foreach (var obj in _historyView)
+        {
+            if (obj is BalanceHistoryExportItem item) item.IsSelectedForExport = false;
+        }
+        HistorySelectionGrid.Items.Refresh();
+        UpdateSelectionSummary();
     }
 
     private void BtnSelectAll_Click(object sender, RoutedEventArgs e)
@@ -82,14 +153,71 @@ public partial class BalanceHistoryExportDialog : Window
 
     private void BtnInvertSelection_Click(object sender, RoutedEventArgs e)
     {
-        foreach (var item in _exportItems) item.IsSelectedForExport = !item.IsSelectedForExport;
+        if (_historyView == null) return;
+        foreach (var obj in _historyView)
+        {
+            if (obj is BalanceHistoryExportItem item) item.IsSelectedForExport = !item.IsSelectedForExport;
+        }
         HistorySelectionGrid.Items.Refresh();
         UpdateSelectionSummary();
+    }
+
+    private void HeaderCheckBox_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is CheckBox chk && _historyView != null)
+        {
+            bool targetState = chk.IsChecked == true;
+            foreach (var obj in _historyView)
+            {
+                if (obj is BalanceHistoryExportItem item) item.IsSelectedForExport = targetState;
+            }
+            HistorySelectionGrid.Items.Refresh();
+            UpdateSelectionSummary();
+        }
     }
 
     private void HistoryCheckBox_Changed(object sender, RoutedEventArgs e)
     {
         UpdateSelectionSummary();
+    }
+
+    private void UpdateSelectionSummary()
+    {
+        if (!_isLoaded) return;
+
+        int total = _exportItems.Count;
+        int selectedTotal = _exportItems.Count(x => x.IsSelectedForExport);
+        int visibleCount = _historyView?.Cast<object>().Count() ?? total;
+        int selectedVisible = _historyView?.OfType<BalanceHistoryExportItem>().Count(x => x.IsSelectedForExport) ?? selectedTotal;
+
+        if (TxtSelectedCount != null)
+            TxtSelectedCount.Text = selectedTotal.ToString();
+
+        if (TxtTotalCount != null)
+        {
+            TxtTotalCount.Text = visibleCount == total
+                ? $" / {total}"
+                : $" / {total} (Göstərilən: {visibleCount})";
+        }
+
+        if (ChkSelectAllHeader != null)
+        {
+            if (visibleCount == 0 || selectedVisible == 0)
+            {
+                ChkSelectAllHeader.IsChecked = false;
+            }
+            else if (selectedVisible == visibleCount)
+            {
+                ChkSelectAllHeader.IsChecked = true;
+            }
+            else
+            {
+                ChkSelectAllHeader.IsChecked = null;
+            }
+        }
+
+        if (TxtError != null)
+            TxtError.Text = string.Empty;
     }
 
     // ═══════════════════════════════════════════════════════════════════

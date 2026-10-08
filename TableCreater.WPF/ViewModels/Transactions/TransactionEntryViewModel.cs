@@ -42,6 +42,12 @@ public partial class TransactionEntryViewModel : ObservableObject
     [ObservableProperty]
     private string _customerSearchText = string.Empty;
 
+    [ObservableProperty]
+    private decimal _customerUsdBalance;
+
+    [ObservableProperty]
+    private decimal _customerRubBalance;
+
     // =========================================================================
     // TRANSACTION INPUT FIELDS
     // All fields trigger Recalculate() on change via partial OnXxxChanged methods.
@@ -108,6 +114,12 @@ public partial class TransactionEntryViewModel : ObservableObject
 
     [ObservableProperty]
     private PaymentStatus _paymentStatus = PaymentStatus.Paid;
+
+    [ObservableProperty]
+    private decimal _paidFromUsdAmount;
+
+    [ObservableProperty]
+    private decimal _paidFromRubAmount;
 
     [ObservableProperty]
     private decimal _profitPerTon;
@@ -252,6 +264,8 @@ public partial class TransactionEntryViewModel : ObservableObject
     partial void OnHistoricalExchangeRateChanged(decimal value) => Recalculate();
     partial void OnAdditionalExpenseAmountChanged(decimal value) => Recalculate();
     partial void OnPaymentStatusChanged(PaymentStatus value) => Recalculate();
+    partial void OnPaidFromUsdAmountChanged(decimal value) => Recalculate();
+    partial void OnPaidFromRubAmountChanged(decimal value) => Recalculate();
     partial void OnProfitPerTonChanged(decimal value) => Recalculate();
     partial void OnProfitPerTonCurrencyChanged(PaymentCurrency value) => Recalculate();
     partial void OnAdditionalExpenseCurrencyChanged(PaymentCurrency value) => Recalculate();
@@ -289,9 +303,20 @@ public partial class TransactionEntryViewModel : ObservableObject
         LiveTotalExpenseUsd = LiveGoodsCostUsd + LiveTransportCostUsd + LiveAdditionalExpenseUsd;
 
         // Step 7: Paid in USD
-        LivePaidInUsd = PaidCurrency == PaymentCurrency.Rub
-            ? PaidAmount / rate              // RUB → USD
-            : PaidAmount;                    // Already USD
+        if (PaymentStatus == PaymentStatus.Unpaid)
+        {
+            LivePaidInUsd = 0m;
+        }
+        else if (PaymentStatus == PaymentStatus.PaidFromBalance)
+        {
+            LivePaidInUsd = PaidFromUsdAmount + (PaidFromRubAmount / rate);
+        }
+        else
+        {
+            LivePaidInUsd = PaidCurrency == PaymentCurrency.Rub
+                ? PaidAmount / rate              // RUB → USD
+                : PaidAmount;                    // Already USD
+        }
 
         // Step 8: Remaining Debt
         LiveRemainingDebtUsd = LivePaidInUsd - LiveTotalExpenseUsd;
@@ -309,6 +334,10 @@ public partial class TransactionEntryViewModel : ObservableObject
         if (PaymentStatus == PaymentStatus.Unpaid)
         {
             LiveBalanceDeltaUsd = -LiveCustomerBilledUsd;
+        }
+        else if (PaymentStatus == PaymentStatus.PaidFromBalance)
+        {
+            LiveBalanceDeltaUsd = (PaidFromRubAmount / rate) - LiveCustomerBilledUsd;
         }
         else
         {
@@ -398,6 +427,8 @@ public partial class TransactionEntryViewModel : ObservableObject
 
             // Payment Status & Profit
             PaymentStatus = data.PaymentStatus;
+            PaidFromUsdAmount = data.PaidFromUsdAmount ?? 0m;
+            PaidFromRubAmount = data.PaidFromRubAmount ?? 0m;
             ProfitPerTon = data.ProfitPerTon;
             ProfitPerTonCurrency = data.ProfitPerTonCurrency;
 
@@ -489,7 +520,9 @@ public partial class TransactionEntryViewModel : ObservableObject
                     VehicleCount = VehicleCount,
                     PricePerVehicle = PricePerVehicle,
                     PaidCurrency = PaidCurrency,
-                    PaidAmount = PaidAmount,
+                    PaidAmount = PaymentStatus == PaymentStatus.Paid ? PaidAmount : null,
+                    PaidFromUsdAmount = PaymentStatus == PaymentStatus.PaidFromBalance ? PaidFromUsdAmount : null,
+                    PaidFromRubAmount = PaymentStatus == PaymentStatus.PaidFromBalance ? PaidFromRubAmount : null,
                     HistoricalExchangeRate = HistoricalExchangeRate,
                     DocumentFilePath = DocumentFilePath,
                     AdditionalExpenseAmount = AdditionalExpenseAmount > 0 ? AdditionalExpenseAmount : null,
@@ -531,7 +564,9 @@ public partial class TransactionEntryViewModel : ObservableObject
                     VehicleCount = VehicleCount,
                     PricePerVehicle = PricePerVehicle,
                     PaidCurrency = PaidCurrency,
-                    PaidAmount = PaidAmount,
+                    PaidAmount = PaymentStatus == PaymentStatus.Paid ? PaidAmount : null,
+                    PaidFromUsdAmount = PaymentStatus == PaymentStatus.PaidFromBalance ? PaidFromUsdAmount : null,
+                    PaidFromRubAmount = PaymentStatus == PaymentStatus.PaidFromBalance ? PaidFromRubAmount : null,
                     HistoricalExchangeRate = HistoricalExchangeRate,
                     DocumentFilePath = DocumentFilePath,
                     AdditionalExpenseAmount = AdditionalExpenseAmount > 0 ? AdditionalExpenseAmount : null,
@@ -587,6 +622,13 @@ public partial class TransactionEntryViewModel : ObservableObject
         if (value != null)
         {
             CustomerSearchText = value.Name;
+            CustomerUsdBalance = value.BalanceUsd;
+            CustomerRubBalance = value.BalanceRub;
+        }
+        else
+        {
+            CustomerUsdBalance = 0m;
+            CustomerRubBalance = 0m;
         }
         SaveCommand.NotifyCanExecuteChanged();
     }
@@ -615,6 +657,8 @@ public partial class TransactionEntryViewModel : ObservableObject
         AdditionalExpenseCurrency = PaymentCurrency.Usd;
         AdditionalExpenseDescription = string.Empty;
         PaymentStatus = PaymentStatus.Paid;
+        PaidFromUsdAmount = 0m;
+        PaidFromRubAmount = 0m;
         ProfitPerTon = 0;
         ProfitPerTonCurrency = PaymentCurrency.Usd;
         ShipmentStatus = ShipmentStatus.Pending;

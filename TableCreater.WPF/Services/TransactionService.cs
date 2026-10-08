@@ -87,8 +87,10 @@ public class TransactionService : ITransactionService
             TransportCurrency = request.TransportCurrency,
             VehicleCount = request.VehicleCount,
             PricePerVehicle = request.PricePerVehicle,
-            PaidAmount = request.PaidAmount,
+            PaidAmount = request.PaymentStatus == PaymentStatus.Paid ? request.PaidAmount : null,
             PaidCurrency = request.PaidCurrency,
+            PaidFromUsdAmount = request.PaymentStatus == PaymentStatus.PaidFromBalance ? request.PaidFromUsdAmount : null,
+            PaidFromRubAmount = request.PaymentStatus == PaymentStatus.PaidFromBalance ? request.PaidFromRubAmount : null,
             HistoricalExchangeRate = request.HistoricalExchangeRate,
             DocumentPath = savedDocumentPath,
             AdditionalExpenseAmount = request.AdditionalExpenseAmount,
@@ -114,9 +116,42 @@ public class TransactionService : ITransactionService
         await _db.SaveChangesAsync();
 
         // === BALANCE UPDATE: Apply balance delta to customer ===
-        ApplyBalanceDelta(customer, entity.HistoricalBalanceDeltaUsd, entity.Id,
-            BalanceTransactionType.TransactionCharge,
-            $"Tranzaksiya #{entity.Id} yaradıldı — {entity.ProductName}");
+        if (entity.PaymentStatus == PaymentStatus.PaidFromBalance)
+        {
+            decimal rubDeduction = entity.PaidFromRubAmount ?? 0m;
+            if (rubDeduction > 0)
+            {
+                customer.BalanceRub -= rubDeduction;
+                _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
+                {
+                    CustomerId = customer.Id,
+                    TransactionId = entity.Id,
+                    CreatedAt = DateTime.UtcNow,
+                    Type = BalanceTransactionType.TransactionCharge,
+                    Currency = PaymentCurrency.Rub,
+                    Amount = -rubDeduction,
+                    BalanceAfter = customer.BalanceRub,
+                    AmountUsd = 0m,
+                    BalanceAfterUsd = customer.BalanceUsd,
+                    Description = $"Tranzaksiya #{entity.Id} — RUB kassasından ödəniş ({rubDeduction:N2} ₽)"
+                });
+            }
+
+            decimal usdDeduction = entity.PaidFromUsdAmount ?? 0m;
+            string usdDesc = usdDeduction > 0
+                ? $"Tranzaksiya #{entity.Id} — Kassadan ödəniş (USD: ${usdDeduction:N2}" + (rubDeduction > 0 ? $", RUB: {rubDeduction:N2} ₽" : "") + $") — {entity.ProductName}"
+                : $"Tranzaksiya #{entity.Id} — Kassadan ödəniş (RUB: {rubDeduction:N2} ₽) — {entity.ProductName}";
+
+            ApplyBalanceDelta(customer, entity.HistoricalBalanceDeltaUsd, entity.Id,
+                BalanceTransactionType.TransactionCharge,
+                usdDesc);
+        }
+        else
+        {
+            ApplyBalanceDelta(customer, entity.HistoricalBalanceDeltaUsd, entity.Id,
+                BalanceTransactionType.TransactionCharge,
+                $"Tranzaksiya #{entity.Id} yaradıldı — {entity.ProductName}");
+        }
 
         await _db.SaveChangesAsync();
 
@@ -205,8 +240,9 @@ public class TransactionService : ITransactionService
             .FirstOrDefaultAsync(t => t.Id == id)
             ?? throw new InvalidOperationException($"Transaction not found (id={id})");
 
-        // Save old balance delta to reverse it
+        // Save old balance delta and RUB deduction to reverse it
         decimal oldBalanceDelta = entity.HistoricalBalanceDeltaUsd;
+        decimal oldPaidFromRub = (entity.PaymentStatus == PaymentStatus.PaidFromBalance ? entity.PaidFromRubAmount ?? 0m : 0m);
 
         // Handle document: if a new file path is provided, copy it; otherwise keep existing
         string? savedDocumentPath = request.DocumentFilePath != null
@@ -224,8 +260,10 @@ public class TransactionService : ITransactionService
         entity.TransportCurrency = request.TransportCurrency;
         entity.VehicleCount = request.VehicleCount;
         entity.PricePerVehicle = request.PricePerVehicle;
-        entity.PaidAmount = request.PaidAmount;
+        entity.PaidAmount = request.PaymentStatus == PaymentStatus.Paid ? request.PaidAmount : null;
         entity.PaidCurrency = request.PaidCurrency;
+        entity.PaidFromUsdAmount = request.PaymentStatus == PaymentStatus.PaidFromBalance ? request.PaidFromUsdAmount : null;
+        entity.PaidFromRubAmount = request.PaymentStatus == PaymentStatus.PaidFromBalance ? request.PaidFromRubAmount : null;
         entity.HistoricalExchangeRate = request.HistoricalExchangeRate;
         entity.DocumentPath = savedDocumentPath;
         entity.AdditionalExpenseAmount = request.AdditionalExpenseAmount;
@@ -251,11 +289,33 @@ public class TransactionService : ITransactionService
         // === RECALCULATION ENGINE (replaces Java @PreUpdate) ===
         CalculateHistoricalFields(entity);
 
+        var customer = entity.Customer;
+
+        // RUB balance change:
+        decimal newPaidFromRub = (entity.PaymentStatus == PaymentStatus.PaidFromBalance ? entity.PaidFromRubAmount ?? 0m : 0m);
+        decimal netRubChange = oldPaidFromRub - newPaidFromRub; // old deduction reversed (+old), new deduction applied (-new)
+        if (netRubChange != 0)
+        {
+            customer.BalanceRub += netRubChange;
+            _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
+            {
+                CustomerId = customer.Id,
+                TransactionId = entity.Id,
+                CreatedAt = DateTime.UtcNow,
+                Type = BalanceTransactionType.TransactionUpdate,
+                Currency = PaymentCurrency.Rub,
+                Amount = netRubChange,
+                BalanceAfter = customer.BalanceRub,
+                AmountUsd = 0m,
+                BalanceAfterUsd = customer.BalanceUsd,
+                Description = $"Tranzaksiya #{entity.Id} yeniləndi (RUB kassası: {netRubChange:+#,##0.00;-#,##0.00;0.00} ₽)"
+            });
+        }
+
         // === BALANCE UPDATE: Reverse old delta, apply new delta ===
         decimal netChange = entity.HistoricalBalanceDeltaUsd - oldBalanceDelta;
         if (netChange != 0)
         {
-            var customer = entity.Customer;
             ApplyBalanceDelta(customer, netChange, entity.Id,
                 BalanceTransactionType.TransactionUpdate,
                 $"Tranzaksiya #{entity.Id} yeniləndi — {entity.ProductName}");
@@ -335,6 +395,8 @@ public class TransactionService : ITransactionService
             DocumentImageUrl = entity.DocumentPath,
             IsCompleted = entity.IsCompleted,
             PaymentStatus = entity.PaymentStatus,
+            PaidFromUsdAmount = entity.PaidFromUsdAmount,
+            PaidFromRubAmount = entity.PaidFromRubAmount,
             ProfitPerTon = entity.ProfitPerTon,
             ProfitPerTonCurrency = entity.ProfitPerTonCurrency,
             ShipmentStatus = entity.ShipmentStatus,
@@ -362,10 +424,30 @@ public class TransactionService : ITransactionService
             .FirstOrDefaultAsync(t => t.Id == id)
             ?? throw new InvalidOperationException($"Transaction not found (id={id})");
 
+        var customer = entity.Customer;
+
+        // Rollback RUB deduction if PaidFromBalance
+        if (entity.PaymentStatus == PaymentStatus.PaidFromBalance && entity.PaidFromRubAmount is { } rubToRestore && rubToRestore > 0)
+        {
+            customer.BalanceRub += rubToRestore;
+            _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
+            {
+                CustomerId = customer.Id,
+                TransactionId = entity.Id,
+                CreatedAt = DateTime.UtcNow,
+                Type = BalanceTransactionType.TransactionRollback,
+                Currency = PaymentCurrency.Rub,
+                Amount = rubToRestore,
+                BalanceAfter = customer.BalanceRub,
+                AmountUsd = 0m,
+                BalanceAfterUsd = customer.BalanceUsd,
+                Description = $"Tranzaksiya #{entity.Id} silindi — RUB kassası bərpa olundu ({rubToRestore:N2} ₽)"
+            });
+        }
+
         // === BALANCE ROLLBACK: Reverse the balance delta before deleting ===
         if (entity.HistoricalBalanceDeltaUsd != 0)
         {
-            var customer = entity.Customer;
             ApplyBalanceDelta(customer, -entity.HistoricalBalanceDeltaUsd, entity.Id,
                 BalanceTransactionType.TransactionRollback,
                 $"Tranzaksiya #{entity.Id} silindi — {entity.ProductName}");
@@ -458,10 +540,24 @@ public class TransactionService : ITransactionService
         entity.HistoricalTotalExpenseUsd = goodsCostUsd + transportCostUsd + additionalExpenseUsd;
 
         // ── Step 7: Paid Amount in USD ──────────────────────────────────────
-        decimal paidAmount = entity.PaidAmount ?? 0m;
-        decimal paidInUsd = entity.PaidCurrency == PaymentCurrency.Rub
-            ? (rate > 0 ? paidAmount / rate : 0m)
-            : paidAmount;
+        decimal paidInUsd;
+        if (entity.PaymentStatus == PaymentStatus.Unpaid)
+        {
+            paidInUsd = 0m;
+        }
+        else if (entity.PaymentStatus == PaymentStatus.PaidFromBalance)
+        {
+            decimal usdPart = entity.PaidFromUsdAmount ?? 0m;
+            decimal rubPart = entity.PaidFromRubAmount ?? 0m;
+            paidInUsd = usdPart + (rate > 0 ? rubPart / rate : 0m);
+        }
+        else
+        {
+            decimal paidAmount = entity.PaidAmount ?? 0m;
+            paidInUsd = entity.PaidCurrency == PaymentCurrency.Rub
+                ? (rate > 0 ? paidAmount / rate : 0m)
+                : paidAmount;
+        }
 
         // ── Step 8: Remaining Debt (USD) ────────────────────────────────────
         entity.HistoricalRemainingDebtUsd = paidInUsd - entity.HistoricalTotalExpenseUsd;
@@ -480,6 +576,14 @@ public class TransactionService : ITransactionService
         {
             // Ödənilməyib: bütün məbləğ müştərinin balansından mənfi çıxılır
             entity.HistoricalBalanceDeltaUsd = -entity.HistoricalCustomerBilledUsd;
+        }
+        else if (entity.PaymentStatus == PaymentStatus.PaidFromBalance)
+        {
+            // Kassadan ödənilib: RUB kassasından ödənilən hissə USD balansında borcu azaldır,
+            // qalan bütün hesablanan məbləğ USD balansından çıxılır
+            decimal rubPart = entity.PaidFromRubAmount ?? 0m;
+            decimal rubPartInUsd = rate > 0 ? rubPart / rate : 0m;
+            entity.HistoricalBalanceDeltaUsd = rubPartInUsd - entity.HistoricalCustomerBilledUsd;
         }
         else
         {
@@ -521,10 +625,18 @@ public class TransactionService : ITransactionService
         if (t.PaymentStatus == PaymentStatus.Unpaid)
             return 0m;
 
+        if (t.PaymentStatus == PaymentStatus.PaidFromBalance)
+        {
+            decimal usdPart = t.PaidFromUsdAmount ?? 0m;
+            decimal rubPart = t.PaidFromRubAmount ?? 0m;
+            decimal rate = t.HistoricalExchangeRate;
+            return usdPart + (rate > 0 ? rubPart / rate : 0m);
+        }
+
         decimal paidAmount = t.PaidAmount ?? 0m;
-        decimal rate = t.HistoricalExchangeRate;
+        decimal rate2 = t.HistoricalExchangeRate;
         return t.PaidCurrency == PaymentCurrency.Rub
-            ? (rate > 0 ? paidAmount / rate : 0m)
+            ? (rate2 > 0 ? paidAmount / rate2 : 0m)
             : paidAmount;
     }
 
@@ -561,7 +673,7 @@ public class TransactionService : ITransactionService
         decimal totalCashFlow = totalPaid - totalExpense;
         decimal totalWeight = transactions.Sum(t => t.WeightTon);
         int totalVehicles = transactions.Sum(t => t.VehicleCount ?? 0);
-        int paidCount = transactions.Count(t => t.PaymentStatus == PaymentStatus.Paid);
+        int paidCount = transactions.Count(t => t.PaymentStatus == PaymentStatus.Paid || t.PaymentStatus == PaymentStatus.PaidFromBalance);
         int unpaidCount = transactions.Count(t => t.PaymentStatus == PaymentStatus.Unpaid);
 
         return new ExpenseIncomeReport
@@ -615,6 +727,8 @@ public class TransactionService : ITransactionService
             PaidInUsd = ComputePaidInUsd(entity),
             IsCompleted = entity.IsCompleted,
             PaymentStatus = entity.PaymentStatus,
+            PaidFromUsdAmount = entity.PaidFromUsdAmount,
+            PaidFromRubAmount = entity.PaidFromRubAmount,
             ProfitPerTon = entity.ProfitPerTon,
             ProfitPerTonCurrency = entity.ProfitPerTonCurrency,
             HistoricalUserProfitUsd = entity.HistoricalUserProfitUsd,

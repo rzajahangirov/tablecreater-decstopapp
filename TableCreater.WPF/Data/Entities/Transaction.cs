@@ -128,6 +128,16 @@ public class Transaction
     public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Paid;
 
     /// <summary>
+    /// Kassadan ödənişdə USD kassasından çıxılan məbləğ.
+    /// </summary>
+    public decimal? PaidFromUsdAmount { get; set; }
+
+    /// <summary>
+    /// Kassadan ödənişdə RUB kassasından çıxılan məbləğ.
+    /// </summary>
+    public decimal? PaidFromRubAmount { get; set; }
+
+    /// <summary>
     /// İstifadəçinin / şirkətin ton başına qazancı (məsələn, 15 USD/ton və ya 1200 RUB/ton).
     /// </summary>
     public decimal ProfitPerTon { get; set; } = 0m;

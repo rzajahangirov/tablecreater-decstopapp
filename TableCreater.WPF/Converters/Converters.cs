@@ -305,7 +305,13 @@ public class PaymentStatusToTextConverter : IValueConverter
     {
         if (value is PaymentStatus status)
         {
-            return status == PaymentStatus.Paid ? "Ödənilib" : "Ödənilməyib";
+            return status switch
+            {
+                PaymentStatus.Paid => "Ödənilib",
+                PaymentStatus.PaidFromBalance => "Kassadan Ödənilib",
+                PaymentStatus.Unpaid => "Ödənilməyib",
+                _ => status.ToString()
+            };
         }
         return value?.ToString() ?? string.Empty;
     }
@@ -318,18 +324,25 @@ public class PaymentStatusToTextConverter : IValueConverter
 
 /// <summary>
 /// Converts PaymentStatus to a background brush.
-/// Paid → Light green, Unpaid → Light red.
+/// Paid → Light green, PaidFromBalance → Light blue, Unpaid → Light red.
 /// </summary>
 public class PaymentStatusToBackgroundConverter : IValueConverter
 {
     private static readonly System.Windows.Media.Brush PaidBg = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(232, 245, 233));
     private static readonly System.Windows.Media.Brush UnpaidBg = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 235, 238));
+    private static readonly System.Windows.Media.Brush PaidFromBalanceBg = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(224, 242, 254));
 
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         if (value is PaymentStatus status)
         {
-            return status == PaymentStatus.Paid ? PaidBg : UnpaidBg;
+            return status switch
+            {
+                PaymentStatus.Paid => PaidBg,
+                PaymentStatus.PaidFromBalance => PaidFromBalanceBg,
+                PaymentStatus.Unpaid => UnpaidBg,
+                _ => PaidBg
+            };
         }
         return PaidBg;
     }
@@ -342,18 +355,25 @@ public class PaymentStatusToBackgroundConverter : IValueConverter
 
 /// <summary>
 /// Converts PaymentStatus to a foreground brush.
-/// Paid → Dark green, Unpaid → Crimson.
+/// Paid → Dark green, PaidFromBalance → Deep sky blue, Unpaid → Crimson.
 /// </summary>
 public class PaymentStatusToForegroundConverter : IValueConverter
 {
     private static readonly System.Windows.Media.Brush PaidFg = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(46, 125, 50));
     private static readonly System.Windows.Media.Brush UnpaidFg = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(198, 40, 40));
+    private static readonly System.Windows.Media.Brush PaidFromBalanceFg = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(2, 132, 199));
 
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         if (value is PaymentStatus status)
         {
-            return status == PaymentStatus.Paid ? PaidFg : UnpaidFg;
+            return status switch
+            {
+                PaymentStatus.Paid => PaidFg,
+                PaymentStatus.PaidFromBalance => PaidFromBalanceFg,
+                PaymentStatus.Unpaid => UnpaidFg,
+                _ => PaidFg
+            };
         }
         return PaidFg;
     }

@@ -312,20 +312,28 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
                                 <RadioButton Grid.Column="0"
                                              Style="{StaticResource StatusCardRadioButtonStyle}"
                                              GroupName="PaymentStatusGroup"
                                              Content="💳 Ödənilib"
-                                             Margin="0,0,8,0"
+                                             Margin="0,0,6,0"
                                              IsChecked="{Binding PaymentStatus, Converter={StaticResource EnumEqualsToBoolConverter}, ConverterParameter=Paid, Mode=TwoWay}"/>
 
                                 <RadioButton Grid.Column="1"
                                              Style="{StaticResource StatusCardRadioButtonStyle}"
                                              GroupName="PaymentStatusGroup"
+                                             Content="🏦 Kassadan Ödənilsin"
+                                             Margin="3,0,3,0"
+                                             IsChecked="{Binding PaymentStatus, Converter={StaticResource EnumEqualsToBoolConverter}, ConverterParameter=PaidFromBalance, Mode=TwoWay}"/>
+
+                                <RadioButton Grid.Column="2"
+                                             Style="{StaticResource StatusCardRadioButtonStyle}"
+                                             GroupName="PaymentStatusGroup"
                                              Content="⏳ Ödənilməyib"
-                                             Margin="8,0,0,0"
+                                             Margin="6,0,0,0"
                                              IsChecked="{Binding PaymentStatus, Converter={StaticResource EnumEqualsToBoolConverter}, ConverterParameter=Unpaid, Mode=TwoWay}"/>
                             </Grid>
 
@@ -342,6 +350,93 @@
                                     </TextBlock>
                                 </StackPanel>
                             </Border>
+
+                            <!-- Kassadan Ödəniş Panel (PaidFromBalance) -->
+                            <StackPanel Visibility="{Binding PaymentStatus, Converter={StaticResource EnumEqualsToVisConverter}, ConverterParameter=PaidFromBalance}">
+                                <!-- Customer current balances badge row -->
+                                <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1"
+                                        CornerRadius="8" Padding="14,12" Margin="0,0,0,16">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,16,0">
+                                            <TextBlock Text="🏦 Müştəri Kassaları" FontSize="13" FontWeight="Bold" Foreground="#1E40AF"/>
+                                            <TextBlock Text="Cari balans vəziyyəti" FontSize="11" Foreground="#3B82F6"/>
+                                        </StackPanel>
+
+                                        <!-- USD Kassası Balansı -->
+                                        <Border Grid.Column="1" Background="#FFFFFF" BorderBrush="#DBEAFE" BorderThickness="1"
+                                                CornerRadius="6" Padding="12,8" Margin="0,0,6,0">
+                                            <StackPanel>
+                                                <TextBlock Text="USD Kassası" FontSize="11" FontWeight="SemiBold" Foreground="#6B7280"/>
+                                                <TextBlock Text="{Binding CustomerUsdBalance, StringFormat='${0:N2}'}" 
+                                                           FontSize="15" FontWeight="ExtraBold" Foreground="#1D4ED8"/>
+                                            </StackPanel>
+                                        </Border>
+
+                                        <!-- RUB Kassası Balansı -->
+                                        <Border Grid.Column="2" Background="#FFFFFF" BorderBrush="#DBEAFE" BorderThickness="1"
+                                                CornerRadius="6" Padding="12,8" Margin="6,0,0,0">
+                                            <StackPanel>
+                                                <TextBlock Text="RUB Kassası" FontSize="11" FontWeight="SemiBold" Foreground="#6B7280"/>
+                                                <TextBlock Text="{Binding CustomerRubBalance, StringFormat='{}{0:N2} ₽'}" 
+                                                           FontSize="15" FontWeight="ExtraBold" Foreground="#7C3AED"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+
+                                <!-- Input fields for deduction from cashboxes -->
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- USD Kassasından Çıxılan Məbləğ -->
+                                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                            <TextBlock Text="USD Kassasından Çıxarılacaq" FontSize="13" FontWeight="SemiBold" Foreground="#1E40AF"/>
+                                            <TextBlock Text=" ($)" FontSize="13" FontWeight="Bold" Foreground="#2563EB"/>
+                                        </StackPanel>
+                                        <ui:NumberBox Value="{Binding PaidFromUsdAmount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                      SpinButtonPlacementMode="Compact"
+                                                      Minimum="0"
+                                                      HorizontalAlignment="Stretch" Padding="8,6"
+                                                      PlaceholderText="0.00"/>
+                                    </StackPanel>
+
+                                    <!-- RUB Kassasından Çıxılan Məbləğ -->
+                                    <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                            <TextBlock Text="RUB Kassasından Çıxarılacaq" FontSize="13" FontWeight="SemiBold" Foreground="#6D28D9"/>
+                                            <TextBlock Text=" (₽)" FontSize="13" FontWeight="Bold" Foreground="#7C3AED"/>
+                                        </StackPanel>
+                                        <ui:NumberBox Value="{Binding PaidFromRubAmount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                      SpinButtonPlacementMode="Compact"
+                                                      Minimum="0"
+                                                      HorizontalAlignment="Stretch" Padding="8,6"
+                                                      PlaceholderText="0.00"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Explanatory note -->
+                                <Border Background="#F3F4F6" BorderBrush="#E5E7EB" BorderThickness="1"
+                                        CornerRadius="6" Padding="12,10">
+                                    <TextBlock TextWrapping="Wrap" FontSize="12" Foreground="#4B5563">
+                                        <Run Text="💡 Qeyd: " FontWeight="Bold" Foreground="#1F2937"/>
+                                        <Run Text="Daxil etdiyiniz məbləğlər müştərinin müvafiq kassalarından çıxılacaq. RUB məbləği cari məzənnə ("/>
+                                        <Run Text="{Binding HistoricalExchangeRate, StringFormat='{}{0:N2}', Mode=OneWay}" FontWeight="SemiBold"/>
+                                        <Run Text=") ilə USD-yə çevrilərək ümumi ödənişə ("/>
+                                        <Run Text="{Binding LivePaidInUsd, StringFormat='${0:N2}', Mode=OneWay}" FontWeight="Bold" Foreground="#15803D"/>
+                                        <Run Text=") daxil edilir."/>
+                                    </TextBlock>
+                                </Border>
+                            </StackPanel>
 
                             <!-- Ödənilib Inputs -->
                             <Grid Visibility="{Binding PaymentStatus, Converter={StaticResource EnumEqualsToVisConverter}, ConverterParameter=Paid}">

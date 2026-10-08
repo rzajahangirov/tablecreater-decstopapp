@@ -484,6 +484,7 @@
                                               SelectedValuePath="Tag" Width="150" FontSize="12" Padding="8,6" BorderBrush="#CBD5E1">
                                         <ComboBoxItem Content="Bütün Ödənişlər" IsSelected="True"/>
                                         <ComboBoxItem Content="💳 Ödənilib" Tag="{x:Static enums:PaymentStatus.Paid}"/>
+                                        <ComboBoxItem Content="🏦 Kassadan Ödənilib" Tag="{x:Static enums:PaymentStatus.PaidFromBalance}"/>
                                         <ComboBoxItem Content="⏳ Ödənilməyib" Tag="{x:Static enums:PaymentStatus.Unpaid}"/>
                                     </ComboBox>
                                 </StackPanel>

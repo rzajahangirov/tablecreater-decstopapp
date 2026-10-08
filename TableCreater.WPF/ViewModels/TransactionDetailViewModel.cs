@@ -99,6 +99,7 @@ public partial class TransactionDetailViewModel : ObservableObject
     public string PaymentStatusText => Transaction?.PaymentStatus switch
     {
         PaymentStatus.Paid => "Ödənilib ✅",
+        PaymentStatus.PaidFromBalance => "Kassadan Ödənilib 🏦",
         PaymentStatus.Unpaid => "Ödənilməyib ❌",
         _ => "—"
     };

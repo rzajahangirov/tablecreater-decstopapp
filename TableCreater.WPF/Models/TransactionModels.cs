@@ -83,10 +83,22 @@ public record TransactionCreateRequest
     /// </summary>
     public string? DocumentFilePath { get; init; }
 
+    // === Kassadan Ödəniş ===
+
+    /// <summary>
+    /// Kassadan ödənişdə USD kassasından çıxılan məbləğ.
+    /// </summary>
+    public decimal? PaidFromUsdAmount { get; init; }
+
+    /// <summary>
+    /// Kassadan ödənişdə RUB kassasından çıxılan məbləğ.
+    /// </summary>
+    public decimal? PaidFromRubAmount { get; init; }
+
     // === Ödəniş Statusu və Ton Başına Qazanc ===
 
     /// <summary>
-    /// Ödəniş statusu: Paid (Ödənilib) və ya Unpaid (Ödənilməyib).
+    /// Ödəniş statusu: Paid (Ödənilib), Unpaid (Ödənilməyib), PaidFromBalance (Kassadan Ödənilsin).
     /// </summary>
     public PaymentStatus PaymentStatus { get; init; } = PaymentStatus.Paid;
 
@@ -171,10 +183,15 @@ public record TransactionReadResponse
     public decimal HistoricalCustomerBilledUsd { get; init; }
     public decimal HistoricalBalanceDeltaUsd { get; init; }
 
+    // === Kassadan Ödəniş ===
+    public decimal? PaidFromUsdAmount { get; init; }
+    public decimal? PaidFromRubAmount { get; init; }
+
     public string PaymentStatusDisplay => PaymentStatus switch
     {
         PaymentStatus.Paid => "Ödənilib",
         PaymentStatus.Unpaid => "Ödənilməyib",
+        PaymentStatus.PaidFromBalance => "Kassadan Ödənilib",
         _ => PaymentStatus.ToString()
     };
 
@@ -271,6 +288,10 @@ public record TransactionEditFormData
     public PaymentStatus PaymentStatus { get; init; } = PaymentStatus.Paid;
     public decimal ProfitPerTon { get; init; }
     public PaymentCurrency ProfitPerTonCurrency { get; init; } = PaymentCurrency.Usd;
+
+    // === Kassadan Ödəniş ===
+    public decimal? PaidFromUsdAmount { get; init; }
+    public decimal? PaidFromRubAmount { get; init; }
 
     // === Göndərmə Statusu və Tarixlər ===
     public ShipmentStatus ShipmentStatus { get; init; } = ShipmentStatus.Pending;

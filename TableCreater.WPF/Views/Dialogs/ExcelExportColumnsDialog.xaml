@@ -85,15 +85,75 @@
             <!-- ════════════ STEP 1: Transaction Selection ════════════ -->
             <Grid x:Name="PanelStep1">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>  <!-- Quick Actions -->
+                    <RowDefinition Height="Auto"/>  <!-- In-dialog Filter Bar -->
+                    <RowDefinition Height="Auto"/>  <!-- Quick Actions & Counters -->
                     <RowDefinition Height="*"/>     <!-- DataGrid -->
                     <RowDefinition Height="Auto"/>  <!-- Summary -->
                 </Grid.RowDefinitions>
 
-                <!-- Quick Action Buttons -->
-                <Border Grid.Row="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="18,10">
+                <!-- 1. IN-DIALOG FILTER BAR -->
+                <Border Grid.Row="0" Background="#F1F5F9" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="16,8">
                     <Grid>
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/> <!-- Tarixdən label -->
+                            <ColumnDefinition Width="135"/>  <!-- DpFilterFrom -->
+                            <ColumnDefinition Width="Auto"/> <!-- Tarixə label -->
+                            <ColumnDefinition Width="135"/>  <!-- DpFilterTo -->
+                            <ColumnDefinition Width="Auto"/> <!-- Ödəniş label -->
+                            <ColumnDefinition Width="135"/>  <!-- CmbFilterPayment -->
+                            <ColumnDefinition Width="Auto"/> <!-- Axtarış label -->
+                            <ColumnDefinition Width="150"/>  <!-- TxtFilterSearch -->
+                            <ColumnDefinition Width="*"/>    <!-- Spacer -->
+                            <ColumnDefinition Width="Auto"/> <!-- BtnClearFilter -->
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Tarixdən -->
+                        <TextBlock Grid.Column="0" Text="Tarixdən:" FontSize="12" Foreground="#475569" 
+                                   FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <DatePicker Grid.Column="1" x:Name="DpFilterFrom" FontSize="12" Margin="0,0,12,0" 
+                                    VerticalAlignment="Center" SelectedDateChanged="FilterInput_Changed"/>
+
+                        <!-- Tarixə -->
+                        <TextBlock Grid.Column="2" Text="Tarixə:" FontSize="12" Foreground="#475569" 
+                                   FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <DatePicker Grid.Column="3" x:Name="DpFilterTo" FontSize="12" Margin="0,0,12,0" 
+                                    VerticalAlignment="Center" SelectedDateChanged="FilterInput_Changed"/>
+
+                        <!-- Ödəniş Statusu -->
+                        <TextBlock Grid.Column="4" Text="Ödəniş:" FontSize="12" Foreground="#475569" 
+                                   FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <ComboBox Grid.Column="5" x:Name="CmbFilterPayment" FontSize="12" Margin="0,0,12,0" 
+                                  VerticalAlignment="Center" Padding="8,4" SelectionChanged="FilterInput_Changed">
+                            <ComboBoxItem Content="Hamısı" Tag="All" IsSelected="True"/>
+                            <ComboBoxItem Content="Ödənilib" Tag="Paid"/>
+                            <ComboBoxItem Content="Kassadan Ödənilib" Tag="PaidFromBalance"/>
+                            <ComboBoxItem Content="Ödənilməyib" Tag="Unpaid"/>
+                        </ComboBox>
+
+                        <!-- Axtarış -->
+                        <TextBlock Grid.Column="6" Text="Axtarış:" FontSize="12" Foreground="#475569" 
+                                   FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBox Grid.Column="7" x:Name="TxtFilterSearch" FontSize="12" Margin="0,0,12,0" 
+                                 VerticalAlignment="Center" Padding="8,4" TextChanged="FilterSearch_TextChanged"/>
+
+                        <!-- Təmizlə -->
+                        <Button Grid.Column="9" Click="BtnClearFilter_Click"
+                                Padding="10,5" Background="White" Foreground="#64748B" 
+                                BorderBrush="#CBD5E1" BorderThickness="1" Cursor="Hand">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE894;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                                <TextBlock Text="Filtrləri Sıfırla" FontSize="11"/>
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- 2. QUICK ACTION BUTTONS & COUNTERS -->
+                <Border Grid.Row="1" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="16,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
@@ -101,51 +161,76 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <Button Grid.Column="0" Click="BtnSelectAllTx_Click"
-                                Padding="10,5" Background="#F1F5F9" Foreground="#1E293B" BorderThickness="0" Margin="0,0,6,0" Cursor="Hand">
+                        <!-- Filtrlənmişləri Seç -->
+                        <Button Grid.Column="0" Click="BtnSelectFilteredTx_Click"
+                                Padding="10,5" Background="#E0F2FE" Foreground="#0369A1" BorderThickness="0" Margin="0,0,6,0" Cursor="Hand"
+                                ToolTip="Hal-hazırda filtrlənmiş bütün tranzaksiyaları seç">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE71C;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#0284C7"/>
+                                <TextBlock x:Name="BtnFilteredText" Text="Filtrlənmişləri Seç" FontWeight="Bold" FontSize="11"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Filtrlənmişləri Ləğv Et -->
+                        <Button Grid.Column="1" Click="BtnDeselectFilteredTx_Click"
+                                Padding="10,5" Background="#F1F5F9" Foreground="#64748B" BorderThickness="0" Margin="0,0,6,0" Cursor="Hand"
+                                ToolTip="Filtrlənmiş tranzaksiyaların seçimini ləğv et">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#94A3B8"/>
+                                <TextBlock Text="Filtrlənənləri Ləğv Et" FontWeight="SemiBold" FontSize="11"/>
+                            </StackPanel>
+                        </Button>
+
+                        <!-- Hamısını Seç -->
+                        <Button Grid.Column="2" Click="BtnSelectAllTx_Click"
+                                Padding="10,5" Background="#F0FDF4" Foreground="#15803D" BorderThickness="0" Margin="0,0,6,0" Cursor="Hand"
+                                ToolTip="Bütün tranzaksiyaları seç">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="&#xE73E;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#107C41"/>
                                 <TextBlock Text="Hamısını Seç" FontWeight="SemiBold" FontSize="11"/>
                             </StackPanel>
                         </Button>
 
-                        <Button Grid.Column="1" Click="BtnSelectFilteredTx_Click"
-                                Padding="10,5" Background="#F1F5F9" Foreground="#1E293B" BorderThickness="0" Margin="0,0,6,0" Cursor="Hand">
+                        <!-- Seçimi Sıfırla -->
+                        <Button Grid.Column="3" Click="BtnDeselectAllTx_Click"
+                                Padding="10,5" Background="#FEF2F2" Foreground="#B91C1C" BorderThickness="0" Margin="0,0,6,0" Cursor="Hand"
+                                ToolTip="Bütün seçimləri sıfırla">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE71C;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#005FB8"/>
-                                <TextBlock x:Name="BtnFilteredText" Text="Filtrlənmişləri Seç" FontWeight="SemiBold" FontSize="11"/>
-                            </StackPanel>
-                        </Button>
-
-                        <Button Grid.Column="2" Click="BtnDeselectAllTx_Click"
-                                Padding="10,5" Background="#F1F5F9" Foreground="#1E293B" BorderThickness="0" Cursor="Hand">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="&#xE711;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#C62828"/>
+                                <TextBlock Text="&#xE74D;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#DC2626"/>
                                 <TextBlock Text="Seçimi Sıfırla" FontWeight="SemiBold" FontSize="11"/>
                             </StackPanel>
                         </Button>
 
+                        <!-- Tərsinə Çevir -->
+                        <Button Grid.Column="4" Click="BtnInvertSelectionTx_Click"
+                                Padding="10,5" Background="#F1F5F9" Foreground="#475569" BorderThickness="0" Cursor="Hand">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE8AB;" FontFamily="Segoe MDL2 Assets" FontSize="11" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#6366F1"/>
+                                <TextBlock Text="Tərsinə Çevir" FontWeight="SemiBold" FontSize="11"/>
+                            </StackPanel>
+                        </Button>
+
                         <!-- Selected Count -->
-                        <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="Seçilmiş: " FontSize="13" Foreground="#64748B"/>
-                            <TextBlock x:Name="TxtSelectedTxCount" Text="0" FontSize="14" FontWeight="Bold" Foreground="#107C41"/>
-                            <TextBlock x:Name="TxtTotalTxCount" Text=" / 0" FontSize="13" Foreground="#94A3B8"/>
+                        <StackPanel Grid.Column="6" Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Seçilmiş: " FontSize="12.5" Foreground="#64748B"/>
+                            <TextBlock x:Name="TxtSelectedTxCount" Text="0" FontSize="13.5" FontWeight="Bold" Foreground="#107C41"/>
+                            <TextBlock x:Name="TxtTotalTxCount" Text=" / 0" FontSize="12.5" Foreground="#94A3B8"/>
                         </StackPanel>
                     </Grid>
                 </Border>
 
-                <!-- Transaction DataGrid with Checkboxes -->
-                <DataGrid Grid.Row="1" x:Name="TxSelectionGrid"
+                <!-- 3. TRANSACTION DATAGRID WITH CHECKBOXES -->
+                <DataGrid Grid.Row="2" x:Name="TxSelectionGrid"
                           AutoGenerateColumns="False"
-                          IsReadOnly="True"
-                          SelectionMode="Extended"
+                          IsReadOnly="False"
+                          SelectionMode="Single"
                           HeadersVisibility="Column"
                           GridLinesVisibility="Horizontal"
                           HorizontalGridLinesBrush="#F0F0F0"
                           BorderThickness="0"
                           FontSize="12"
-                          RowHeight="36"
-                          ColumnHeaderHeight="34"
+                          RowHeight="38"
+                          ColumnHeaderHeight="36"
                           Background="Transparent"
                           HorizontalScrollBarVisibility="Auto"
                           CanUserResizeColumns="True"
@@ -181,20 +266,25 @@
                     </DataGrid.Resources>
 
                     <DataGrid.Columns>
-                        <!-- Checkbox Column -->
-                        <DataGridTemplateColumn Header="✓" Width="40">
+                        <!-- Checkbox Column with Header CheckBox -->
+                        <DataGridTemplateColumn Width="46" CanUserResize="False">
+                            <DataGridTemplateColumn.Header>
+                                <CheckBox x:Name="ChkSelectAllTxHeader"
+                                          Style="{StaticResource DataGridCheckBoxStyle}"
+                                          ToolTip="Hamısını seç / ləğv et"
+                                          Click="HeaderTxCheckBox_Click"/>
+                            </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <CheckBox IsChecked="{Binding IsSelectedForExport, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                              HorizontalAlignment="Center" VerticalAlignment="Center"
-                                              Checked="TxCheckBox_Changed" Unchecked="TxCheckBox_Changed"
-                                              Cursor="Hand"/>
+                                    <CheckBox Style="{StaticResource DataGridCheckBoxStyle}"
+                                              IsChecked="{Binding IsSelectedForExport, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                              Click="TxCheckBox_Changed"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
                         <!-- Tarix -->
-                        <DataGridTextColumn Header="Tarix" Binding="{Binding TransactionDate}" Width="85">
+                        <DataGridTextColumn Header="Tarix" Binding="{Binding TransactionDate}" Width="85" IsReadOnly="True">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="VerticalAlignment" Value="Center"/>
@@ -204,7 +294,7 @@
                         </DataGridTextColumn>
 
                         <!-- Məhsul -->
-                        <DataGridTextColumn Header="Məhsul" Binding="{Binding ProductName}" Width="130">
+                        <DataGridTextColumn Header="Məhsul" Binding="{Binding ProductName}" Width="130" IsReadOnly="True">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="FontWeight" Value="SemiBold"/>
@@ -215,7 +305,7 @@
                         </DataGridTextColumn>
 
                         <!-- Göndərən -->
-                        <DataGridTextColumn Header="Göndərən" Binding="{Binding SendingCompany}" Width="100">
+                        <DataGridTextColumn Header="Göndərən" Binding="{Binding SendingCompany}" Width="100" IsReadOnly="True">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="VerticalAlignment" Value="Center"/>
@@ -225,7 +315,7 @@
                         </DataGridTextColumn>
 
                         <!-- Çəki -->
-                        <DataGridTextColumn Header="Çəki(T)" Binding="{Binding WeightTonFormatted}" Width="70">
+                        <DataGridTextColumn Header="Çəki(T)" Binding="{Binding WeightTonFormatted}" Width="70" IsReadOnly="True">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="VerticalAlignment" Value="Center"/>
@@ -236,7 +326,7 @@
                         </DataGridTextColumn>
 
                         <!-- Xərc+Qazanc -->
-                        <DataGridTextColumn Header="Xərc+Qazanc" Binding="{Binding BilledUsdFormatted}" Width="100">
+                        <DataGridTextColumn Header="Xərc+Qazanc" Binding="{Binding BilledUsdFormatted}" Width="100" IsReadOnly="True">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="VerticalAlignment" Value="Center"/>
@@ -248,7 +338,7 @@
                         </DataGridTextColumn>
 
                         <!-- Ödəniş -->
-                        <DataGridTextColumn Header="Ödəniş" Binding="{Binding PaidUsdFormatted}" Width="90">
+                        <DataGridTextColumn Header="Ödəniş" Binding="{Binding PaidUsdFormatted}" Width="90" IsReadOnly="True">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="VerticalAlignment" Value="Center"/>
@@ -260,7 +350,7 @@
                         </DataGridTextColumn>
 
                         <!-- Ödəniş Statusu -->
-                        <DataGridTemplateColumn Header="Status" Width="100">
+                        <DataGridTemplateColumn Header="Status" Width="100" IsReadOnly="True">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Border CornerRadius="10" Padding="8,3" HorizontalAlignment="Center">
@@ -271,6 +361,9 @@
                                                     <DataTrigger Binding="{Binding PaymentStatusDisplay}" Value="Ödənilib">
                                                         <Setter Property="Background" Value="#E8F5E9"/>
                                                     </DataTrigger>
+                                                    <DataTrigger Binding="{Binding PaymentStatusDisplay}" Value="Kassadan Ödənilib">
+                                                        <Setter Property="Background" Value="#E0F2FE"/>
+                                                    </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
                                         </Border.Style>
@@ -280,7 +373,10 @@
                                                     <Setter Property="Foreground" Value="#C62828"/>
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding PaymentStatusDisplay}" Value="Ödənilib">
-                                                            <Setter Property="Foreground" Value="#2E7D32"/>
+                                                             <Setter Property="Foreground" Value="#2E7D32"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding PaymentStatusDisplay}" Value="Kassadan Ödənilib">
+                                                             <Setter Property="Foreground" Value="#0284C7"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -292,7 +388,7 @@
                         </DataGridTemplateColumn>
 
                         <!-- Göndərmə Statusu -->
-                        <DataGridTextColumn Header="Göndərmə" Binding="{Binding ShipmentStatusDisplay}" Width="90">
+                        <DataGridTextColumn Header="Göndərmə" Binding="{Binding ShipmentStatusDisplay}" Width="90" IsReadOnly="True">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="VerticalAlignment" Value="Center"/>
@@ -304,8 +400,8 @@
                     </DataGrid.Columns>
                 </DataGrid>
 
-                <!-- Summary Bar -->
-                <Border Grid.Row="2" Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="0,1,0,0" Padding="18,8">
+                <!-- 4. SUMMARY BAR -->
+                <Border Grid.Row="3" Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="0,1,0,0" Padding="18,8">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
