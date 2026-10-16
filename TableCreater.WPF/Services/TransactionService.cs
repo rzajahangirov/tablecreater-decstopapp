@@ -9,10 +9,9 @@ namespace TableCreater.WPF.Services;
 
 /// <summary>
 /// Full implementation of the Transaction service.
-/// Ports the Java TransactionService including the core Calculation Engine (Section 5.1)
-/// and Aggregate Financial Reporting (Section 5.2).
-///
-/// All methods are async to keep the WPF UI responsive.
+/// Updated for dual-stream billing (RUB + USD independently) with
+/// dynamic per-ton additional expenses.
+/// All transactions automatically bill directly to the customer's balances.
 /// </summary>
 public class TransactionService : ITransactionService
 {
@@ -21,7 +20,7 @@ public class TransactionService : ITransactionService
 
     /// <summary>
     /// Directory where document attachments are stored.
-    /// Uses application base directory for 100% portable isolation.
+    /// Uses application base directory for portable isolation.
     /// </summary>
     private static readonly string UploadsDirectory =
         Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "uploads");
@@ -31,11 +30,9 @@ public class TransactionService : ITransactionService
         _db = db;
         _excelService = excelService;
 
-        // Ensure the uploads directory exists on service construction
         if (!Directory.Exists(UploadsDirectory))
             Directory.CreateDirectory(UploadsDirectory);
 
-        // Migrate any existing files from LocalApplicationData to portable uploads
         try
         {
             var oldUploads = Path.Combine(
@@ -57,22 +54,19 @@ public class TransactionService : ITransactionService
 
     // =========================================================================
     // T1 — CREATE TRANSACTION
-    // Mapped from: TransactionService.createTransaction(TransactionCreateDto, Long)
-    // Replaces Java @PrePersist with explicit calculation before SaveChanges.
     // =========================================================================
 
     /// <inheritdoc />
     public async Task<TransactionReadResponse> CreateTransaction(
         TransactionCreateRequest request, long customerId)
     {
-        // Validate customer exists
         var customer = await _db.Customers.FindAsync(customerId)
             ?? throw new InvalidOperationException($"Customer not found (id={customerId})");
 
-        // Handle document attachment (replaces MultipartFile → uploads/ logic)
         string? savedDocumentPath = CopyDocumentToUploads(request.DocumentFilePath);
 
-        // Build entity from request
+        decimal rate = request.HistoricalExchangeRate > 0 ? request.HistoricalExchangeRate : 1.0m;
+
         var entity = new Transaction
         {
             CustomerId = customerId,
@@ -87,21 +81,15 @@ public class TransactionService : ITransactionService
             TransportCurrency = request.TransportCurrency,
             VehicleCount = request.VehicleCount,
             PricePerVehicle = request.PricePerVehicle,
-            PaidAmount = request.PaymentStatus == PaymentStatus.Paid ? request.PaidAmount : null,
+            PaidAmount = null,
             PaidCurrency = request.PaidCurrency,
-            PaidFromUsdAmount = request.PaymentStatus == PaymentStatus.PaidFromBalance ? request.PaidFromUsdAmount : null,
-            PaidFromRubAmount = request.PaymentStatus == PaymentStatus.PaidFromBalance ? request.PaidFromRubAmount : null,
-            HistoricalExchangeRate = request.HistoricalExchangeRate,
+            HistoricalExchangeRate = rate,
             DocumentPath = savedDocumentPath,
-            AdditionalExpenseAmount = request.AdditionalExpenseAmount,
-            AdditionalExpenseCurrency = request.AdditionalExpenseCurrency,
-            AdditionalExpenseDescription = request.AdditionalExpenseDescription,
-            PaymentStatus = request.PaymentStatus,
+            PaymentStatus = PaymentStatus.Paid,
             ProfitPerTon = request.ProfitPerTon,
             ProfitPerTonCurrency = request.ProfitPerTonCurrency
         };
 
-        // Sync and validate shipment status dates
         SyncShipmentStatusAndDates(
             entity,
             request.ShipmentStatus,
@@ -109,58 +97,100 @@ public class TransactionService : ITransactionService
             request.InTransitStartDate,
             request.DeliveredDate);
 
-        // === CALCULATION ENGINE (replaces Java @PrePersist) ===
-        CalculateHistoricalFields(entity);
+        // === CALCULATION ENGINE: Dual-Stream Billing ===
+        decimal goodsCostRub = entity.WeightTon * entity.PricePerTonRub;
+        decimal transportRaw = (entity.PricePerVehicle ?? 0m) * (entity.VehicleCount ?? 0);
+        decimal transportCostRub = entity.TransportCurrency == PaymentCurrency.Rub ? transportRaw : 0m;
+        decimal profitRub = entity.ProfitPerTonCurrency == PaymentCurrency.Rub ? (entity.WeightTon * entity.ProfitPerTon) : 0m;
+
+        decimal transportCostUsd = entity.TransportCurrency == PaymentCurrency.Usd ? transportRaw : 0m;
+        decimal profitUsd = entity.ProfitPerTonCurrency == PaymentCurrency.Usd ? (entity.WeightTon * entity.ProfitPerTon) : 0m;
+
+        decimal addlExpRub = 0m;
+        decimal addlExpUsd = 0m;
+        if (request.AdditionalExpenses != null && request.AdditionalExpenses.Count > 0)
+        {
+            foreach (var item in request.AdditionalExpenses)
+            {
+                decimal totalItemAmount = item.Type == AdditionalExpenseType.PerTon 
+                    ? (item.AmountPerTon * entity.WeightTon) 
+                    : item.AmountPerTon;
+
+                if (item.Currency == PaymentCurrency.Rub)
+                    addlExpRub += totalItemAmount;
+                else
+                    addlExpUsd += totalItemAmount;
+
+                entity.AdditionalExpenses.Add(new TransactionAdditionalExpense
+                {
+                    Title = string.IsNullOrWhiteSpace(item.Title) ? "Əlavə xərc" : item.Title,
+                    ExpenseType = item.Type,
+                    AmountPerTon = item.AmountPerTon,
+                    Currency = item.Currency
+                });
+            }
+        }
+
+        decimal baseExpenseRub = goodsCostRub + transportCostRub + addlExpRub;
+        decimal baseExpenseUsd = transportCostUsd + addlExpUsd;
+
+        entity.TotalBilledRub = baseExpenseRub + profitRub;
+        entity.TotalBilledUsd = baseExpenseUsd + profitUsd;
+
+        decimal unifiedBaseCostUsd = baseExpenseUsd + (rate > 0 ? baseExpenseRub / rate : 0m);
+        decimal unifiedProfitUsd = profitUsd + (rate > 0 ? profitRub / rate : 0m);
+        decimal unifiedBilledUsd = entity.TotalBilledUsd + (rate > 0 ? entity.TotalBilledRub / rate : 0m);
+
+        entity.HistoricalTotalExpenseUsd = unifiedBaseCostUsd;
+        entity.HistoricalCustomerBilledUsd = unifiedBilledUsd;
+        entity.HistoricalUserProfitUsd = unifiedProfitUsd;
 
         _db.Transactions.Add(entity);
         await _db.SaveChangesAsync();
 
-        // === BALANCE UPDATE: Apply balance delta to customer ===
-        if (entity.PaymentStatus == PaymentStatus.PaidFromBalance)
+        // === BALANCE DEDUCTION: Automatic direct charge to customer accounts ===
+        if (entity.TotalBilledRub > 0)
         {
-            decimal rubDeduction = entity.PaidFromRubAmount ?? 0m;
-            if (rubDeduction > 0)
+            customer.BalanceRub -= entity.TotalBilledRub;
+            _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
             {
-                customer.BalanceRub -= rubDeduction;
-                _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
-                {
-                    CustomerId = customer.Id,
-                    TransactionId = entity.Id,
-                    CreatedAt = DateTime.UtcNow,
-                    Type = BalanceTransactionType.TransactionCharge,
-                    Currency = PaymentCurrency.Rub,
-                    Amount = -rubDeduction,
-                    BalanceAfter = customer.BalanceRub,
-                    AmountUsd = 0m,
-                    BalanceAfterUsd = customer.BalanceUsd,
-                    Description = $"Tranzaksiya #{entity.Id} — RUB kassasından ödəniş ({rubDeduction:N2} ₽)"
-                });
-            }
-
-            decimal usdDeduction = entity.PaidFromUsdAmount ?? 0m;
-            string usdDesc = usdDeduction > 0
-                ? $"Tranzaksiya #{entity.Id} — Kassadan ödəniş (USD: ${usdDeduction:N2}" + (rubDeduction > 0 ? $", RUB: {rubDeduction:N2} ₽" : "") + $") — {entity.ProductName}"
-                : $"Tranzaksiya #{entity.Id} — Kassadan ödəniş (RUB: {rubDeduction:N2} ₽) — {entity.ProductName}";
-
-            ApplyBalanceDelta(customer, entity.HistoricalBalanceDeltaUsd, entity.Id,
-                BalanceTransactionType.TransactionCharge,
-                usdDesc);
+                CustomerId = customer.Id,
+                TransactionId = entity.Id,
+                CreatedAt = DateTime.UtcNow,
+                Type = BalanceTransactionType.TransactionCharge,
+                Currency = PaymentCurrency.Rub,
+                Amount = -entity.TotalBilledRub,
+                BalanceAfter = customer.BalanceRub,
+                AmountUsd = 0m,
+                BalanceAfterUsd = customer.BalanceUsd,
+                Description = $"Tranzaksiya #{entity.Id} — {entity.ProductName} (RUB xərci: -{entity.TotalBilledRub:N2} ₽)"
+            });
         }
-        else
+
+        if (entity.TotalBilledUsd > 0)
         {
-            ApplyBalanceDelta(customer, entity.HistoricalBalanceDeltaUsd, entity.Id,
-                BalanceTransactionType.TransactionCharge,
-                $"Tranzaksiya #{entity.Id} yaradıldı — {entity.ProductName}");
+            customer.BalanceUsd -= entity.TotalBilledUsd;
+            _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
+            {
+                CustomerId = customer.Id,
+                TransactionId = entity.Id,
+                CreatedAt = DateTime.UtcNow,
+                Type = BalanceTransactionType.TransactionCharge,
+                Currency = PaymentCurrency.Usd,
+                Amount = -entity.TotalBilledUsd,
+                BalanceAfter = customer.BalanceUsd,
+                AmountUsd = -entity.TotalBilledUsd,
+                BalanceAfterUsd = customer.BalanceUsd,
+                Description = $"Tranzaksiya #{entity.Id} — {entity.ProductName} (USD xərci: -${entity.TotalBilledUsd:N2})"
+            });
         }
 
         await _db.SaveChangesAsync();
-
         return MapToReadResponse(entity, customer.Name);
     }
 
     // =========================================================================
     // T2 — GET ALL TRANSACTIONS BY CUSTOMER
-    // Mapped from: TransactionService.getAllTranslationsByCustomer(Long)
     // =========================================================================
 
     /// <inheritdoc />
@@ -168,17 +198,16 @@ public class TransactionService : ITransactionService
     {
         var transactions = await _db.Transactions
             .Include(t => t.Customer)
+            .Include(t => t.AdditionalExpenses)
             .Where(t => t.CustomerId == customerId)
             .OrderByDescending(t => t.TransactionDate)
             .ToListAsync();
 
-        return transactions.Select(t => MapToReadResponse(t, t.Customer.Name)).ToList();
+        return transactions.Select(t => MapToReadResponse(t, t.Customer?.Name ?? string.Empty)).ToList();
     }
 
     // =========================================================================
     // T3 — CALCULATE EXPENSE AND INCOME (DATE RANGE)
-    // Mapped from: TransactionService.calculateExpenseAndIncome(LocalDate, LocalDate)
-    // Implements Section 5.2 — Aggregate Financial Reporting.
     // =========================================================================
 
     /// <inheritdoc />
@@ -188,6 +217,7 @@ public class TransactionService : ITransactionService
             throw new ArgumentException("'to' date must be >= 'from' date.");
 
         var transactions = await _db.Transactions
+            .Include(t => t.AdditionalExpenses)
             .Where(t => t.TransactionDate >= from && t.TransactionDate <= to)
             .ToListAsync();
 
@@ -196,14 +226,13 @@ public class TransactionService : ITransactionService
 
     // =========================================================================
     // T4 — CALCULATE CUSTOMER EXPENSE AND INCOME
-    // Mapped from: TransactionService.calculateCustomerExpenseAndIncome(Long)
-    // Same aggregate logic as T3 but filtered by customer (no date filter).
     // =========================================================================
 
     /// <inheritdoc />
     public async Task<ExpenseIncomeReport> CalculateCustomerExpenseAndIncome(long customerId)
     {
         var transactions = await _db.Transactions
+            .Include(t => t.AdditionalExpenses)
             .Where(t => t.CustomerId == customerId)
             .ToListAsync();
 
@@ -218,6 +247,7 @@ public class TransactionService : ITransactionService
 
         var transactions = await _db.Transactions
             .Include(t => t.Customer)
+            .Include(t => t.AdditionalExpenses)
             .Where(t => t.TransactionDate >= from && t.TransactionDate <= to)
             .OrderByDescending(t => t.TransactionDate)
             .ToListAsync();
@@ -227,8 +257,6 @@ public class TransactionService : ITransactionService
 
     // =========================================================================
     // T5 — UPDATE TRANSACTION
-    // Mapped from: TransactionService.updateTransaction(Long, TransactionUpdateDto)
-    // Replaces Java @PreUpdate with explicit recalculation before SaveChanges.
     // =========================================================================
 
     /// <inheritdoc />
@@ -237,19 +265,25 @@ public class TransactionService : ITransactionService
     {
         var entity = await _db.Transactions
             .Include(t => t.Customer)
+            .Include(t => t.AdditionalExpenses)
             .FirstOrDefaultAsync(t => t.Id == id)
             ?? throw new InvalidOperationException($"Transaction not found (id={id})");
 
-        // Save old balance delta and RUB deduction to reverse it
-        decimal oldBalanceDelta = entity.HistoricalBalanceDeltaUsd;
-        decimal oldPaidFromRub = (entity.PaymentStatus == PaymentStatus.PaidFromBalance ? entity.PaidFromRubAmount ?? 0m : 0m);
+        var customer = entity.Customer;
 
-        // Handle document: if a new file path is provided, copy it; otherwise keep existing
+        // Roll back old charges
+        decimal oldBilledRub = entity.TotalBilledRub;
+        decimal oldBilledUsd = entity.TotalBilledUsd;
+
+        customer.BalanceRub += oldBilledRub;
+        customer.BalanceUsd += oldBilledUsd;
+
+        // Document handling
         string? savedDocumentPath = request.DocumentFilePath != null
             ? CopyDocumentToUploads(request.DocumentFilePath)
             : entity.DocumentPath;
 
-        // Update all fields from request (full replace, not partial)
+        // Update fields
         entity.TransactionDate = request.TransactionDate;
         entity.ProductName = request.ProductName;
         entity.ReceivingCompany = request.ReceivingCompany;
@@ -260,20 +294,12 @@ public class TransactionService : ITransactionService
         entity.TransportCurrency = request.TransportCurrency;
         entity.VehicleCount = request.VehicleCount;
         entity.PricePerVehicle = request.PricePerVehicle;
-        entity.PaidAmount = request.PaymentStatus == PaymentStatus.Paid ? request.PaidAmount : null;
-        entity.PaidCurrency = request.PaidCurrency;
-        entity.PaidFromUsdAmount = request.PaymentStatus == PaymentStatus.PaidFromBalance ? request.PaidFromUsdAmount : null;
-        entity.PaidFromRubAmount = request.PaymentStatus == PaymentStatus.PaidFromBalance ? request.PaidFromRubAmount : null;
-        entity.HistoricalExchangeRate = request.HistoricalExchangeRate;
+        decimal rate = request.HistoricalExchangeRate > 0 ? request.HistoricalExchangeRate : 1.0m;
+        entity.HistoricalExchangeRate = rate;
         entity.DocumentPath = savedDocumentPath;
-        entity.AdditionalExpenseAmount = request.AdditionalExpenseAmount;
-        entity.AdditionalExpenseCurrency = request.AdditionalExpenseCurrency;
-        entity.AdditionalExpenseDescription = request.AdditionalExpenseDescription;
-        entity.PaymentStatus = request.PaymentStatus;
         entity.ProfitPerTon = request.ProfitPerTon;
         entity.ProfitPerTonCurrency = request.ProfitPerTonCurrency;
 
-        // Sync shipment tracking status and dates
         SyncShipmentStatusAndDates(
             entity,
             request.ShipmentStatus,
@@ -286,17 +312,66 @@ public class TransactionService : ITransactionService
             entity.IsCompleted = request.IsCompleted.Value;
         }
 
-        // === RECALCULATION ENGINE (replaces Java @PreUpdate) ===
-        CalculateHistoricalFields(entity);
+        // Remove old dynamic additional expenses
+        _db.TransactionAdditionalExpenses.RemoveRange(entity.AdditionalExpenses);
+        entity.AdditionalExpenses.Clear();
 
-        var customer = entity.Customer;
+        // Calculate new dual stream
+        decimal goodsCostRub = entity.WeightTon * entity.PricePerTonRub;
+        decimal transportRaw = (entity.PricePerVehicle ?? 0m) * (entity.VehicleCount ?? 0);
+        decimal transportCostRub = entity.TransportCurrency == PaymentCurrency.Rub ? transportRaw : 0m;
+        decimal profitRub = entity.ProfitPerTonCurrency == PaymentCurrency.Rub ? (entity.WeightTon * entity.ProfitPerTon) : 0m;
 
-        // RUB balance change:
-        decimal newPaidFromRub = (entity.PaymentStatus == PaymentStatus.PaidFromBalance ? entity.PaidFromRubAmount ?? 0m : 0m);
-        decimal netRubChange = oldPaidFromRub - newPaidFromRub; // old deduction reversed (+old), new deduction applied (-new)
-        if (netRubChange != 0)
+        decimal transportCostUsd = entity.TransportCurrency == PaymentCurrency.Usd ? transportRaw : 0m;
+        decimal profitUsd = entity.ProfitPerTonCurrency == PaymentCurrency.Usd ? (entity.WeightTon * entity.ProfitPerTon) : 0m;
+
+        decimal addlExpRub = 0m;
+        decimal addlExpUsd = 0m;
+        if (request.AdditionalExpenses != null && request.AdditionalExpenses.Count > 0)
         {
-            customer.BalanceRub += netRubChange;
+            foreach (var item in request.AdditionalExpenses)
+            {
+                decimal totalItemAmount = item.Type == AdditionalExpenseType.PerTon 
+                    ? (item.AmountPerTon * entity.WeightTon) 
+                    : item.AmountPerTon;
+
+                if (item.Currency == PaymentCurrency.Rub)
+                    addlExpRub += totalItemAmount;
+                else
+                    addlExpUsd += totalItemAmount;
+
+                entity.AdditionalExpenses.Add(new TransactionAdditionalExpense
+                {
+                    TransactionId = entity.Id,
+                    Title = string.IsNullOrWhiteSpace(item.Title) ? "Əlavə xərc" : item.Title,
+                    ExpenseType = item.Type,
+                    AmountPerTon = item.AmountPerTon,
+                    Currency = item.Currency
+                });
+            }
+        }
+
+        decimal baseExpenseRub = goodsCostRub + transportCostRub + addlExpRub;
+        decimal baseExpenseUsd = transportCostUsd + addlExpUsd;
+
+        entity.TotalBilledRub = baseExpenseRub + profitRub;
+        entity.TotalBilledUsd = baseExpenseUsd + profitUsd;
+
+        decimal unifiedBaseCostUsd = baseExpenseUsd + (rate > 0 ? baseExpenseRub / rate : 0m);
+        decimal unifiedProfitUsd = profitUsd + (rate > 0 ? profitRub / rate : 0m);
+        decimal unifiedBilledUsd = entity.TotalBilledUsd + (rate > 0 ? entity.TotalBilledRub / rate : 0m);
+
+        entity.HistoricalTotalExpenseUsd = unifiedBaseCostUsd;
+        entity.HistoricalCustomerBilledUsd = unifiedBilledUsd;
+        entity.HistoricalUserProfitUsd = unifiedProfitUsd;
+
+        // Apply new charges
+        customer.BalanceRub -= entity.TotalBilledRub;
+        customer.BalanceUsd -= entity.TotalBilledUsd;
+
+        decimal netRubDiff = oldBilledRub - entity.TotalBilledRub;
+        if (netRubDiff != 0)
+        {
             _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
             {
                 CustomerId = customer.Id,
@@ -304,31 +379,35 @@ public class TransactionService : ITransactionService
                 CreatedAt = DateTime.UtcNow,
                 Type = BalanceTransactionType.TransactionUpdate,
                 Currency = PaymentCurrency.Rub,
-                Amount = netRubChange,
+                Amount = netRubDiff,
                 BalanceAfter = customer.BalanceRub,
                 AmountUsd = 0m,
                 BalanceAfterUsd = customer.BalanceUsd,
-                Description = $"Tranzaksiya #{entity.Id} yeniləndi (RUB kassası: {netRubChange:+#,##0.00;-#,##0.00;0.00} ₽)"
+                Description = $"Tranzaksiya #{entity.Id} yeniləndi (RUB balansı dəyişimi: {netRubDiff:+#,##0.00;-#,##0.00;0.00} ₽)"
             });
         }
 
-        // === BALANCE UPDATE: Reverse old delta, apply new delta ===
-        decimal netChange = entity.HistoricalBalanceDeltaUsd - oldBalanceDelta;
-        if (netChange != 0)
+        decimal netUsdDiff = oldBilledUsd - entity.TotalBilledUsd;
+        if (netUsdDiff != 0)
         {
-            ApplyBalanceDelta(customer, netChange, entity.Id,
-                BalanceTransactionType.TransactionUpdate,
-                $"Tranzaksiya #{entity.Id} yeniləndi — {entity.ProductName}");
+            _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
+            {
+                CustomerId = customer.Id,
+                TransactionId = entity.Id,
+                CreatedAt = DateTime.UtcNow,
+                Type = BalanceTransactionType.TransactionUpdate,
+                Currency = PaymentCurrency.Usd,
+                Amount = netUsdDiff,
+                BalanceAfter = customer.BalanceUsd,
+                AmountUsd = netUsdDiff,
+                BalanceAfterUsd = customer.BalanceUsd,
+                Description = $"Tranzaksiya #{entity.Id} yeniləndi (USD balansı dəyişimi: {netUsdDiff:+#,##0.00;-#,##0.00;0.00} $)"
+            });
         }
 
         await _db.SaveChangesAsync();
-
-        return MapToReadResponse(entity, entity.Customer.Name);
+        return MapToReadResponse(entity, customer.Name);
     }
-
-    // =========================================================================
-    // UPDATE SHIPMENT STATUS (Dedicated Endpoint / Action)
-    // =========================================================================
 
     /// <inheritdoc />
     public async Task<TransactionReadResponse> UpdateShipmentStatus(
@@ -336,6 +415,7 @@ public class TransactionService : ITransactionService
     {
         var entity = await _db.Transactions
             .Include(t => t.Customer)
+            .Include(t => t.AdditionalExpenses)
             .FirstOrDefaultAsync(t => t.Id == id)
             ?? throw new InvalidOperationException($"Transaction not found (id={id})");
 
@@ -347,8 +427,7 @@ public class TransactionService : ITransactionService
             request.DeliveredDate);
 
         await _db.SaveChangesAsync();
-
-        return MapToReadResponse(entity, entity.Customer.Name);
+        return MapToReadResponse(entity, entity.Customer?.Name ?? string.Empty);
     }
 
     /// <inheritdoc />
@@ -356,25 +435,26 @@ public class TransactionService : ITransactionService
     {
         var entity = await _db.Transactions
             .Include(t => t.Customer)
+            .Include(t => t.AdditionalExpenses)
             .FirstOrDefaultAsync(t => t.Id == id)
             ?? throw new InvalidOperationException($"Transaction not found (id={id})");
 
         entity.IsCompleted = !entity.IsCompleted;
         await _db.SaveChangesAsync();
 
-        return MapToReadResponse(entity, entity.Customer.Name);
+        return MapToReadResponse(entity, entity.Customer?.Name ?? string.Empty);
     }
 
     // =========================================================================
-    // T6 — GET TRANSACTION FOR UPDATE (EDIT FORM)
-    // Mapped from: TransactionService.getTransactionForUpdate(Long)
-    // Returns data in the shape needed by the edit form.
+    // T6 — GET TRANSACTION FOR UPDATE
     // =========================================================================
 
     /// <inheritdoc />
     public async Task<TransactionEditFormData> GetTransactionForUpdate(long id)
     {
-        var entity = await _db.Transactions.FindAsync(id)
+        var entity = await _db.Transactions
+            .Include(t => t.AdditionalExpenses)
+            .FirstOrDefaultAsync(t => t.Id == id)
             ?? throw new InvalidOperationException($"Transaction not found (id={id})");
 
         return new TransactionEditFormData
@@ -389,14 +469,9 @@ public class TransactionService : ITransactionService
             TransportCurrency = entity.TransportCurrency,
             VehicleCount = entity.VehicleCount,
             PricePerVehicle = entity.PricePerVehicle,
-            PaidCurrency = entity.PaidCurrency,
-            PaidAmount = entity.PaidAmount,
             HistoricalExchangeRate = entity.HistoricalExchangeRate,
             DocumentImageUrl = entity.DocumentPath,
             IsCompleted = entity.IsCompleted,
-            PaymentStatus = entity.PaymentStatus,
-            PaidFromUsdAmount = entity.PaidFromUsdAmount,
-            PaidFromRubAmount = entity.PaidFromRubAmount,
             ProfitPerTon = entity.ProfitPerTon,
             ProfitPerTonCurrency = entity.ProfitPerTonCurrency,
             ShipmentStatus = entity.ShipmentStatus,
@@ -405,15 +480,21 @@ public class TransactionService : ITransactionService
             InTransitEndDate = entity.InTransitEndDate,
             DeliveredDate = entity.DeliveredDate,
             IsInTransitAutoDates = entity.IsInTransitAutoDates,
-            AdditionalExpenseAmount = entity.AdditionalExpenseAmount,
-            AdditionalExpenseCurrency = entity.AdditionalExpenseCurrency,
-            AdditionalExpenseDescription = entity.AdditionalExpenseDescription
+            AdditionalExpenses = entity.AdditionalExpenses?.Select(e => new TransactionAdditionalExpenseDto
+            {
+                Title = e.Title,
+                Type = e.ExpenseType,
+                AmountPerTon = e.AmountPerTon,
+                Currency = e.Currency,
+                TotalAmount = e.ExpenseType == AdditionalExpenseType.Fixed 
+                    ? e.AmountPerTon 
+                    : (entity.WeightTon * e.AmountPerTon)
+            }).ToList() ?? new List<TransactionAdditionalExpenseDto>()
         };
     }
 
     // =========================================================================
     // T7 — DELETE TRANSACTION
-    // Mapped from: TransactionService.deleteTransaction(Long)
     // =========================================================================
 
     /// <inheritdoc />
@@ -421,15 +502,15 @@ public class TransactionService : ITransactionService
     {
         var entity = await _db.Transactions
             .Include(t => t.Customer)
+            .Include(t => t.AdditionalExpenses)
             .FirstOrDefaultAsync(t => t.Id == id)
             ?? throw new InvalidOperationException($"Transaction not found (id={id})");
 
         var customer = entity.Customer;
 
-        // Rollback RUB deduction if PaidFromBalance
-        if (entity.PaymentStatus == PaymentStatus.PaidFromBalance && entity.PaidFromRubAmount is { } rubToRestore && rubToRestore > 0)
+        if (entity.TotalBilledRub > 0)
         {
-            customer.BalanceRub += rubToRestore;
+            customer.BalanceRub += entity.TotalBilledRub;
             _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
             {
                 CustomerId = customer.Id,
@@ -437,30 +518,39 @@ public class TransactionService : ITransactionService
                 CreatedAt = DateTime.UtcNow,
                 Type = BalanceTransactionType.TransactionRollback,
                 Currency = PaymentCurrency.Rub,
-                Amount = rubToRestore,
+                Amount = entity.TotalBilledRub,
                 BalanceAfter = customer.BalanceRub,
                 AmountUsd = 0m,
                 BalanceAfterUsd = customer.BalanceUsd,
-                Description = $"Tranzaksiya #{entity.Id} silindi — RUB kassası bərpa olundu ({rubToRestore:N2} ₽)"
+                Description = $"Tranzaksiya #{entity.Id} silindi — RUB bərpa edildi (+{entity.TotalBilledRub:N2} ₽)"
             });
         }
 
-        // === BALANCE ROLLBACK: Reverse the balance delta before deleting ===
-        if (entity.HistoricalBalanceDeltaUsd != 0)
+        if (entity.TotalBilledUsd > 0)
         {
-            ApplyBalanceDelta(customer, -entity.HistoricalBalanceDeltaUsd, entity.Id,
-                BalanceTransactionType.TransactionRollback,
-                $"Tranzaksiya #{entity.Id} silindi — {entity.ProductName}");
+            customer.BalanceUsd += entity.TotalBilledUsd;
+            _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
+            {
+                CustomerId = customer.Id,
+                TransactionId = entity.Id,
+                CreatedAt = DateTime.UtcNow,
+                Type = BalanceTransactionType.TransactionRollback,
+                Currency = PaymentCurrency.Usd,
+                Amount = entity.TotalBilledUsd,
+                BalanceAfter = customer.BalanceUsd,
+                AmountUsd = entity.TotalBilledUsd,
+                BalanceAfterUsd = customer.BalanceUsd,
+                Description = $"Tranzaksiya #{entity.Id} silindi — USD bərpa edildi (+${entity.TotalBilledUsd:N2})"
+            });
         }
 
+        _db.TransactionAdditionalExpenses.RemoveRange(entity.AdditionalExpenses);
         _db.Transactions.Remove(entity);
         await _db.SaveChangesAsync();
     }
 
     // =========================================================================
     // T8 — EXPORT CUSTOMER TRANSACTIONS (Excel)
-    // Mapped from: TransactionService.exportCustomerTransactions(Long)
-    // Stub — delegates to IExcelService in a future step.
     // =========================================================================
 
     /// <inheritdoc />
@@ -478,217 +568,39 @@ public class TransactionService : ITransactionService
     }
 
     // =========================================================================
-    //  CORE CALCULATION ENGINE — Section 5.1
-    //  Replaces Java @PrePersist / @PreUpdate lifecycle callbacks.
-    //
-    //  This is the heart of the system's financial integrity.
-    //  All values are "locked in" using the HistoricalExchangeRate at persist time.
-    //
-    //  UPDATED: Transport currency is now manual (TransportCurrency field).
-    //           Additional expenses are included in total expense.
+    //  AGGREGATE FINANCIAL REPORTING
     // =========================================================================
 
-    /// <summary>
-    /// Calculates and sets the historical financial fields on a Transaction entity.
-    /// Must be called before every save (create or update).
-    ///
-    /// Algorithm (updated with ProfitPerTon & Balance Delta):
-    /// NOTE: HistoricalExchangeRate = "1 USD = X RUB", so RUB / Rate = USD
-    ///
-    /// 1. GoodsCostRub  = WeightTon × PricePerTonRub
-    /// 2. GoodsCostUsd  = GoodsCostRub / HistoricalExchangeRate
-    /// 3. TransportRaw  = PricePerVehicle × VehicleCount
-    /// 4. TransportUsd  = (TransportCurrency==RUB) ? TransportRaw / Rate : TransportRaw
-    /// 5. AdditionalExpUsd = (AdditionalExpenseCurrency==RUB) ? Amount / Rate : Amount
-    /// 6. TotalExpense   = GoodsCostUsd + TransportCostUsd + AdditionalExpenseUsd
-    /// 7. PaidInUsd      = (PaidCurrency==RUB) ? PaidAmount / Rate : PaidAmount
-    /// 8. RemainingDebt  = PaidInUsd − TotalExpense
-    /// 9. UserProfitUsd  = WeightTon × ProfitPerTon (converted to USD if RUB)
-    /// 10. CustomerBilledUsd = TotalExpense + UserProfitUsd
-    /// 11. BalanceDelta   = Based on PaymentStatus:
-    ///     - Unpaid: -CustomerBilledUsd (entire bill charged to customer balance)
-    ///     - Paid:   PaidInUsd - CustomerBilledUsd (overpayment/underpayment)
-    /// </summary>
-    private static void CalculateHistoricalFields(Transaction entity)
-    {
-        decimal rate = entity.HistoricalExchangeRate;
-
-        // ── Step 1 & 2: Goods Cost ──────────────────────────────────────────
-        decimal goodsCostRub = entity.WeightTon * entity.PricePerTonRub;
-        decimal goodsCostUsd = rate > 0 ? goodsCostRub / rate : 0m;
-
-        // ── Step 3 & 4: Transport Cost ──────────────────────────────────────
-        decimal pricePerVehicle = entity.PricePerVehicle ?? 0m;
-        int vehicleCount = entity.VehicleCount ?? 0;
-        decimal totalTransportRaw = pricePerVehicle * vehicleCount;
-
-        decimal transportCostUsd = entity.TransportCurrency == PaymentCurrency.Rub
-            ? (rate > 0 ? totalTransportRaw / rate : 0m)    // RUB → USD conversion
-            : totalTransportRaw;                             // Already in USD
-
-        // ── Step 5: Additional Expense ──────────────────────────────────────
-        decimal additionalExpenseUsd = 0m;
-        if (entity.AdditionalExpenseAmount.HasValue && entity.AdditionalExpenseAmount.Value > 0)
-        {
-            decimal addAmount = entity.AdditionalExpenseAmount.Value;
-            additionalExpenseUsd = (entity.AdditionalExpenseCurrency == PaymentCurrency.Rub)
-                ? (rate > 0 ? addAmount / rate : 0m)
-                : addAmount;
-        }
-
-        // ── Step 6: Total Expense (USD) ─────────────────────────────────────
-        entity.HistoricalTotalExpenseUsd = goodsCostUsd + transportCostUsd + additionalExpenseUsd;
-
-        // ── Step 7: Paid Amount in USD ──────────────────────────────────────
-        decimal paidInUsd;
-        if (entity.PaymentStatus == PaymentStatus.Unpaid)
-        {
-            paidInUsd = 0m;
-        }
-        else if (entity.PaymentStatus == PaymentStatus.PaidFromBalance)
-        {
-            decimal usdPart = entity.PaidFromUsdAmount ?? 0m;
-            decimal rubPart = entity.PaidFromRubAmount ?? 0m;
-            paidInUsd = usdPart + (rate > 0 ? rubPart / rate : 0m);
-        }
-        else
-        {
-            decimal paidAmount = entity.PaidAmount ?? 0m;
-            paidInUsd = entity.PaidCurrency == PaymentCurrency.Rub
-                ? (rate > 0 ? paidAmount / rate : 0m)
-                : paidAmount;
-        }
-
-        // ── Step 8: Remaining Debt (USD) ────────────────────────────────────
-        entity.HistoricalRemainingDebtUsd = paidInUsd - entity.HistoricalTotalExpenseUsd;
-
-        // ── Step 9: User Profit (USD) ───────────────────────────────────────
-        decimal profitPerTonUsd = entity.ProfitPerTonCurrency == PaymentCurrency.Rub
-            ? (rate > 0 ? entity.ProfitPerTon / rate : 0m)
-            : entity.ProfitPerTon;
-        entity.HistoricalUserProfitUsd = entity.WeightTon * profitPerTonUsd;
-
-        // ── Step 10: Customer Billed (USD) ──────────────────────────────────
-        entity.HistoricalCustomerBilledUsd = entity.HistoricalTotalExpenseUsd + entity.HistoricalUserProfitUsd;
-
-        // ── Step 11: Balance Delta (USD) ────────────────────────────────────
-        if (entity.PaymentStatus == PaymentStatus.Unpaid)
-        {
-            // Ödənilməyib: bütün məbləğ müştərinin balansından mənfi çıxılır
-            entity.HistoricalBalanceDeltaUsd = -entity.HistoricalCustomerBilledUsd;
-        }
-        else if (entity.PaymentStatus == PaymentStatus.PaidFromBalance)
-        {
-            // Kassadan ödənilib: RUB kassasından ödənilən hissə USD balansında borcu azaldır,
-            // qalan bütün hesablanan məbləğ USD balansından çıxılır
-            decimal rubPart = entity.PaidFromRubAmount ?? 0m;
-            decimal rubPartInUsd = rate > 0 ? rubPart / rate : 0m;
-            entity.HistoricalBalanceDeltaUsd = rubPartInUsd - entity.HistoricalCustomerBilledUsd;
-        }
-        else
-        {
-            // Ödənilib: ödənilən məbləğ ilə hesabın fərqi
-            entity.HistoricalBalanceDeltaUsd = paidInUsd - entity.HistoricalCustomerBilledUsd;
-        }
-    }
-
-    /// <summary>
-    /// Applies a balance change to the customer and records it in the ledger.
-    /// </summary>
-    private void ApplyBalanceDelta(
-        Customer customer, decimal deltaUsd, long transactionId,
-        BalanceTransactionType type, string description)
-    {
-        customer.BalanceUsd += deltaUsd;
-
-        _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
-        {
-            CustomerId = customer.Id,
-            TransactionId = transactionId,
-            CreatedAt = DateTime.UtcNow,
-            Type = type,
-            Currency = PaymentCurrency.Usd,
-            Amount = deltaUsd,
-            BalanceAfter = customer.BalanceUsd,
-            AmountUsd = deltaUsd,
-            BalanceAfterUsd = customer.BalanceUsd,
-            Description = description
-        });
-    }
-
-    /// <summary>
-    /// Computes the PaidInUsd for a single transaction from its raw fields.
-    /// If payment status is Unpaid, returns 0.
-    /// </summary>
-    private static decimal ComputePaidInUsd(Transaction t)
-    {
-        if (t.PaymentStatus == PaymentStatus.Unpaid)
-            return 0m;
-
-        if (t.PaymentStatus == PaymentStatus.PaidFromBalance)
-        {
-            decimal usdPart = t.PaidFromUsdAmount ?? 0m;
-            decimal rubPart = t.PaidFromRubAmount ?? 0m;
-            decimal rate = t.HistoricalExchangeRate;
-            return usdPart + (rate > 0 ? rubPart / rate : 0m);
-        }
-
-        decimal paidAmount = t.PaidAmount ?? 0m;
-        decimal rate2 = t.HistoricalExchangeRate;
-        return t.PaidCurrency == PaymentCurrency.Rub
-            ? (rate2 > 0 ? paidAmount / rate2 : 0m)
-            : paidAmount;
-    }
-
-    /// <summary>
-    /// Computes the AdditionalExpenseUsd for a single transaction from its raw fields.
-    /// </summary>
-    private static decimal ComputeAdditionalExpenseUsd(Transaction t)
-    {
-        if (!t.AdditionalExpenseAmount.HasValue || t.AdditionalExpenseAmount.Value <= 0)
-            return 0m;
-
-        decimal rate = t.HistoricalExchangeRate;
-        return (t.AdditionalExpenseCurrency == PaymentCurrency.Rub)
-            ? (rate > 0 ? t.AdditionalExpenseAmount.Value / rate : 0m)
-            : t.AdditionalExpenseAmount.Value;
-    }
-
-    // =========================================================================
-    //  AGGREGATE FINANCIAL REPORTING — Section 5.2
-    //  Builds an ExpenseIncomeReport from a set of transactions.
-    // =========================================================================
-
-    /// <summary>
-    /// Builds the aggregate financial report from a list of transactions.
-    /// Computes full financial breakdown matching the updated accounting engine.
-    /// </summary>
     private static ExpenseIncomeReport BuildExpenseIncomeReport(List<Transaction> transactions)
     {
-        decimal totalExpense = transactions.Sum(t => t.HistoricalTotalExpenseUsd);
-        decimal totalBilled = transactions.Sum(t => t.HistoricalCustomerBilledUsd);
-        decimal totalUserProfit = transactions.Sum(t => t.HistoricalUserProfitUsd);
-        decimal totalPaid = transactions.Sum(ComputePaidInUsd);
-        decimal totalBenefit = totalPaid - totalBilled;
-        decimal totalCashFlow = totalPaid - totalExpense;
+        decimal totalBilledRub = transactions.Sum(t => t.TotalBilledRub);
+        decimal totalBilledUsd = transactions.Sum(t => t.TotalBilledUsd);
         decimal totalWeight = transactions.Sum(t => t.WeightTon);
         int totalVehicles = transactions.Sum(t => t.VehicleCount ?? 0);
-        int paidCount = transactions.Count(t => t.PaymentStatus == PaymentStatus.Paid || t.PaymentStatus == PaymentStatus.PaidFromBalance);
-        int unpaidCount = transactions.Count(t => t.PaymentStatus == PaymentStatus.Unpaid);
+
+        decimal totalCustomerBilledUsd = transactions.Sum(t => 
+            t.TotalBilledUsd + (t.HistoricalExchangeRate > 0 ? t.TotalBilledRub / t.HistoricalExchangeRate : 0m));
+
+        decimal totalUserProfitUsd = transactions.Sum(t => t.HistoricalUserProfitUsd);
+
+        decimal totalExpenseUsd = transactions.Sum(t => 
+            Math.Max(0m, (t.TotalBilledUsd + (t.HistoricalExchangeRate > 0 ? t.TotalBilledRub / t.HistoricalExchangeRate : 0m)) - t.HistoricalUserProfitUsd));
 
         return new ExpenseIncomeReport
         {
-            TotalExpenseUsd = totalExpense,
-            TotalBilledUsd = totalBilled,
-            TotalUserProfitUsd = totalUserProfit,
-            TotalPaidUsd = totalPaid,
-            TotalBenefitUsd = totalBenefit,
-            TotalCashFlowUsd = totalCashFlow,
+            TotalExpenseUsd = totalExpenseUsd,
+            TotalBilledUsd = totalCustomerBilledUsd,
+            TotalUserProfitUsd = totalUserProfitUsd,
+            TotalPaidUsd = totalCustomerBilledUsd,
+            TotalBenefitUsd = totalUserProfitUsd,
+            TotalCashFlowUsd = totalUserProfitUsd,
             TransactionCount = transactions.Count,
-            PaidTransactionCount = paidCount,
-            UnpaidTransactionCount = unpaidCount,
+            PaidTransactionCount = transactions.Count,
+            UnpaidTransactionCount = 0,
             TotalWeightTon = totalWeight,
-            TotalVehicleCount = totalVehicles
+            TotalVehicleCount = totalVehicles,
+            TotalBilledRubSum = totalBilledRub,
+            TotalBilledUsdSum = totalBilledUsd
         };
     }
 
@@ -696,12 +608,22 @@ public class TransactionService : ITransactionService
     //  MAPPING HELPERS
     // =========================================================================
 
-    /// <summary>
-    /// Maps a Transaction entity to a TransactionReadResponse DTO.
-    /// Replaces Java's ModelMapper mapping.
-    /// </summary>
     private static TransactionReadResponse MapToReadResponse(Transaction entity, string customerName)
     {
+        var expDtos = entity.AdditionalExpenses?.Select(e => new TransactionAdditionalExpenseDto
+        {
+            Title = e.Title,
+            Type = e.ExpenseType,
+            AmountPerTon = e.AmountPerTon,
+            Currency = e.Currency,
+            TotalAmount = e.ExpenseType == AdditionalExpenseType.Fixed 
+                ? e.AmountPerTon 
+                : (entity.WeightTon * e.AmountPerTon)
+        }).ToList() ?? new List<TransactionAdditionalExpenseDto>();
+
+        decimal expRubTotal = expDtos.Where(e => e.Currency == PaymentCurrency.Rub).Sum(e => e.TotalAmount);
+        decimal expUsdTotal = expDtos.Where(e => e.Currency == PaymentCurrency.Usd).Sum(e => e.TotalAmount);
+
         return new TransactionReadResponse
         {
             Id = entity.Id,
@@ -723,8 +645,8 @@ public class TransactionService : ITransactionService
             DocumentPath = entity.DocumentPath,
             HistoricalExchangeRate = entity.HistoricalExchangeRate,
             HistoricalTotalExpenseUsd = entity.HistoricalTotalExpenseUsd,
-            HistoricalRemainingDebtUsd = entity.HistoricalRemainingDebtUsd,
-            PaidInUsd = ComputePaidInUsd(entity),
+            HistoricalRemainingDebtUsd = 0m,
+            PaidInUsd = entity.TotalBilledUsd,
             IsCompleted = entity.IsCompleted,
             PaymentStatus = entity.PaymentStatus,
             PaidFromUsdAmount = entity.PaidFromUsdAmount,
@@ -733,27 +655,21 @@ public class TransactionService : ITransactionService
             ProfitPerTonCurrency = entity.ProfitPerTonCurrency,
             HistoricalUserProfitUsd = entity.HistoricalUserProfitUsd,
             HistoricalCustomerBilledUsd = entity.HistoricalCustomerBilledUsd,
-            HistoricalBalanceDeltaUsd = entity.HistoricalBalanceDeltaUsd,
+            HistoricalBalanceDeltaUsd = -entity.TotalBilledUsd,
+            TotalBilledRub = entity.TotalBilledRub,
+            TotalBilledUsd = entity.TotalBilledUsd,
             ShipmentStatus = entity.ShipmentStatus,
             LoadedDate = entity.LoadedDate,
             InTransitStartDate = entity.InTransitStartDate,
             InTransitEndDate = entity.InTransitEndDate,
             DeliveredDate = entity.DeliveredDate,
             IsInTransitAutoDates = entity.IsInTransitAutoDates,
-            AdditionalExpenseAmount = entity.AdditionalExpenseAmount,
-            AdditionalExpenseCurrency = entity.AdditionalExpenseCurrency,
-            AdditionalExpenseDescription = entity.AdditionalExpenseDescription,
-            AdditionalExpenseUsd = ComputeAdditionalExpenseUsd(entity)
+            AdditionalExpenses = expDtos,
+            AdditionalExpensesRubTotal = expRubTotal,
+            AdditionalExpensesUsdTotal = expUsdTotal
         };
     }
 
-    /// <summary>
-    /// Synchronizes shipment status, transit date intervals, and completion flag.
-    /// Stage 0 (Pending): All dates null.
-    /// Stage 1 (Loaded): Stores LoadedDate.
-    /// Stage 2 (InTransit): Stores InTransitStartDate (and optional LoadedDate). InTransitEndDate remains null.
-    /// Stage 3 (Delivered): Stores DeliveredDate. InTransitEndDate is automatically set equal to DeliveredDate.
-    /// </summary>
     private static void SyncShipmentStatusAndDates(
         Transaction entity,
         ShipmentStatus status,
@@ -783,7 +699,7 @@ public class TransactionService : ITransactionService
 
             case ShipmentStatus.InTransit:
                 entity.InTransitStartDate = inTransitStartDate;
-                entity.InTransitEndDate = null; // Yoldadır — hələ çatmayıb
+                entity.InTransitEndDate = null;
                 if (loadedDate.HasValue)
                 {
                     entity.LoadedDate = loadedDate.Value;
@@ -794,7 +710,6 @@ public class TransactionService : ITransactionService
 
             case ShipmentStatus.Delivered:
                 entity.DeliveredDate = deliveredDate;
-                // Stage 3 biznes qaydası: Yoldadır intervalının ikinci tarixi çatdı tarixi ilə eyni olacaq
                 entity.InTransitEndDate = deliveredDate;
                 if (inTransitStartDate.HasValue)
                 {
@@ -809,16 +724,6 @@ public class TransactionService : ITransactionService
         }
     }
 
-    // =========================================================================
-    //  FILE HANDLING
-    //  Replaces Java MultipartFile → UUID-named file in uploads/ directory.
-    // =========================================================================
-
-    /// <summary>
-    /// Copies a user-selected document file to the local uploads directory
-    /// with a UUID-based filename to prevent collisions.
-    /// Returns the saved path, or null if no file was provided.
-    /// </summary>
     private static string? CopyDocumentToUploads(string? sourceFilePath)
     {
         if (string.IsNullOrWhiteSpace(sourceFilePath) || !File.Exists(sourceFilePath))
@@ -829,7 +734,6 @@ public class TransactionService : ITransactionService
         string destinationPath = Path.Combine(UploadsDirectory, newFileName);
 
         File.Copy(sourceFilePath, destinationPath, overwrite: true);
-
         return destinationPath;
     }
 }

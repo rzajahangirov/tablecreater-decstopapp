@@ -16,10 +16,9 @@ public record CustomerCreateRequest
     public string Name { get; init; } = string.Empty;
     public string Phone { get; init; } = string.Empty;
 
-    // === İlkin Balans (İstəyə bağlı) ===
-    public decimal? InitialBalance { get; init; }
-    public PaymentCurrency InitialBalanceCurrency { get; init; } = PaymentCurrency.Usd;
-    public decimal InitialExchangeRate { get; init; } = 1.0m;
+    // === İkili İlkin Balans (hər iki kassaya eyni anda depozit) ===
+    public decimal InitialBalanceUsd { get; init; }
+    public decimal InitialBalanceRub { get; init; }
 }
 
 /// <summary>

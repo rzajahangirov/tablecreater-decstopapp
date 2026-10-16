@@ -29,16 +29,8 @@ public class CustomerService : ICustomerService
     /// <inheritdoc />
     public async Task<CustomerReadResponse> CreateCustomer(CustomerCreateRequest request)
     {
-        decimal initialBalanceUsd = 0m;
-        decimal initialBalanceRub = 0m;
-
-        if (request.InitialBalance.HasValue && request.InitialBalance.Value != 0)
-        {
-            if (request.InitialBalanceCurrency == PaymentCurrency.Rub)
-                initialBalanceRub = request.InitialBalance.Value;
-            else
-                initialBalanceUsd = request.InitialBalance.Value;
-        }
+        decimal initialBalanceUsd = request.InitialBalanceUsd;
+        decimal initialBalanceRub = request.InitialBalanceRub;
 
         var entity = new Customer
         {
@@ -52,7 +44,7 @@ public class CustomerService : ICustomerService
         _db.Customers.Add(entity);
         await _db.SaveChangesAsync();
 
-        // Record initial balance in ledger if non-zero
+        // Record initial USD balance in ledger if non-zero
         if (initialBalanceUsd != 0)
         {
             _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
@@ -65,11 +57,12 @@ public class CustomerService : ICustomerService
                 BalanceAfter = initialBalanceUsd,
                 AmountUsd = initialBalanceUsd,
                 BalanceAfterUsd = initialBalanceUsd,
-                Description = $"İlkin balans təyinatı: ${initialBalanceUsd:N2}"
+                Description = $"İlkin USD balans təyinatı: ${initialBalanceUsd:N2}"
             });
-            await _db.SaveChangesAsync();
         }
-        else if (initialBalanceRub != 0)
+
+        // Record initial RUB balance in ledger if non-zero
+        if (initialBalanceRub != 0)
         {
             _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
             {
@@ -80,11 +73,13 @@ public class CustomerService : ICustomerService
                 Amount = initialBalanceRub,
                 BalanceAfter = initialBalanceRub,
                 AmountUsd = 0m,
-                BalanceAfterUsd = 0m,
-                Description = $"İlkin balans təyinatı: {initialBalanceRub:N2} ₽"
+                BalanceAfterUsd = entity.BalanceUsd,
+                Description = $"İlkin RUB balans təyinatı: {initialBalanceRub:N2} ₽"
             });
-            await _db.SaveChangesAsync();
         }
+
+        if (initialBalanceUsd != 0 || initialBalanceRub != 0)
+            await _db.SaveChangesAsync();
 
         return MapToReadResponse(entity);
     }

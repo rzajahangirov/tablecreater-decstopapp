@@ -18,14 +18,14 @@ public record NegativeCustomerItem
     public string CustomerName { get; init; } = string.Empty;
     public string Phone { get; init; } = string.Empty;
     public decimal BalanceUsd { get; init; }
-    public string BalanceFormatted => $"${BalanceUsd:N2}";
+    public decimal BalanceRub { get; init; }
+    public string BalanceFormatted => $"${BalanceUsd:N2} | {BalanceRub:N2} ₽";
     public DateOnly? LastTransactionDate { get; init; }
     public string LastTransactionDateFormatted => LastTransactionDate?.ToString("yyyy-MM-dd") ?? "—";
 }
 
 /// <summary>
 /// ViewModel for the executive Dashboard / Home Overview.
-/// Implements Task 2 (🔴 Dashboard / Ana Səhifə) from Table Creater Task.md.
 /// Displays key business metrics, recent transactions, and debt warnings.
 /// </summary>
 public partial class DashboardViewModel : ObservableObject
@@ -57,10 +57,19 @@ public partial class DashboardViewModel : ObservableObject
     private decimal _monthlyProfitUsd;
 
     [ObservableProperty]
+    private decimal _monthlyBilledRub;
+
+    [ObservableProperty]
+    private decimal _monthlyBilledUsd;
+
+    [ObservableProperty]
     private int _monthlyTransactionCount;
 
     [ObservableProperty]
     private decimal _totalBalanceUsd;
+
+    [ObservableProperty]
+    private decimal _totalBalanceRub;
 
     [ObservableProperty]
     private string _currentMonthName = DateTime.Today.ToString("MMMM yyyy");
@@ -101,37 +110,29 @@ public partial class DashboardViewModel : ObservableObject
             var endOfMonth = new DateOnly(today.Year, today.Month, DateTime.DaysInMonth(today.Year, today.Month));
             CurrentMonthName = today.ToString("MMMM yyyy");
 
-            // 1. Customer counts
+            // 1. Customer counts & balances
             TotalCustomers = await _db.Customers.CountAsync();
             ActiveCustomers = await _db.Customers.CountAsync(c => c.Type == CustomerType.Active);
             TotalBalanceUsd = await _db.Customers.SumAsync(c => (decimal?)c.BalanceUsd) ?? 0m;
+            TotalBalanceRub = await _db.Customers.SumAsync(c => (decimal?)c.BalanceRub) ?? 0m;
 
             // 2. Transactions for current month
             var monthlyTx = await _db.Transactions
+                .Include(t => t.AdditionalExpenses)
                 .Where(t => t.TransactionDate >= startOfMonth && t.TransactionDate <= endOfMonth)
                 .ToListAsync();
 
-            MonthlyExpenseUsd = monthlyTx.Sum(t => t.HistoricalTotalExpenseUsd);
+            MonthlyExpenseUsd = monthlyTx.Sum(t => Math.Max(0m, (t.TotalBilledUsd + (t.HistoricalExchangeRate > 0 ? t.TotalBilledRub / t.HistoricalExchangeRate : 0m)) - t.HistoricalUserProfitUsd));
             MonthlyProfitUsd = monthlyTx.Sum(t => t.HistoricalUserProfitUsd);
             MonthlyTransactionCount = monthlyTx.Count;
-
-            MonthlyPaidUsd = monthlyTx.Sum(t =>
-            {
-                if (t.PaymentStatus == PaymentStatus.Unpaid) return 0m;
-                if (t.PaymentStatus == PaymentStatus.PaidFromBalance)
-                {
-                    decimal usdPart = t.PaidFromUsdAmount ?? 0m;
-                    decimal rubPart = t.PaidFromRubAmount ?? 0m;
-                    decimal rate = t.HistoricalExchangeRate;
-                    return usdPart + (rate > 0 ? rubPart / rate : 0m);
-                }
-                decimal paid = t.PaidAmount ?? 0m;
-                return t.PaidCurrency == PaymentCurrency.Rub ? (t.HistoricalExchangeRate > 0 ? paid / t.HistoricalExchangeRate : 0m) : paid;
-            });
+            MonthlyBilledRub = monthlyTx.Sum(t => t.TotalBilledRub);
+            MonthlyBilledUsd = monthlyTx.Sum(t => t.TotalBilledUsd + (t.HistoricalExchangeRate > 0 ? t.TotalBilledRub / t.HistoricalExchangeRate : 0m));
+            MonthlyPaidUsd = MonthlyBilledUsd;
 
             // 3. Top 10 recent transactions
             var recent = await _db.Transactions
                 .Include(t => t.Customer)
+                .Include(t => t.AdditionalExpenses)
                 .OrderByDescending(t => t.TransactionDate)
                 .ThenByDescending(t => t.Id)
                 .Take(10)
@@ -140,13 +141,13 @@ public partial class DashboardViewModel : ObservableObject
             var recentResponses = recent.Select(t => MapToReadResponse(t, t.Customer?.Name ?? "—")).ToList();
             RecentTransactions = new ObservableCollection<TransactionReadResponse>(recentResponses);
 
-            // 4. Customers with negative balance (debt)
+            // 4. Customers with negative balance (debt in USD or RUB)
             var debtors = await _db.Customers
-                .Where(c => c.BalanceUsd < 0)
+                .Where(c => c.BalanceUsd < 0 || c.BalanceRub < 0)
                 .Include(c => c.Transactions)
                 .ToListAsync();
 
-            var orderedDebtors = debtors.OrderBy(c => c.BalanceUsd).ToList();
+            var orderedDebtors = debtors.OrderBy(c => c.BalanceUsd).ThenBy(c => c.BalanceRub).ToList();
 
             var negItems = orderedDebtors.Select(c => new NegativeCustomerItem
             {
@@ -154,6 +155,7 @@ public partial class DashboardViewModel : ObservableObject
                 CustomerName = c.Name,
                 Phone = c.Phone ?? string.Empty,
                 BalanceUsd = c.BalanceUsd,
+                BalanceRub = c.BalanceRub,
                 LastTransactionDate = c.Transactions
                     .OrderByDescending(t => t.TransactionDate)
                     .Select(t => (DateOnly?)t.TransactionDate)
@@ -220,16 +222,25 @@ public partial class DashboardViewModel : ObservableObject
             ProfitPerTonCurrency = entity.ProfitPerTonCurrency,
             HistoricalUserProfitUsd = entity.HistoricalUserProfitUsd,
             HistoricalCustomerBilledUsd = entity.HistoricalCustomerBilledUsd,
-            HistoricalBalanceDeltaUsd = entity.HistoricalBalanceDeltaUsd,
+            HistoricalBalanceDeltaUsd = -entity.TotalBilledUsd,
+            TotalBilledRub = entity.TotalBilledRub,
+            TotalBilledUsd = entity.TotalBilledUsd,
             ShipmentStatus = entity.ShipmentStatus,
             LoadedDate = entity.LoadedDate,
             InTransitStartDate = entity.InTransitStartDate,
             InTransitEndDate = entity.InTransitEndDate,
             DeliveredDate = entity.DeliveredDate,
             IsInTransitAutoDates = entity.IsInTransitAutoDates,
-            AdditionalExpenseAmount = entity.AdditionalExpenseAmount,
-            AdditionalExpenseCurrency = entity.AdditionalExpenseCurrency,
-            AdditionalExpenseDescription = entity.AdditionalExpenseDescription
+            AdditionalExpenses = entity.AdditionalExpenses?.Select(e => new TransactionAdditionalExpenseDto
+            {
+                Title = e.Title,
+                Type = e.ExpenseType,
+                AmountPerTon = e.AmountPerTon,
+                Currency = e.Currency,
+                TotalAmount = e.ExpenseType == AdditionalExpenseType.Fixed 
+                    ? e.AmountPerTon 
+                    : (entity.WeightTon * e.AmountPerTon)
+            }).ToList() ?? new List<TransactionAdditionalExpenseDto>()
         };
     }
 }

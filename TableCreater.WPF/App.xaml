@@ -38,6 +38,8 @@
             <converters:IsCompletedToTextConverter x:Key="IsCompletedToTextConverter"/>
             <converters:IsCompletedToGlyphConverter x:Key="IsCompletedToGlyphConverter"/>
             <converters:IsCompletedToRowBackgroundConverter x:Key="IsCompletedToRowBgConverter"/>
+            <converters:NumericGreaterThanZeroToVisibilityConverter x:Key="NumericGreaterThanZeroToVisConverter"/>
+            <converters:TransportTypeToTextConverter x:Key="TransportTypeToTextConverter"/>
 
             <!-- Status Card RadioButton Style (Unified for Dialog and Entry Page) -->
             <Style x:Key="StatusCardRadioButtonStyle" TargetType="RadioButton">

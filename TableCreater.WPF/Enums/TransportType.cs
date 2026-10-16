@@ -8,5 +8,6 @@ namespace TableCreater.WPF.Enums;
 public enum TransportType
 {
     Truck,
-    Wagon
+    Wagon,
+    Ship
 }

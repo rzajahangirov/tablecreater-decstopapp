@@ -215,23 +215,14 @@ public partial class ReportsViewModel : ObservableObject
     [ObservableProperty]
     private string _reportSearchText = string.Empty;
 
-    [ObservableProperty]
-    private PaymentStatus? _reportPaymentStatusFilter;
-
     public List<TransactionReadResponse> AllReportTransactions => _allReportTransactions;
 
     partial void OnReportSearchTextChanged(string value) => FilterReportTransactions();
-    partial void OnReportPaymentStatusFilterChanged(PaymentStatus? value) => FilterReportTransactions();
 
     [RelayCommand]
     private void FilterReportTransactions()
     {
         IEnumerable<TransactionReadResponse> filtered = _allReportTransactions;
-
-        if (ReportPaymentStatusFilter.HasValue)
-        {
-            filtered = filtered.Where(t => t.PaymentStatus == ReportPaymentStatusFilter.Value);
-        }
 
         if (!string.IsNullOrWhiteSpace(ReportSearchText))
         {
@@ -252,7 +243,6 @@ public partial class ReportsViewModel : ObservableObject
     private void ClearReportFilters()
     {
         ReportSearchText = string.Empty;
-        ReportPaymentStatusFilter = null;
         FilterReportTransactions();
     }
 

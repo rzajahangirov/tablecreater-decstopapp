@@ -227,7 +227,7 @@ public partial class BalanceHistoryExportDialog : Window
     private void InitializeColumnOptions()
     {
         AddOption("Index", "№ (Sıra nömrəsi)", "📌 Əsas Məlumatlar", isDefault: true);
-        AddOption("CreatedAt", "Tarix və Saat", "📌 Əsas Məlumatlar", isDefault: true);
+        AddOption("CreatedAt", "Tarix", "📌 Əsas Məlumatlar", isDefault: true);
         AddOption("Currency", "Kassa (USD / RUB)", "📌 Əsas Məlumatlar", isDefault: true);
         AddOption("Type", "Əməliyyat Növü", "📌 Əsas Məlumatlar", isDefault: true);
 

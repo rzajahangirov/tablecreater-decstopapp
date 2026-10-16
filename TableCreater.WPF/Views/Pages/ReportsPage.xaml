@@ -56,7 +56,7 @@
                                    VerticalAlignment="Center" Margin="0,0,10,0"/>
                         <TextBlock Text="Maliyyə Hesabatları" FontSize="26" FontWeight="Bold" Foreground="#1E293B"/>
                     </StackPanel>
-                    <TextBlock Text="Tarix aralığı və müştəri üzrə ümumi xərc, xərc+qazanc, ödəniş və gəlir analitikası"
+                    <TextBlock Text="Tarix aralığı və müştəri üzrə ümumi xərc, ödəniş və gəlir analitikası"
                                FontSize="13" Foreground="#64748B"/>
                 </StackPanel>
             </Grid>
@@ -389,31 +389,31 @@
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <!-- Card 1: Xərc + Qazanc (Müştəri Hesabı) -->
+                        <!-- Card 1: Ümumi Xərc (USD) -->
                         <Border Grid.Row="0" Grid.Column="0" Margin="0,0,6,12" Padding="16,14"
                                 Background="#EEF2FF" BorderBrush="#C7D2FE" BorderThickness="1.5" CornerRadius="8">
                             <StackPanel>
-                                <TextBlock Text="Xərc + Qazanc (Müştəri Hesabı)" FontSize="11" Foreground="#4338CA" FontWeight="Bold" Margin="0,0,0,6"/>
+                                <TextBlock Text="Ümumi Xərc (USD)" FontSize="11" Foreground="#4338CA" FontWeight="Bold" Margin="0,0,0,6"/>
                                 <TextBlock Text="{Binding TotalBilledUsd, StringFormat='${0:N2}'}" FontSize="22" FontWeight="ExtraBold" Foreground="#1E1B4B"/>
                                 <TextBlock Text="Müştərilərə hesablanmış yekun məbləğ" FontSize="10.5" Foreground="#6366F1" Margin="0,4,0,0"/>
                             </StackPanel>
                         </Border>
 
-                        <!-- Card 2: Ümumi Xərc -->
+                        <!-- Card 2: Maya Dəyəri (USD) -->
                         <Border Grid.Row="0" Grid.Column="1" Margin="3,0,3,12" Padding="16,14"
                                 Background="#FFF8E1" BorderBrush="#FFE082" BorderThickness="1.5" CornerRadius="8">
                             <StackPanel>
-                                <TextBlock Text="Ümumi Xərc (Maya Dəyəri)" FontSize="11" Foreground="#D97706" FontWeight="Bold" Margin="0,0,0,6"/>
+                                <TextBlock Text="Maya Dəyəri (USD)" FontSize="11" Foreground="#D97706" FontWeight="Bold" Margin="0,0,0,6"/>
                                 <TextBlock Text="{Binding TotalExpenseUsd, StringFormat='${0:N2}'}" FontSize="22" FontWeight="ExtraBold" Foreground="#B45309"/>
-                                <TextBlock Text="Məhsul, daşıma və əlavə xərclər cəmi" FontSize="10.5" Foreground="#B45309" Margin="0,4,0,0"/>
+                                <TextBlock Text="Ümumi Xərc - Şirkət Qazancı" FontSize="10.5" Foreground="#B45309" Margin="0,4,0,0"/>
                             </StackPanel>
                         </Border>
 
-                        <!-- Card 3: Şirkət Qazancı (Mənfəət) -->
+                        <!-- Card 3: Qazanc (USD) -->
                         <Border Grid.Row="0" Grid.Column="2" Margin="6,0,0,12" Padding="16,14"
                                 Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1.5" CornerRadius="8">
                             <StackPanel>
-                                <TextBlock Text="Şirkət Qazancı (Mənfəət)" FontSize="11" Foreground="#15803D" FontWeight="Bold" Margin="0,0,0,6"/>
+                                <TextBlock Text="Qazanc (USD)" FontSize="11" Foreground="#15803D" FontWeight="Bold" Margin="0,0,0,6"/>
                                 <TextBlock Text="{Binding TotalUserProfitUsd, StringFormat='${0:N2}'}" FontSize="22" FontWeight="ExtraBold" Foreground="#166534"/>
                                 <TextBlock Text="{Binding ProfitMarginPercent, StringFormat='Gəlir marjası: {0}%'}" FontSize="10.5" Foreground="#15803D" FontWeight="SemiBold" Margin="0,4,0,0"/>
                             </StackPanel>
@@ -436,7 +436,7 @@
                                 <TextBlock Text="{Binding DebtStatusText}" FontSize="11" Foreground="#64748B" FontWeight="Bold" Margin="0,0,0,6"/>
                                 <TextBlock Text="{Binding TotalBenefitUsd, StringFormat='${0:N2}'}" FontSize="22" FontWeight="ExtraBold"
                                            Foreground="{Binding DebtStatusColor}"/>
-                                <TextBlock Text="Faktiki Ödəniş − Xərc+Qazanc" FontSize="10.5" Foreground="#94A3B8" Margin="0,4,0,0"/>
+                                <TextBlock Text="Faktiki Ödəniş − Ümumi Xərc" FontSize="10.5" Foreground="#94A3B8" Margin="0,4,0,0"/>
                             </StackPanel>
                         </Border>
 
@@ -461,7 +461,6 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
@@ -472,21 +471,10 @@
                                 </StackPanel>
 
                                 <!-- Search Box -->
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,12,0">
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
                                     <TextBox Text="{Binding ReportSearchText, UpdateSourceTrigger=PropertyChanged}"
-                                             Width="240" FontSize="12" Padding="10,6" BorderBrush="#CBD5E1"
+                                             Width="260" FontSize="12" Padding="10,6" BorderBrush="#CBD5E1"
                                              ui:ControlHelper.PlaceholderText="Məhsul, şirkət və ya müştəri axtar..."/>
-                                </StackPanel>
-
-                                <!-- Payment Filter -->
-                                <StackPanel Grid.Column="2" Orientation="Horizontal">
-                                    <ComboBox SelectedValue="{Binding ReportPaymentStatusFilter, Mode=TwoWay}"
-                                              SelectedValuePath="Tag" Width="150" FontSize="12" Padding="8,6" BorderBrush="#CBD5E1">
-                                        <ComboBoxItem Content="Bütün Ödənişlər" IsSelected="True"/>
-                                        <ComboBoxItem Content="💳 Ödənilib" Tag="{x:Static enums:PaymentStatus.Paid}"/>
-                                        <ComboBoxItem Content="🏦 Kassadan Ödənilib" Tag="{x:Static enums:PaymentStatus.PaidFromBalance}"/>
-                                        <ComboBoxItem Content="⏳ Ödənilməyib" Tag="{x:Static enums:PaymentStatus.Unpaid}"/>
-                                    </ComboBox>
                                 </StackPanel>
                             </Grid>
 
@@ -538,9 +526,10 @@
                                     <DataGridTextColumn Header="Müştəri" Binding="{Binding CustomerName}" Width="130"/>
                                     <DataGridTextColumn Header="Məhsul" Binding="{Binding ProductName}" Width="120"/>
                                     <DataGridTextColumn Header="Çəki" Binding="{Binding WeightTonFormatted}" Width="80"/>
-                                    <DataGridTextColumn Header="Ümumi Xərc" Binding="{Binding HistoricalTotalExpenseUsd, StringFormat='${0:N2}'}" Width="105"/>
+                                    <DataGridTextColumn Header="Məzənnə" Binding="{Binding HistoricalExchangeRateFormatted}" Width="80"/>
+                                    <DataGridTextColumn Header="Maya Dəyəri" Binding="{Binding BaseCostUnifiedUsdFormatted}" Width="105"/>
                                     <DataGridTextColumn Header="Şirkət Qazancı" Binding="{Binding HistoricalUserProfitUsd, StringFormat='${0:N2}'}" Width="105"/>
-                                    <DataGridTextColumn Header="Xərc + Qazanc" Binding="{Binding HistoricalCustomerBilledUsd, StringFormat='${0:N2}'}" Width="110">
+                                    <DataGridTextColumn Header="Ümumi Xərc" Binding="{Binding TotalExpenseUnifiedUsdFormatted}" Width="110">
                                         <DataGridTextColumn.ElementStyle>
                                             <Style TargetType="TextBlock">
                                                 <Setter Property="FontWeight" Value="Bold"/>

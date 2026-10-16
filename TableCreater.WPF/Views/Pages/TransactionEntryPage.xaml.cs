@@ -83,26 +83,13 @@ public partial class TransactionEntryPage : UserControl
     }
 
     /// <summary>
-    /// Click-away behavior: clicking outside active input controls clears focus
-    /// and causes immediate live calculation updates.
+    /// Background click behavior: clicking on empty form background clears focus
+    /// from active input fields so binding updates immediately.
+    /// Does not intercept or interfere with ComboBox popups, dropdown items, or buttons.
     /// </summary>
-    private void Page_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+    private void BackgroundGrid_MouseDown(object sender, MouseButtonEventArgs e)
     {
-        if (e.OriginalSource is not DependencyObject d) return;
-
-        bool isInteractiveInput = false;
-        var current = d;
-        while (current != null && current != this)
-        {
-            if (current is TextBox or PasswordBox or ComboBox or Button or CheckBox or RadioButton or DatePicker)
-            {
-                isInteractiveInput = true;
-                break;
-            }
-            current = VisualTreeHelper.GetParent(current);
-        }
-
-        if (!isInteractiveInput)
+        if (e.OriginalSource is Grid or Border or ScrollViewer)
         {
             Focus();
             Keyboard.ClearFocus();

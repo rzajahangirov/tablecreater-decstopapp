@@ -22,6 +22,7 @@ public class AppDbContext : DbContext
     public DbSet<CustomerBalanceHistory> CustomerBalanceHistories => Set<CustomerBalanceHistory>();
     public DbSet<CustomColumn> CustomColumns => Set<CustomColumn>();
     public DbSet<CustomFieldValue> CustomFieldValues => Set<CustomFieldValue>();
+    public DbSet<TransactionAdditionalExpense> TransactionAdditionalExpenses => Set<TransactionAdditionalExpense>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -127,6 +128,14 @@ public class AppDbContext : DbContext
             entity.Property(t => t.HistoricalUserProfitUsd).HasColumnType("REAL");
             entity.Property(t => t.HistoricalCustomerBilledUsd).HasColumnType("REAL");
             entity.Property(t => t.HistoricalBalanceDeltaUsd).HasColumnType("REAL");
+            entity.Property(t => t.TotalBilledRub).HasColumnType("REAL").HasDefaultValue(0m);
+            entity.Property(t => t.TotalBilledUsd).HasColumnType("REAL").HasDefaultValue(0m);
+
+            // Additional Expenses: One-to-Many
+            entity.HasMany(t => t.AdditionalExpenses)
+                  .WithOne(e => e.Transaction)
+                  .HasForeignKey(e => e.TransactionId)
+                  .OnDelete(DeleteBehavior.Cascade);
 
             // Shipment tracking properties
             entity.Property(t => t.ShipmentStatus)
@@ -214,6 +223,23 @@ public class AppDbContext : DbContext
             // Unique constraint: one value per transaction per column
             entity.HasIndex(cfv => new { cfv.TransactionId, cfv.CustomColumnId })
                   .IsUnique();
+        });
+
+        // =====================================================================
+        // TRANSACTION ADDITIONAL EXPENSE (Dynamic Per-Ton Expenses)
+        // =====================================================================
+        modelBuilder.Entity<TransactionAdditionalExpense>(entity =>
+        {
+            entity.Property(e => e.Currency)
+                  .HasConversion<string>()
+                  .HasDefaultValue(PaymentCurrency.Usd);
+
+            entity.Property(e => e.AmountPerTon)
+                  .HasColumnType("REAL");
+
+            entity.Property(e => e.ExpenseType)
+                  .HasConversion<string>()
+                  .HasDefaultValue(AdditionalExpenseType.PerTon);
         });
     }
 }

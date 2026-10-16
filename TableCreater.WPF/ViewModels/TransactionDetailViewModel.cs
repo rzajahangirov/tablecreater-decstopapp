@@ -123,6 +123,7 @@ public partial class TransactionDetailViewModel : ObservableObject
     {
         TransportType.Truck => "Yük maşını (TIR)",
         TransportType.Wagon => "Vaqon (Dəmir yolu)",
+        TransportType.Ship => "Gəmi (Dəniz yolu)",
         _ => Transaction?.TransportType.ToString() ?? "—"
     };
 }

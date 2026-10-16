@@ -114,12 +114,13 @@ public partial class ExcelExportColumnsDialog : Window
             if (tx.TransactionDate > filterTo) return false;
         }
 
-        // Payment status
-        if (CmbFilterPayment?.SelectedItem is ComboBoxItem payItem && payItem.Tag is string payTag && payTag != "All")
+        // Shipment status
+        if (CmbFilterShipment?.SelectedItem is ComboBoxItem shipItem && shipItem.Tag is string shipTag && shipTag != "All")
         {
-            if (payTag == "Paid" && tx.PaymentStatus != PaymentStatus.Paid) return false;
-            if (payTag == "PaidFromBalance" && tx.PaymentStatus != PaymentStatus.PaidFromBalance) return false;
-            if (payTag == "Unpaid" && tx.PaymentStatus != PaymentStatus.Unpaid) return false;
+            if (shipTag == "Pending" && tx.ShipmentStatus != ShipmentStatus.Pending) return false;
+            if (shipTag == "Loaded" && tx.ShipmentStatus != ShipmentStatus.Loaded) return false;
+            if (shipTag == "InTransit" && tx.ShipmentStatus != ShipmentStatus.InTransit) return false;
+            if (shipTag == "Delivered" && tx.ShipmentStatus != ShipmentStatus.Delivered) return false;
         }
 
         // Search text
@@ -154,7 +155,7 @@ public partial class ExcelExportColumnsDialog : Window
     {
         if (DpFilterFrom != null) DpFilterFrom.SelectedDate = null;
         if (DpFilterTo != null) DpFilterTo.SelectedDate = null;
-        if (CmbFilterPayment != null) CmbFilterPayment.SelectedIndex = 0;
+        if (CmbFilterShipment != null) CmbFilterShipment.SelectedIndex = 0;
         if (TxtFilterSearch != null) TxtFilterSearch.Text = string.Empty;
         if (_isLoaded && _txView != null)
         {
@@ -249,18 +250,18 @@ public partial class ExcelExportColumnsDialog : Window
                 : $" / {total} (Göstərilən: {visibleCount})";
         }
 
-        decimal totalBilled = selected.Sum(x => x.Transaction.HistoricalCustomerBilledUsd);
-        decimal totalPaid = selected.Sum(x => x.Transaction.PaidInUsd);
         decimal totalWeight = selected.Sum(x => x.Transaction.WeightTon);
-
-        if (TxtSelectedBilled != null)
-            TxtSelectedBilled.Text = $"${totalBilled:N2}";
-
-        if (TxtSelectedPaid != null)
-            TxtSelectedPaid.Text = $"${totalPaid:N2}";
+        decimal totalUsd = selected.Sum(x => x.Transaction.TotalBilledUsd);
+        decimal totalRub = selected.Sum(x => x.Transaction.TotalBilledRub);
 
         if (TxtSelectedWeight != null)
             TxtSelectedWeight.Text = $"{totalWeight:N2} T";
+
+        if (TxtSelectedUsd != null)
+            TxtSelectedUsd.Text = $"${totalUsd:N2}";
+
+        if (TxtSelectedRub != null)
+            TxtSelectedRub.Text = $"{totalRub:N2} ₽";
 
         if (ChkSelectAllTxHeader != null)
         {
@@ -296,38 +297,36 @@ public partial class ExcelExportColumnsDialog : Window
         AddOption("ReceivingCompany", "Qəbul Edən Firma", "📌 Əsas Məlumatlar", isDefault: true);
         AddOption("WeightTon", "Çəki (Ton)", "📌 Əsas Məlumatlar", isDefault: true);
         AddOption("PricePerTonRub", "Qiymət / Ton (₽)", "📌 Əsas Məlumatlar", isDefault: true);
+        AddOption("GoodsCostRub", "Məhsul Dəyəri (₽)", "📌 Əsas Məlumatlar", isDefault: true);
 
         // 2. Nəqliyyat
-        AddOption("TransportType", "Nəqliyyat Növü (TIR / Vaqon)", "🚛 Nəqliyyat", isDefault: true);
+        AddOption("TransportType", "Nəqliyyat Növü (TIR / Vaqon / Gəmi)", "🚛 Nəqliyyat", isDefault: true);
         AddOption("VehicleCount", "Vasitə Sayı", "🚛 Nəqliyyat", isDefault: true);
-        AddOption("PricePerVehicle", "Nəqliyyat Qiyməti", "🚛 Nəqliyyat", isDefault: true);
-        AddOption("TransportCurrency", "Nəqliyyat Valyutası", "🚛 Nəqliyyat", isDefault: false);
+        AddOption("PricePerVehicle", "Vasitə Başına Qiymət", "🚛 Nəqliyyat", isDefault: true);
+        AddOption("TransportCurrency", "Nəqliyyat Valyutası", "🚛 Nəqliyyat", isDefault: true);
+        AddOption("TransportTotalCost", "Cəmi Nəqliyyat Xərci", "🚛 Nəqliyyat", isDefault: true);
 
-        // 3. Əlavə Xərclər və Məzənnə
-        AddOption("AdditionalExpenseAmount", "Əlavə Xərc Məbləği", "💰 Əlavə Xərclər və Məzənnə", isDefault: true);
-        AddOption("AdditionalExpenseCurrency", "Əlavə Xərc Valyutası", "💰 Əlavə Xərclər və Məzənnə", isDefault: false);
-        AddOption("AdditionalExpenseDescription", "Əlavə Xərc Təsviri / Qeyd", "💰 Əlavə Xərclər və Məzənnə", isDefault: true);
-        AddOption("HistoricalExchangeRate", "Məzənnə (USD / RUB)", "💰 Əlavə Xərclər və Məzənnə", isDefault: true);
+        // 3. Əlavə Xərclər və Qazanc
+        AddOption("AdditionalExpenses", "Əlavə Xərclər (Cəmi)", "💰 Əlavə Xərclər və Qazanc", isDefault: true);
+        AddOption("AdditionalExpensesDetail", "Əlavə Xərclər Təsviri (Hesablama)", "💰 Əlavə Xərclər və Qazanc", isDefault: false);
+        AddOption("AdditionalExpensesUnifiedUsd", "Əlavə Xərclər Cəmi (USD)", "💰 Əlavə Xərclər və Qazanc", isDefault: true);
+        AddOption("ProfitPerTon", "Ton Başına Qazanc", "💰 Əlavə Xərclər və Qazanc", isDefault: false);
+        AddOption("ProfitPerTonCurrency", "Qazanc Valyutası", "💰 Əlavə Xərclər və Qazanc", isDefault: false);
+        AddOption("TotalProfit", "Cəmi Şirkət Qazancı", "💰 Əlavə Xərclər və Qazanc", isDefault: true);
 
-        // 4. Maliyyə və Hesablaşma
-        AddOption("HistoricalTotalExpenseUsd", "Ümumi Xərc (USD)", "📊 Maliyyə və Hesablaşma", isDefault: true);
-        AddOption("ProfitPerTon", "Ton Başına Qazanc", "📊 Maliyyə və Hesablaşma", isDefault: false);
-        AddOption("ProfitPerTonCurrency", "Qazanc Valyutası", "📊 Maliyyə və Hesablaşma", isDefault: false);
-        AddOption("HistoricalUserProfitUsd", "Şirkət Qazancı (USD)", "📊 Maliyyə və Hesablaşma", isDefault: true);
-        AddOption("HistoricalCustomerBilledUsd", "Xərc + Qazanc (USD)", "📊 Maliyyə və Hesablaşma", isDefault: true);
-        AddOption("PaidAmount", "Ödənilən Məbləğ", "📊 Maliyyə və Hesablaşma", isDefault: true);
-        AddOption("PaidCurrency", "Ödəniş Valyutası", "📊 Maliyyə və Hesablaşma", isDefault: false);
-        AddOption("PaidInUsd", "Ödəniş (USD ekvivalenti)", "📊 Maliyyə və Hesablaşma", isDefault: true);
-        AddOption("PaidFromUsdAmount", "Kassadan Ödəniş (USD)", "📊 Maliyyə və Hesablaşma", isDefault: false);
-        AddOption("PaidFromRubAmount", "Kassadan Ödəniş (RUB)", "📊 Maliyyə və Hesablaşma", isDefault: false);
-        AddOption("PaymentStatus", "Ödəniş Statusu", "📊 Maliyyə və Hesablaşma", isDefault: true);
-        AddOption("HistoricalBalanceDeltaUsd", "Balans Təsiri (USD)", "📊 Maliyyə və Hesablaşma", isDefault: true);
+        // 4. Kassa Hesablaşması (Dual-Stream & Vahid)
+        AddOption("TotalBilledRub", "Balansa Təsiri (RUB)", "📊 Kassa Hesablaşması", isDefault: true);
+        AddOption("TotalBilledUsd", "Balansa Təsiri (USD)", "📊 Kassa Hesablaşması", isDefault: true);
+        AddOption("HistoricalExchangeRate", "Məzənnə (₽/$)", "📊 Kassa Hesablaşması", isDefault: true);
+        AddOption("BaseCostUnifiedUsd", "Maya Dəyəri (USD)", "📊 Kassa Hesablaşması", isDefault: true);
+        AddOption("TotalExpenseUnifiedUsd", "Ümumi Xərc (USD)", "📊 Kassa Hesablaşması", isDefault: true);
+        AddOption("ProfitUnifiedUsd", "Qazanc (USD)", "📊 Kassa Hesablaşması", isDefault: true);
 
-        // 5. Status və Tarixlər
-        AddOption("ShipmentStatus", "Göndərmə Statusu", "📅 Status və Tarixlər", isDefault: true);
-        AddOption("LoadedDate", "Yüklənmə Tarixi", "📅 Status və Tarixlər", isDefault: false);
-        AddOption("InTransitStartDate", "Yola Çıxma Tarixi", "📅 Status və Tarixlər", isDefault: false);
-        AddOption("DeliveredDate", "Çatdırılma Tarixi", "📅 Status və Tarixlər", isDefault: false);
+        // 5. Logistika və Status
+        AddOption("ShipmentStatus", "Göndərmə Statusu", "📅 Logistika və Status", isDefault: true);
+        AddOption("LoadedDate", "Yüklənmə Tarixi", "📅 Logistika və Status", isDefault: false);
+        AddOption("InTransitStartDate", "Yola Çıxma Tarixi", "📅 Logistika və Status", isDefault: false);
+        AddOption("DeliveredDate", "Çatdırılma Tarixi", "📅 Logistika və Status", isDefault: false);
     }
 
     private void AddOption(string id, string headerName, string category, bool isDefault)
@@ -669,11 +668,18 @@ public class TransactionExportItem : INotifyPropertyChanged
     public DateOnly TransactionDate => Transaction.TransactionDate;
     public string ProductName => Transaction.ProductName;
     public string? SendingCompany => Transaction.SendingCompany;
+    public string? ReceivingCompany => Transaction.ReceivingCompany;
     public string WeightTonFormatted => Transaction.WeightTonFormatted;
-    public string BilledUsdFormatted => Transaction.BilledUsdFormatted;
-    public string PaidUsdFormatted => Transaction.PaidUsdFormatted;
-    public string PaymentStatusDisplay => Transaction.PaymentStatusDisplay;
+    public string AdditionalExpenseFormatted => Transaction.AdditionalExpenseFormatted;
+    public string AdditionalExpenseDescription => Transaction.AdditionalExpenseDescription;
+    public string TotalBilledRubFormatted => $"{Transaction.TotalBilledRub:N2} ₽";
+    public string TotalBilledUsdFormatted => $"${Transaction.TotalBilledUsd:N2}";
+    public string TotalExpenseUnifiedUsdFormatted => Transaction.TotalExpenseUnifiedUsdFormatted;
+    public string BaseCostUnifiedUsdFormatted => Transaction.BaseCostUnifiedUsdFormatted;
+    public string ProfitUnifiedUsdFormatted => Transaction.ProfitUnifiedUsdFormatted;
+    public string AdditionalExpensesUnifiedUsdFormatted => Transaction.AdditionalExpensesUnifiedUsdFormatted;
     public string ShipmentStatusDisplay => Transaction.ShipmentStatusDisplay;
+    public ShipmentStatus ShipmentStatus => Transaction.ShipmentStatus;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 }

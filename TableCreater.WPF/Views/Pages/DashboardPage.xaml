@@ -81,9 +81,10 @@
                 </StackPanel>
             </Border>
 
-            <!-- 6 KPI CARDS GRID -->
+            <!-- 7 KPI CARDS GRID -->
             <Grid Margin="-4,0,-4,24">
                 <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
@@ -162,18 +163,33 @@
                     </StackPanel>
                 </Border>
 
-                <!-- CARD 6: Ümumi Balans -->
+                <!-- CARD 6: Ümumi Balans (USD) -->
                 <Border Grid.Column="5" Style="{StaticResource KpiCardStyle}">
                     <StackPanel>
                         <Grid Margin="0,0,0,8">
-                            <TextBlock Text="Ümumi Balans" FontSize="12" FontWeight="SemiBold" Foreground="#64748B"/>
-                            <Border HorizontalAlignment="Right" Background="#FFFBEB" CornerRadius="6" Padding="6,4">
-                                <TextBlock Text="&#xE8C4;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#D97706"/>
+                            <TextBlock Text="Ümumi Balans (USD)" FontSize="12" FontWeight="SemiBold" Foreground="#64748B"/>
+                            <Border HorizontalAlignment="Right" Background="#EFF6FF" CornerRadius="6" Padding="6,4">
+                                <TextBlock Text="&#xE8C4;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#2563EB"/>
                             </Border>
                         </Grid>
-                        <TextBlock Text="{Binding TotalBalanceUsd, StringFormat='${0:N0}'}" FontSize="22" FontWeight="Bold"
+                        <TextBlock Text="{Binding TotalBalanceUsd, StringFormat='${0:N2}'}" FontSize="20" FontWeight="Bold"
                                    Foreground="{Binding TotalBalanceUsd, Converter={StaticResource ProfitLossToColorConverter}}"/>
-                        <TextBlock Text="Sistem cəmi balans" FontSize="11" Foreground="#94A3B8" Margin="0,2,0,0"/>
+                        <TextBlock Text="USD kassaları cəmi" FontSize="11" Foreground="#94A3B8" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- CARD 7: Ümumi Balans (RUB) -->
+                <Border Grid.Column="6" Style="{StaticResource KpiCardStyle}">
+                    <StackPanel>
+                        <Grid Margin="0,0,0,8">
+                            <TextBlock Text="Ümumi Balans (RUB)" FontSize="12" FontWeight="SemiBold" Foreground="#64748B"/>
+                            <Border HorizontalAlignment="Right" Background="#FFF7ED" CornerRadius="6" Padding="6,4">
+                                <TextBlock Text="&#xE8C4;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="#C2410C"/>
+                            </Border>
+                        </Grid>
+                        <TextBlock Text="{Binding TotalBalanceRub, StringFormat='{}{0:N2} ₽'}" FontSize="20" FontWeight="Bold"
+                                   Foreground="{Binding TotalBalanceRub, Converter={StaticResource ProfitLossToColorConverter}}"/>
+                        <TextBlock Text="RUB kassaları cəmi" FontSize="11" Foreground="#94A3B8" Margin="0,2,0,0"/>
                     </StackPanel>
                 </Border>
             </Grid>

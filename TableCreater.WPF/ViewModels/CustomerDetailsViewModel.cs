@@ -70,24 +70,10 @@ public partial class CustomerDetailsViewModel : ObservableObject
     private DateTime? _txFilterDateTo;
 
     [ObservableProperty]
-    private PaymentStatus? _txFilterPaymentStatus;
-
-    [ObservableProperty]
     private ShipmentStatus? _txFilterShipmentStatus;
 
     [ObservableProperty]
     private string _txSearchText = string.Empty;
-
-    /// <summary>
-    /// Options for Payment Status filter ComboBox (null = Hamısı).
-    /// </summary>
-    public PaymentStatus?[] PaymentStatusFilterOptions => new PaymentStatus?[]
-    {
-        null,
-        PaymentStatus.Paid,
-        PaymentStatus.PaidFromBalance,
-        PaymentStatus.Unpaid
-    };
 
     /// <summary>
     /// Options for Shipment Status filter ComboBox (null = Hamısı).
@@ -147,6 +133,9 @@ public partial class CustomerDetailsViewModel : ObservableObject
     private decimal _totalBilledUsd;
 
     [ObservableProperty]
+    private decimal _totalUserProfitUsd;
+
+    [ObservableProperty]
     private decimal _remainingDebtUsd;
 
     [ObservableProperty]
@@ -189,7 +178,7 @@ public partial class CustomerDetailsViewModel : ObservableObject
     [ObservableProperty]
     private string _transferPreview = string.Empty;
 
-    public BalanceTransactionType[] ManualBalanceTypes => new[]
+    public static BalanceTransactionType[] ManualBalanceTypes { get; } = new[]
     {
         BalanceTransactionType.ManualDeposit,
         BalanceTransactionType.ManualWithdrawal,
@@ -197,7 +186,7 @@ public partial class CustomerDetailsViewModel : ObservableObject
         BalanceTransactionType.Transfer
     };
 
-    public PaymentCurrency[] PaymentCurrencies => Enum.GetValues<PaymentCurrency>();
+    public static PaymentCurrency[] PaymentCurrencies { get; } = Enum.GetValues<PaymentCurrency>();
 
     partial void OnAdjustmentAmountChanged(decimal value) => UpdateTransferPreview();
     partial void OnAdjustmentExchangeRateChanged(decimal value) => UpdateTransferPreview();
@@ -477,12 +466,6 @@ public partial class CustomerDetailsViewModel : ObservableObject
             filtered = filtered.Where(t => t.TransactionDate <= toDate);
         }
 
-        // Payment status filter
-        if (TxFilterPaymentStatus.HasValue)
-        {
-            filtered = filtered.Where(t => t.PaymentStatus == TxFilterPaymentStatus.Value);
-        }
-
         // Shipment status filter
         if (TxFilterShipmentStatus.HasValue)
         {
@@ -514,7 +497,6 @@ public partial class CustomerDetailsViewModel : ObservableObject
     {
         TxFilterDateFrom = null;
         TxFilterDateTo = null;
-        TxFilterPaymentStatus = null;
         TxFilterShipmentStatus = null;
         TxSearchText = string.Empty;
         ApplyTransactionFilters();
@@ -597,6 +579,7 @@ public partial class CustomerDetailsViewModel : ObservableObject
         TotalExpenseUsd = report.TotalExpenseUsd;
         TotalPaidUsd = report.TotalPaidUsd;
         TotalBilledUsd = report.TotalBilledUsd;
+        TotalUserProfitUsd = report.TotalUserProfitUsd;
         RemainingDebtUsd = report.TotalBenefitUsd;
 
         if (RemainingDebtUsd < 0)

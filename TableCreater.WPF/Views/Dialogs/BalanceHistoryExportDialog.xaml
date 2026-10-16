@@ -276,7 +276,7 @@
                         </DataGridTemplateColumn>
 
                         <!-- Tarix -->
-                        <DataGridTextColumn Header="Tarix" Binding="{Binding History.CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}" Width="125" IsReadOnly="True">
+                        <DataGridTextColumn Header="Tarix" Binding="{Binding History.CreatedAt, StringFormat='{}{0:dd.MM.yyyy}'}" Width="100" IsReadOnly="True">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="VerticalAlignment" Value="Center"/>

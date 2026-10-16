@@ -1,0 +1,7 @@
+# Build və Publish qovluqlarını tamamilə blokla
+[Bb]in/
+[Oo]bj/
+
+# Verilənlər bazası fayllarını blokla
+*.db
+*.sqlite

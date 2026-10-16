@@ -41,6 +41,7 @@ public class ExcelService : IExcelService
         else if (customer != null)
         {
             var entities = await _db.Transactions
+                .Include(t => t.AdditionalExpenses)
                 .Where(t => t.CustomerId == customerId)
                 .OrderByDescending(t => t.TransactionDate)
                 .ToListAsync();
@@ -51,6 +52,7 @@ public class ExcelService : IExcelService
         {
             var entities = await _db.Transactions
                 .Include(t => t.Customer)
+                .Include(t => t.AdditionalExpenses)
                 .OrderByDescending(t => t.TransactionDate)
                 .ToListAsync();
 
@@ -72,55 +74,30 @@ public class ExcelService : IExcelService
         var ws = workbook.Worksheets.Add("Tranzaksiyalar");
         ws.ShowGridLines = true;
 
-        // ── Brand Header Block (Rows 1-4) ───────────────────────────
+        // ── Brand Header Block ─────────────────────────────────────────────────────
+        int headerRow = 4;
+        ws.Row(1).Height = 28;
+        ws.Row(2).Height = 20;
+        ws.Row(3).Height = 10;
+
+        // Title & Meta Info
+        ws.Cell("A1").Value = customer != null ? "MÜŞTƏRİ TRANZAKSİYA VƏ MALİYYƏ HESABATI" : "ÜMUMİ TRANZAKSİYA VƏ MALİYYƏ HESABATI";
+        ws.Cell("A1").Style.Font.Bold = true;
+        ws.Cell("A1").Style.Font.FontSize = 15;
+        ws.Cell("A1").Style.Font.FontColor = XLColor.FromArgb(16, 124, 65); // Excel Green
+
         if (customer != null)
         {
-            ws.Cell("A1").Value = "Müştəri:";
-            ws.Cell("B1").Value = customer.Name;
-            ws.Cell("B1").Style.Font.Bold = true;
-            ws.Cell("B1").Style.Font.FontSize = 14;
-            ws.Cell("B1").Style.Font.FontColor = XLColor.FromArgb(16, 124, 65); // Office Green
-
-            ws.Cell("A2").Value = "Əlaqə nömrəsi:";
-            ws.Cell("B2").Value = string.IsNullOrWhiteSpace(customer.Phone) ? "—" : customer.Phone;
-
-            ws.Cell("A3").Value = "Cari Balans:";
-            ws.Cell("B3").Value = (double)customer.BalanceUsd;
-            ws.Cell("B3").Style.NumberFormat.Format = "$#,##0.00";
-            ws.Cell("B3").Style.Font.Bold = true;
-            ws.Cell("B3").Style.Font.FontColor = customer.BalanceUsd >= 0
-                ? XLColor.FromArgb(46, 125, 50)
-                : XLColor.FromArgb(198, 40, 40);
-
-            ws.Cell("A4").Value = "Hesabat tarixi:";
-            ws.Cell("B4").Value = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+            ws.Cell("A2").Value = $"Müştəri: {customer.Name}   |   Əlaqə: {(string.IsNullOrWhiteSpace(customer.Phone) ? "—" : customer.Phone)}   |   Tarix: {DateTime.Now:yyyy-MM-dd HH:mm}";
         }
         else
         {
-            ws.Cell("A1").Value = "Hesabat:";
-            ws.Cell("B1").Value = "Maliyyə və Tranzaksiya Hesabatı";
-            ws.Cell("B1").Style.Font.Bold = true;
-            ws.Cell("B1").Style.Font.FontSize = 14;
-            ws.Cell("B1").Style.Font.FontColor = XLColor.FromArgb(16, 124, 65);
-
-            ws.Cell("A2").Value = "Tranzaksiya sayı:";
-            ws.Cell("B2").Value = list.Count;
-
-            ws.Cell("A3").Value = "Cəmi Xərc + Qazanc:";
-            ws.Cell("B3").Value = (double)list.Sum(x => x.HistoricalCustomerBilledUsd);
-            ws.Cell("B3").Style.NumberFormat.Format = "$#,##0.00";
-            ws.Cell("B3").Style.Font.Bold = true;
-            ws.Cell("B3").Style.Font.FontColor = XLColor.FromArgb(67, 56, 202);
-
-            ws.Cell("A4").Value = "Hesabat tarixi:";
-            ws.Cell("B4").Value = DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+            ws.Cell("A2").Value = $"Hesabat Tarixi: {DateTime.Now:yyyy-MM-dd HH:mm}   |   Sistem Üzrə Bütün Tranzaksiyalar";
         }
+        ws.Cell("A2").Style.Font.FontSize = 10;
+        ws.Cell("A2").Style.Font.FontColor = XLColor.FromArgb(100, 116, 139);
 
-        ws.Range("A1:A4").Style.Font.Bold = true;
-        ws.Range("A1:A4").Style.Font.FontColor = XLColor.FromArgb(71, 85, 105);
-
-        // ── Table Column Headers (Row 6) ────────────────────────────
-        int headerRow = 6;
+        // ── Table Column Headers ────────────────────────────
         for (int c = 0; c < activeColumns.Count; c++)
         {
             var colDef = activeColumns[c];
@@ -129,13 +106,13 @@ public class ExcelService : IExcelService
             cell.Style.Font.Bold = true;
             cell.Style.Font.FontSize = 11;
             cell.Style.Font.FontColor = XLColor.White;
-            cell.Style.Fill.BackgroundColor = XLColor.FromArgb(16, 124, 65); // Office Green
+            cell.Style.Fill.BackgroundColor = XLColor.FromArgb(16, 124, 65); // Excel Green #107C41
             cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
             cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
             cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
-            cell.Style.Border.OutsideBorderColor = XLColor.FromArgb(12, 94, 49);
+            cell.Style.Border.OutsideBorderColor = XLColor.FromArgb(13, 101, 53);
         }
-        ws.Row(headerRow).Height = 26;
+        ws.Row(headerRow).Height = 28;
 
         // ── Data Rows ───────────────────────────────────────────────
         int startRow = headerRow + 1;
@@ -146,7 +123,7 @@ public class ExcelService : IExcelService
             var item = list[i];
             int rowIdx = startRow + i;
             var xlRow = ws.Row(rowIdx);
-            xlRow.Height = 20;
+            xlRow.Height = 22;
 
             bool isEven = i % 2 == 1;
             var rowBg = isEven ? XLColor.FromArgb(248, 250, 252) : XLColor.White;
@@ -170,20 +147,59 @@ public class ExcelService : IExcelService
                 cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
                 cell.Style.Border.OutsideBorderColor = XLColor.FromArgb(226, 232, 240);
 
-                // Specific color overrides
-                if (colDef.Id == "HistoricalBalanceDeltaUsd")
+                if (colDef.Id == "AdditionalExpensesDetail")
                 {
-                    cell.Style.Font.Bold = true;
-                    cell.Style.Font.FontColor = item.HistoricalBalanceDeltaUsd >= 0
-                        ? XLColor.FromArgb(46, 125, 50)
-                        : XLColor.FromArgb(198, 40, 40);
+                    cell.Style.Alignment.WrapText = true;
                 }
-                else if (colDef.Id == "PaymentStatus")
+
+                // Specific styling for key financial / status columns
+                if (colDef.Id == "ShipmentStatus")
                 {
                     cell.Style.Font.Bold = true;
-                    cell.Style.Font.FontColor = item.PaymentStatus == PaymentStatus.Paid
-                        ? XLColor.FromArgb(46, 125, 50)
-                        : XLColor.FromArgb(198, 40, 40);
+                    switch (item.ShipmentStatus)
+                    {
+                        case ShipmentStatus.Delivered:
+                            cell.Style.Fill.BackgroundColor = XLColor.FromArgb(220, 252, 231);
+                            cell.Style.Font.FontColor = XLColor.FromArgb(21, 128, 61);
+                            break;
+                        case ShipmentStatus.InTransit:
+                            cell.Style.Fill.BackgroundColor = XLColor.FromArgb(243, 232, 255);
+                            cell.Style.Font.FontColor = XLColor.FromArgb(126, 34, 206);
+                            break;
+                        case ShipmentStatus.Loaded:
+                            cell.Style.Fill.BackgroundColor = XLColor.FromArgb(219, 234, 254);
+                            cell.Style.Font.FontColor = XLColor.FromArgb(29, 78, 216);
+                            break;
+                        default:
+                            cell.Style.Fill.BackgroundColor = XLColor.FromArgb(254, 243, 199);
+                            cell.Style.Font.FontColor = XLColor.FromArgb(180, 83, 9);
+                            break;
+                    }
+                }
+                else if (colDef.Id == "TotalBilledRub")
+                {
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Font.FontColor = XLColor.FromArgb(112, 26, 117);
+                }
+                else if (colDef.Id == "TotalBilledUsd")
+                {
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Font.FontColor = XLColor.FromArgb(29, 78, 216);
+                }
+                else if (colDef.Id == "TotalExpenseUnifiedUsd")
+                {
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Font.FontColor = XLColor.FromArgb(21, 128, 61); // Green
+                }
+                else if (colDef.Id == "BaseCostUnifiedUsd")
+                {
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Font.FontColor = XLColor.FromArgb(180, 83, 9); // Amber
+                }
+                else if (colDef.Id == "AdditionalExpensesUnifiedUsd")
+                {
+                    cell.Style.Font.Bold = true;
+                    cell.Style.Font.FontColor = XLColor.FromArgb(180, 83, 9); // Amber
                 }
 
                 if (colDef.IsSummable && colDef.GetSumValue != null)
@@ -196,7 +212,7 @@ public class ExcelService : IExcelService
         // ── Summary / Totals Row ────────────────────────────────────
         int summaryRow = startRow + list.Count;
         var sumRow = ws.Row(summaryRow);
-        sumRow.Height = 24;
+        sumRow.Height = 28;
 
         for (int c = 0; c < activeColumns.Count; c++)
         {
@@ -235,9 +251,27 @@ public class ExcelService : IExcelService
         ws.Columns().AdjustToContents(headerRow, summaryRow);
         for (int c = 1; c <= activeColumns.Count; c++)
         {
-            if (ws.Column(c).Width < 12) ws.Column(c).Width = 12;
-            if (ws.Column(c).Width > 45) ws.Column(c).Width = 45;
+            if (ws.Column(c).Width < 13) ws.Column(c).Width = 13;
+            if (ws.Column(c).Width > 50) ws.Column(c).Width = 50;
         }
+
+        // Freeze panes at header row (sticky header on scroll)
+        ws.SheetView.FreezeRows(headerRow);
+
+        // Native Excel AutoFilter on headers
+        if (list.Count > 0)
+        {
+            ws.Range(headerRow, 1, summaryRow - 1, activeColumns.Count).SetAutoFilter();
+        }
+
+        // Print & Page Setup (Executive Standard A4 Landscape)
+        ws.PageSetup.PaperSize = XLPaperSize.A4Paper;
+        ws.PageSetup.PageOrientation = XLPageOrientation.Landscape;
+        ws.PageSetup.FitToPages(1, 0); // All columns fit on 1 page wide
+        ws.PageSetup.Margins.Left = 0.5;
+        ws.PageSetup.Margins.Right = 0.5;
+        ws.PageSetup.Margins.Top = 0.75;
+        ws.PageSetup.Margins.Bottom = 0.75;
 
         workbook.SaveAs(filePath);
     }
@@ -403,6 +437,22 @@ public class ExcelService : IExcelService
             }
         }
 
+        // Freeze panes at header row (sticky header on scroll)
+        ws.SheetView.FreezeRows(headerRow);
+
+        // Native Excel AutoFilter on headers
+        if (list.Count > 0)
+        {
+            ws.Range(headerRow, 1, endRow - 1, activeColumns.Count).SetAutoFilter();
+        }
+
+        // Print & Page Setup (Executive Standard A4 Portrait)
+        ws.PageSetup.PaperSize = XLPaperSize.A4Paper;
+        ws.PageSetup.PageOrientation = XLPageOrientation.Landscape;
+        ws.PageSetup.FitToPages(1, 0);
+        ws.PageSetup.Margins.Left = 0.5;
+        ws.PageSetup.Margins.Right = 0.5;
+
         workbook.SaveAs(filePath);
     }
 
@@ -411,7 +461,7 @@ public class ExcelService : IExcelService
         return new List<BalanceHistoryColumnDef>
         {
             new() { Id = "Index", Header = "№", Group = "Əsas", IsDefault = true, GetValue = (h, i) => i + 1, Alignment = XLAlignmentHorizontalValues.Center },
-            new() { Id = "CreatedAt", Header = "Tarix və Saat", Group = "Əsas", IsDefault = true, GetValue = (h, i) => h.CreatedAt.ToString("yyyy-MM-dd HH:mm"), Alignment = XLAlignmentHorizontalValues.Center },
+            new() { Id = "CreatedAt", Header = "Tarix", Group = "Əsas", IsDefault = true, GetValue = (h, i) => h.CreatedAt.ToString("yyyy-MM-dd"), Alignment = XLAlignmentHorizontalValues.Center },
             new() { Id = "Currency", Header = "Kassa", Group = "Əsas", IsDefault = true, GetValue = (h, i) => h.KassaName, Alignment = XLAlignmentHorizontalValues.Center },
             new() { Id = "Type", Header = "Əməliyyat Növü", Group = "Əsas", IsDefault = true, GetValue = (h, i) => FormatBalanceType(h.Type), Alignment = XLAlignmentHorizontalValues.Left },
             new() { Id = "Amount", Header = "Dəyişiklik Məbləği", Group = "Məbləğlər", IsDefault = true, GetValue = (h, i) => (double)(h.Amount != 0 ? h.Amount : h.AmountUsd), NumberFormat = "#,##0.00", Alignment = XLAlignmentHorizontalValues.Right },
@@ -481,28 +531,32 @@ public class ExcelService : IExcelService
             new() { Id = "SendingCompany", Header = "Göndərən Firma", GetValue = (t, i) => t.SendingCompany ?? "—", Alignment = XLAlignmentHorizontalValues.Left },
             new() { Id = "ReceivingCompany", Header = "Qəbul Edən Firma", GetValue = (t, i) => t.ReceivingCompany ?? "—", Alignment = XLAlignmentHorizontalValues.Left },
             new() { Id = "WeightTon", Header = "Çəki (Ton)", GetValue = (t, i) => (double)t.WeightTon, NumberFormat = "#,##0.00", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.WeightTon },
-            new() { Id = "PricePerTonRub", Header = "Qiymət/Ton (₽)", GetValue = (t, i) => (double)t.PricePerTonRub, NumberFormat = "#,##0.00", Alignment = XLAlignmentHorizontalValues.Right },
-            new() { Id = "TransportType", Header = "Nəqliyyat Növü", GetValue = (t, i) => t.TransportType == TransportType.Truck ? "TIR" : (t.TransportType == TransportType.Wagon ? "Vaqon" : t.TransportType.ToString()), Alignment = XLAlignmentHorizontalValues.Center },
+            new() { Id = "PricePerTonRub", Header = "Qiymət/Ton (₽)", GetValue = (t, i) => (double)t.PricePerTonRub, NumberFormat = "#,##0.00 ₽", Alignment = XLAlignmentHorizontalValues.Right },
+            new() { Id = "GoodsCostRub", Header = "Məhsul Dəyəri (₽)", GetValue = (t, i) => (double)(t.WeightTon * t.PricePerTonRub), NumberFormat = "#,##0.00 ₽", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.WeightTon * t.PricePerTonRub },
+            new() { Id = "TransportType", Header = "Nəqliyyat Növü", GetValue = (t, i) => t.TransportType == TransportType.Truck ? "TIR" : (t.TransportType == TransportType.Wagon ? "Vaqon" : (t.TransportType == TransportType.Ship ? "Gəmi" : t.TransportType.ToString())), Alignment = XLAlignmentHorizontalValues.Center },
             new() { Id = "VehicleCount", Header = "Vasitə Sayı", GetValue = (t, i) => t.VehicleCount ?? 0, NumberFormat = "#,##0", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.VehicleCount ?? 0 },
             new() { Id = "PricePerVehicle", Header = "Nəqliyyat Qiyməti", GetValue = (t, i) => (double)(t.PricePerVehicle ?? 0), NumberFormat = "#,##0.00", Alignment = XLAlignmentHorizontalValues.Right },
             new() { Id = "TransportCurrency", Header = "Nəql. Valyutası", GetValue = (t, i) => t.TransportCurrency.ToString().ToUpperInvariant(), Alignment = XLAlignmentHorizontalValues.Center },
-            new() { Id = "AdditionalExpenseAmount", Header = "Əlavə Xərc", GetValue = (t, i) => (double)(t.AdditionalExpenseAmount ?? 0), NumberFormat = "#,##0.00", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.AdditionalExpenseAmount ?? 0 },
-            new() { Id = "AdditionalExpenseCurrency", Header = "Əlavə Xərc Valyutası", GetValue = (t, i) => t.AdditionalExpenseCurrency?.ToString().ToUpperInvariant() ?? "—", Alignment = XLAlignmentHorizontalValues.Center },
-            new() { Id = "AdditionalExpenseDescription", Header = "Əlavə Xərc Təsviri", GetValue = (t, i) => t.AdditionalExpenseDescription ?? "—", Alignment = XLAlignmentHorizontalValues.Left },
-            new() { Id = "HistoricalExchangeRate", Header = "Məzənnə", GetValue = (t, i) => (double)t.HistoricalExchangeRate, NumberFormat = "0.000000", Alignment = XLAlignmentHorizontalValues.Right },
-            new() { Id = "HistoricalTotalExpenseUsd", Header = "Ümumi Xərc (USD)", GetValue = (t, i) => (double)t.HistoricalTotalExpenseUsd, NumberFormat = "$#,##0.00", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.HistoricalTotalExpenseUsd },
-            new() { Id = "ProfitPerTon", Header = "Ton Başına Qazanc", GetValue = (t, i) => (double)t.ProfitPerTon, NumberFormat = "#,##0.00", Alignment = XLAlignmentHorizontalValues.Right },
+            new() { Id = "TransportTotalCost", Header = "Cəmi Nəqliyyat Xərci", GetValue = (t, i) => {
+                decimal total = (t.PricePerVehicle ?? 0m) * (t.VehicleCount ?? 0);
+                return $"{total:N2} {(t.TransportCurrency == PaymentCurrency.Rub ? "₽" : "$")}";
+            }, Alignment = XLAlignmentHorizontalValues.Right },
+            new() { Id = "AdditionalExpenses", Header = "Əlavə Xərclər", GetValue = (t, i) => t.AdditionalExpenseFormatted, Alignment = XLAlignmentHorizontalValues.Center },
+            new() { Id = "AdditionalExpensesDetail", Header = "Əlavə Xərclər Təsviri", GetValue = (t, i) => t.AdditionalExpenseDescription, Alignment = XLAlignmentHorizontalValues.Left },
+            new() { Id = "AdditionalExpensesUnifiedUsd", Header = "Əlavə Xərclər (USD)", GetValue = (t, i) => (double)t.AdditionalExpensesUnifiedUsd, NumberFormat = "$#,##0.00", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.AdditionalExpensesUnifiedUsd },
+            new() { Id = "ProfitPerTon", Header = "Ton Başı Qazanc", GetValue = (t, i) => (double)t.ProfitPerTon, NumberFormat = "#,##0.00", Alignment = XLAlignmentHorizontalValues.Right },
             new() { Id = "ProfitPerTonCurrency", Header = "Qazanc Valyutası", GetValue = (t, i) => t.ProfitPerTonCurrency.ToString().ToUpperInvariant(), Alignment = XLAlignmentHorizontalValues.Center },
-            new() { Id = "HistoricalUserProfitUsd", Header = "Şirkət Qazancı (USD)", GetValue = (t, i) => (double)t.HistoricalUserProfitUsd, NumberFormat = "$#,##0.00", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.HistoricalUserProfitUsd },
-            new() { Id = "HistoricalCustomerBilledUsd", Header = "Xərc + Qazanc (USD)", GetValue = (t, i) => (double)t.HistoricalCustomerBilledUsd, NumberFormat = "$#,##0.00", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.HistoricalCustomerBilledUsd },
-            new() { Id = "PaidAmount", Header = "Ödənilən Məbləğ", GetValue = (t, i) => (double)(t.PaidAmount ?? 0), NumberFormat = "#,##0.00", Alignment = XLAlignmentHorizontalValues.Right },
-            new() { Id = "PaidCurrency", Header = "Ödəniş Valyutası", GetValue = (t, i) => t.PaidCurrency.ToString().ToUpperInvariant(), Alignment = XLAlignmentHorizontalValues.Center },
-            new() { Id = "PaidInUsd", Header = "Ödəniş (USD)", GetValue = (t, i) => (double)t.PaidInUsd, NumberFormat = "$#,##0.00", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.PaidInUsd },
-            new() { Id = "PaidFromUsdAmount", Header = "Kassadan Ödəniş (USD)", GetValue = (t, i) => (double)(t.PaidFromUsdAmount ?? 0), NumberFormat = "$#,##0.00", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.PaidFromUsdAmount ?? 0m },
-            new() { Id = "PaidFromRubAmount", Header = "Kassadan Ödəniş (RUB)", GetValue = (t, i) => (double)(t.PaidFromRubAmount ?? 0), NumberFormat = "#,##0.00 ₽", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.PaidFromRubAmount ?? 0m },
-            new() { Id = "PaymentStatus", Header = "Ödəniş Statusu", GetValue = (t, i) => t.PaymentStatusDisplay, Alignment = XLAlignmentHorizontalValues.Center },
-            new() { Id = "HistoricalBalanceDeltaUsd", Header = "Balans Təsiri (USD)", GetValue = (t, i) => (double)t.HistoricalBalanceDeltaUsd, NumberFormat = "$#,##0.00", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.HistoricalBalanceDeltaUsd },
-            new() { Id = "ShipmentStatus", Header = "Göndərmə Statusu", GetValue = (t, i) => t.ShipmentStatusDisplay, Alignment = XLAlignmentHorizontalValues.Center },
+            new() { Id = "TotalProfit", Header = "Şirkət Qazancı", GetValue = (t, i) => {
+                decimal total = t.WeightTon * t.ProfitPerTon;
+                return $"{total:N2} {(t.ProfitPerTonCurrency == PaymentCurrency.Rub ? "₽" : "$")}";
+            }, Alignment = XLAlignmentHorizontalValues.Right },
+            new() { Id = "TotalBilledRub", Header = "Balansa Təsiri (RUB)", GetValue = (t, i) => (double)t.TotalBilledRub, NumberFormat = "#,##0.00 ₽", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.TotalBilledRub },
+            new() { Id = "TotalBilledUsd", Header = "Balansa Təsiri (USD)", GetValue = (t, i) => (double)t.TotalBilledUsd, NumberFormat = "$#,##0.00", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.TotalBilledUsd },
+            new() { Id = "HistoricalExchangeRate", Header = "Məzənnə (₽/$)", GetValue = (t, i) => (double)t.HistoricalExchangeRate, NumberFormat = "#,##0.00", Alignment = XLAlignmentHorizontalValues.Right },
+            new() { Id = "BaseCostUnifiedUsd", Header = "Maya Dəyəri (USD)", GetValue = (t, i) => (double)t.BaseCostUnifiedUsd, NumberFormat = "$#,##0.00", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.BaseCostUnifiedUsd },
+            new() { Id = "TotalExpenseUnifiedUsd", Header = "Ümumi Xərc (USD)", GetValue = (t, i) => (double)t.TotalExpenseUnifiedUsd, NumberFormat = "$#,##0.00", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.TotalExpenseUnifiedUsd },
+            new() { Id = "ProfitUnifiedUsd", Header = "Qazanc (USD)", GetValue = (t, i) => (double)t.ProfitUnifiedUsd, NumberFormat = "$#,##0.00", Alignment = XLAlignmentHorizontalValues.Right, IsSummable = true, GetSumValue = t => t.ProfitUnifiedUsd },
+            new() { Id = "ShipmentStatus", Header = "Status", GetValue = (t, i) => t.ShipmentStatusDisplay, Alignment = XLAlignmentHorizontalValues.Center },
             new() { Id = "LoadedDate", Header = "Yüklənmə Tarixi", GetValue = (t, i) => t.LoadedDate.HasValue ? t.LoadedDate.Value.ToString("yyyy-MM-dd") : "—", Alignment = XLAlignmentHorizontalValues.Center },
             new() { Id = "InTransitStartDate", Header = "Yola Çıxma Tarixi", GetValue = (t, i) => t.InTransitStartDate.HasValue ? t.InTransitStartDate.Value.ToString("yyyy-MM-dd") : "—", Alignment = XLAlignmentHorizontalValues.Center },
             new() { Id = "DeliveredDate", Header = "Çatdırılma Tarixi", GetValue = (t, i) => t.DeliveredDate.HasValue ? t.DeliveredDate.Value.ToString("yyyy-MM-dd") : "—", Alignment = XLAlignmentHorizontalValues.Center }
@@ -539,21 +593,19 @@ public class ExcelService : IExcelService
 
     private static TransactionReadResponse MapEntityToReadResponse(Transaction entity, string customerName)
     {
-        decimal paidInUsd = 0m;
-        if (entity.PaymentStatus == PaymentStatus.PaidFromBalance)
+        var expDtos = entity.AdditionalExpenses?.Select(e => new TransactionAdditionalExpenseDto
         {
-            decimal usdPart = entity.PaidFromUsdAmount ?? 0m;
-            decimal rubPart = entity.PaidFromRubAmount ?? 0m;
-            decimal rate = entity.HistoricalExchangeRate;
-            paidInUsd = usdPart + (rate > 0 ? rubPart / rate : 0m);
-        }
-        else if (entity.PaymentStatus != PaymentStatus.Unpaid)
-        {
-            decimal paidAmount = entity.PaidAmount ?? 0m;
-            paidInUsd = entity.PaidCurrency == PaymentCurrency.Rub
-                ? (entity.HistoricalExchangeRate > 0 ? paidAmount / entity.HistoricalExchangeRate : 0m)
-                : paidAmount;
-        }
+            Title = e.Title,
+            Type = e.ExpenseType,
+            AmountPerTon = e.AmountPerTon,
+            Currency = e.Currency,
+            TotalAmount = e.ExpenseType == AdditionalExpenseType.Fixed 
+                ? e.AmountPerTon 
+                : (entity.WeightTon * e.AmountPerTon)
+        }).ToList() ?? new List<TransactionAdditionalExpenseDto>();
+
+        decimal expRubTotal = expDtos.Where(e => e.Currency == PaymentCurrency.Rub).Sum(e => e.TotalAmount);
+        decimal expUsdTotal = expDtos.Where(e => e.Currency == PaymentCurrency.Usd).Sum(e => e.TotalAmount);
 
         return new TransactionReadResponse
         {
@@ -571,29 +623,24 @@ public class ExcelService : IExcelService
             TransportCurrency = entity.TransportCurrency,
             VehicleCount = entity.VehicleCount,
             PricePerVehicle = entity.PricePerVehicle,
-            PaidAmount = entity.PaidAmount,
-            PaidCurrency = entity.PaidCurrency,
-            HistoricalExchangeRate = entity.HistoricalExchangeRate,
-            HistoricalTotalExpenseUsd = entity.HistoricalTotalExpenseUsd,
-            HistoricalRemainingDebtUsd = entity.HistoricalRemainingDebtUsd,
-            PaidInUsd = paidInUsd,
+            DocumentPath = entity.DocumentPath,
             IsCompleted = entity.IsCompleted,
-            PaymentStatus = entity.PaymentStatus,
-            PaidFromUsdAmount = entity.PaidFromUsdAmount,
-            PaidFromRubAmount = entity.PaidFromRubAmount,
             ProfitPerTon = entity.ProfitPerTon,
             ProfitPerTonCurrency = entity.ProfitPerTonCurrency,
+            HistoricalExchangeRate = entity.HistoricalExchangeRate,
+            HistoricalTotalExpenseUsd = entity.HistoricalTotalExpenseUsd,
             HistoricalUserProfitUsd = entity.HistoricalUserProfitUsd,
             HistoricalCustomerBilledUsd = entity.HistoricalCustomerBilledUsd,
-            HistoricalBalanceDeltaUsd = entity.HistoricalBalanceDeltaUsd,
+            TotalBilledRub = entity.TotalBilledRub,
+            TotalBilledUsd = entity.TotalBilledUsd,
             ShipmentStatus = entity.ShipmentStatus,
             LoadedDate = entity.LoadedDate,
             InTransitStartDate = entity.InTransitStartDate,
             InTransitEndDate = entity.InTransitEndDate,
             DeliveredDate = entity.DeliveredDate,
-            AdditionalExpenseAmount = entity.AdditionalExpenseAmount,
-            AdditionalExpenseCurrency = entity.AdditionalExpenseCurrency,
-            AdditionalExpenseDescription = entity.AdditionalExpenseDescription
+            AdditionalExpenses = expDtos,
+            AdditionalExpensesRubTotal = expRubTotal,
+            AdditionalExpensesUsdTotal = expUsdTotal
         };
     }
 }

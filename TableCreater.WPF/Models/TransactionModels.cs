@@ -6,13 +6,26 @@ namespace TableCreater.WPF.Models;
 
 // ============================================================================
 // TRANSACTION DTOs / Records
-// Mapped from Java TransactionCreateDto, TransactionUpdateDto, TransactionReadDto,
-// TransactionUpdateReadDto, and TranslationExpenseDto.
+// Updated for dual-stream billing (RUB + USD independently) with dynamic
+// additional expenses (per-ton, multiple items).
 // ============================================================================
 
 /// <summary>
+/// DTO for a single additional expense item (per-ton or fixed).
+/// </summary>
+public record TransactionAdditionalExpenseDto
+{
+    public string Title { get; init; } = string.Empty;
+    public AdditionalExpenseType Type { get; init; } = AdditionalExpenseType.PerTon;
+    public decimal AmountPerTon { get; init; }
+    public PaymentCurrency Currency { get; init; } = PaymentCurrency.Usd;
+    public decimal TotalAmount { get; init; }
+}
+
+/// <summary>
 /// Request model for creating a new transaction.
-/// Mapped from Java TransactionCreateDto with Bean Validation annotations.
+/// Updated: No more PaymentStatus, PaidAmount, exchange rate input.
+/// Dual-stream billing with dynamic additional expenses.
 /// </summary>
 public record TransactionCreateRequest
 {
@@ -40,7 +53,7 @@ public record TransactionCreateRequest
     public TransportType TransportType { get; init; }
 
     /// <summary>
-    /// Nəqliyyat valyutası — manual seçilir, artıq avtomatik deyil.
+    /// Nəqliyyat valyutası — manual seçilir.
     /// </summary>
     [Required(ErrorMessage = "Nəqliyyat valyutası seçilməlidir")]
     public PaymentCurrency TransportCurrency { get; init; } = PaymentCurrency.Usd;
@@ -51,56 +64,13 @@ public record TransactionCreateRequest
     [Range(0, (double)decimal.MaxValue, ErrorMessage = "Nəqliyyat qiyməti mənfi ola bilməz")]
     public decimal? PricePerVehicle { get; init; }
 
-    [Required(ErrorMessage = "Ödəniş valyutası mütləqdir")]
-    public PaymentCurrency PaidCurrency { get; init; }
-
-    [Range(0, (double)decimal.MaxValue, ErrorMessage = "Ödənilən məbləğ mənfi ola bilməz")]
-    public decimal? PaidAmount { get; init; }
-
-    [Required, Range(0.0001, (double)decimal.MaxValue, ErrorMessage = "Məzənnə 0-dan böyük olmalıdır")]
-    public decimal HistoricalExchangeRate { get; init; }
-
-    // === Əlavə Xərclər (Additional Expenses) ===
+    // === Dinamik Əlavə Xərclər (ton başına, çox saylı) ===
+    public List<TransactionAdditionalExpenseDto> AdditionalExpenses { get; init; } = new();
 
     /// <summary>
-    /// Əlavə xərc məbləği. Nullable — mütləq deyil.
-    /// </summary>
-    [Range(0, (double)decimal.MaxValue, ErrorMessage = "Əlavə xərc mənfi ola bilməz")]
-    public decimal? AdditionalExpenseAmount { get; init; }
-
-    /// <summary>
-    /// Əlavə xərcin valyutası (USD və ya RUB).
-    /// </summary>
-    public PaymentCurrency? AdditionalExpenseCurrency { get; init; }
-
-    /// <summary>
-    /// Əlavə xərcin təsviri.
-    /// </summary>
-    public string? AdditionalExpenseDescription { get; init; }
-
-    /// <summary>
-    /// Local file path selected via OpenFileDialog (replaces MultipartFile from Java).
+    /// Local file path selected via OpenFileDialog.
     /// </summary>
     public string? DocumentFilePath { get; init; }
-
-    // === Kassadan Ödəniş ===
-
-    /// <summary>
-    /// Kassadan ödənişdə USD kassasından çıxılan məbləğ.
-    /// </summary>
-    public decimal? PaidFromUsdAmount { get; init; }
-
-    /// <summary>
-    /// Kassadan ödənişdə RUB kassasından çıxılan məbləğ.
-    /// </summary>
-    public decimal? PaidFromRubAmount { get; init; }
-
-    // === Ödəniş Statusu və Ton Başına Qazanc ===
-
-    /// <summary>
-    /// Ödəniş statusu: Paid (Ödənilib), Unpaid (Ödənilməyib), PaidFromBalance (Kassadan Ödənilsin).
-    /// </summary>
-    public PaymentStatus PaymentStatus { get; init; } = PaymentStatus.Paid;
 
     /// <summary>
     /// Şirkətin ton başına qazancı.
@@ -120,6 +90,17 @@ public record TransactionCreateRequest
     public DateOnly? InTransitEndDate { get; init; }
     public DateOnly? DeliveredDate { get; init; }
     public bool IsInTransitAutoDates { get; init; } = true;
+
+    // === Legacy fields (kept for backward compatibility, defaults used) ===
+    public decimal HistoricalExchangeRate { get; init; } = 1.0m;
+    public PaymentCurrency PaidCurrency { get; init; } = PaymentCurrency.Usd;
+    public decimal? PaidAmount { get; init; }
+    public PaymentStatus PaymentStatus { get; init; } = PaymentStatus.Unpaid;
+    public decimal? PaidFromUsdAmount { get; init; }
+    public decimal? PaidFromRubAmount { get; init; }
+    public decimal? AdditionalExpenseAmount { get; init; }
+    public PaymentCurrency? AdditionalExpenseCurrency { get; init; }
+    public string? AdditionalExpenseDescription { get; init; }
 }
 
 /// <summary>
@@ -137,8 +118,6 @@ public record ShipmentStatusUpdateRequest
 
 /// <summary>
 /// Request model for updating an existing transaction.
-/// Identical to TransactionCreateRequest with an additional IsCompleted flag.
-/// Mapped from Java TransactionUpdateDto.
 /// </summary>
 public record TransactionUpdateRequest : TransactionCreateRequest
 {
@@ -147,8 +126,7 @@ public record TransactionUpdateRequest : TransactionCreateRequest
 
 /// <summary>
 /// Response model returned when reading a transaction.
-/// Includes calculated historical financial data.
-/// Mapped from Java TransactionReadDto.
+/// Includes dual-stream billing totals and dynamic additional expenses.
 /// </summary>
 public record TransactionReadResponse
 {
@@ -187,6 +165,10 @@ public record TransactionReadResponse
     public decimal? PaidFromUsdAmount { get; init; }
     public decimal? PaidFromRubAmount { get; init; }
 
+    // === İkili Valyuta Hesablaşması ===
+    public decimal TotalBilledRub { get; init; }
+    public decimal TotalBilledUsd { get; init; }
+
     public string PaymentStatusDisplay => PaymentStatus switch
     {
         PaymentStatus.Paid => "Ödənilib",
@@ -195,7 +177,7 @@ public record TransactionReadResponse
         _ => PaymentStatus.ToString()
     };
 
-    // === UI Formatlanmış Dəyərlər (Xərc / Qazanc üslubunda) ===
+    // === UI Formatlanmış Dəyərlər ===
     public string PaidAmountFormatted => PaidAmount.HasValue
         ? $"{PaidAmount.Value:N0}{(PaidCurrency == PaymentCurrency.Rub ? "₽" : "$")}"
         : "0$";
@@ -204,16 +186,61 @@ public record TransactionReadResponse
         ? $"{PricePerVehicle.Value:N0}{(TransportCurrency == PaymentCurrency.Rub ? "₽" : "$")}"
         : "—";
 
-    public string AdditionalExpenseFormatted => AdditionalExpenseAmount.HasValue && AdditionalExpenseAmount.Value > 0
-        ? $"{AdditionalExpenseAmount.Value:N0}{(AdditionalExpenseCurrency == PaymentCurrency.Rub ? "₽" : "$")}"
-        : "—";
-
     public string PricePerTonRubFormatted => $"{PricePerTonRub:N0} ₽";
-
     public string WeightTonFormatted => $"{WeightTon:N2} T";
 
+    public string TotalBilledRubFormatted => $"{TotalBilledRub:N2} ₽";
+    public string TotalBilledUsdFormatted => $"${TotalBilledUsd:N2}";
     public string BilledUsdFormatted => $"${HistoricalCustomerBilledUsd:N2}";
     public string PaidUsdFormatted => $"${PaidInUsd:N2}";
+
+    // === Məhsul, Nəqliyyat və Qazanc Hesablamaları ===
+    /// <summary>
+    /// Malın Ümumi Dəyəri (RUB): Çəki * Ton Başı Qiymət
+    /// </summary>
+    public decimal GoodsTotalCostRub => WeightTon * PricePerTonRub;
+    public string GoodsTotalCostRubFormatted => $"{GoodsTotalCostRub:N2} ₽";
+    public string GoodsTotalCostFormula => $"{WeightTon:N2} T × {PricePerTonRub:N0} ₽";
+
+    /// <summary>
+    /// Cəmi Nəqliyyat Xərci: Sayı * Bir Vasitənin Qiyməti
+    /// </summary>
+    public decimal TransportTotalCost => (VehicleCount ?? 0) * (PricePerVehicle ?? 0m);
+    public string TransportTotalCostFormatted => $"{TransportTotalCost:N2}{(TransportCurrency == PaymentCurrency.Rub ? " ₽" : "$")}";
+
+    /// <summary>
+    /// Hesablanmış Ümumi Şirkət Qazancı: Çəki * Ton Başı Qazanc
+    /// </summary>
+    public decimal TotalProfitCalculated => WeightTon * ProfitPerTon;
+    public string TotalProfitCalculatedFormatted => $"{TotalProfitCalculated:N2}{(ProfitPerTonCurrency == PaymentCurrency.Rub ? " ₽" : "$")}";
+    public string ProfitFormula => $"{WeightTon:N2} T × {ProfitPerTon:N2}{(ProfitPerTonCurrency == PaymentCurrency.Rub ? " ₽" : "$")}";
+
+    // === Vahid Maliyyə (USD Ekvivalenti) ===
+    /// <summary>
+    /// Vahid Ümumi Xərc (Müştəri Hesabı): USD hesablanan + (RUB hesablanan / Məzənnə).
+    /// </summary>
+    public decimal TotalExpenseUnifiedUsd => TotalBilledUsd + (HistoricalExchangeRate > 0 ? TotalBilledRub / HistoricalExchangeRate : 0m);
+    public string TotalExpenseUnifiedUsdFormatted => $"${TotalExpenseUnifiedUsd:N2}";
+
+    /// <summary>
+    /// Şirkət Qazancı (USD): Vahid gəlir / profit (USD ekvivalenti).
+    /// </summary>
+    public decimal ProfitUnifiedUsd => HistoricalUserProfitUsd;
+    public string ProfitUnifiedUsdFormatted => $"${ProfitUnifiedUsd:N2}";
+
+    /// <summary>
+    /// Xalis Maya Dəyəri (USD): Ümumi Xərc - Qazanc.
+    /// </summary>
+    public decimal BaseCostUnifiedUsd => Math.Max(0m, TotalExpenseUnifiedUsd - ProfitUnifiedUsd);
+    public string BaseCostUnifiedUsdFormatted => $"${BaseCostUnifiedUsd:N2}";
+
+    /// <summary>
+    /// Vahid Əlavə Xərclər Cəmi (USD): Məzənnəyə uyğun olaraq USD ekvivalenti.
+    /// </summary>
+    public decimal AdditionalExpensesUnifiedUsd => AdditionalExpensesUsdTotal + (HistoricalExchangeRate > 0 ? AdditionalExpensesRubTotal / HistoricalExchangeRate : 0m);
+    public string AdditionalExpensesUnifiedUsdFormatted => $"${AdditionalExpensesUnifiedUsd:N2}";
+
+    public string HistoricalExchangeRateFormatted => HistoricalExchangeRate > 0 ? $"{HistoricalExchangeRate:N2} ₽" : "—";
 
     // === Göndərmə Statusu və Tarixlər ===
     public ShipmentStatus ShipmentStatus { get; init; } = ShipmentStatus.Pending;
@@ -255,16 +282,98 @@ public record TransactionReadResponse
         }
     }
 
-    // === Əlavə Xərclər ===
+    // === Dinamik Əlavə Xərclər ===
+    public List<TransactionAdditionalExpenseDto> AdditionalExpenses { get; init; } = new();
+    public decimal AdditionalExpensesRubTotal { get; init; }
+    public decimal AdditionalExpensesUsdTotal { get; init; }
+
+    // Legacy
     public decimal? AdditionalExpenseAmount { get; init; }
     public PaymentCurrency? AdditionalExpenseCurrency { get; init; }
-    public string? AdditionalExpenseDescription { get; init; }
     public decimal AdditionalExpenseUsd { get; init; }
+
+    public string AdditionalExpenseFormatted
+    {
+        get
+        {
+            if (AdditionalExpenses != null && AdditionalExpenses.Count > 0)
+            {
+                var rub = AdditionalExpensesRubTotal;
+                var usd = AdditionalExpensesUsdTotal;
+
+                if (rub > 0 && usd > 0)
+                {
+                    decimal totalUsd = usd + (HistoricalExchangeRate > 0 ? rub / HistoricalExchangeRate : 0m);
+                    return $"${usd:N0} + {rub:N0}₽ (${totalUsd:N2})";
+                }
+                if (rub > 0)
+                {
+                    decimal totalUsd = HistoricalExchangeRate > 0 ? rub / HistoricalExchangeRate : 0m;
+                    return totalUsd > 0 ? $"{rub:N0}₽ (${totalUsd:N2})" : $"{rub:N0}₽";
+                }
+                if (usd > 0)
+                {
+                    return $"${usd:N0}";
+                }
+            }
+
+            if (AdditionalExpenseAmount.HasValue && AdditionalExpenseAmount.Value > 0)
+            {
+                if (AdditionalExpenseCurrency == PaymentCurrency.Rub)
+                {
+                    decimal totalUsd = HistoricalExchangeRate > 0 ? AdditionalExpenseAmount.Value / HistoricalExchangeRate : 0m;
+                    return totalUsd > 0 ? $"{AdditionalExpenseAmount.Value:N0}₽ (${totalUsd:N2})" : $"{AdditionalExpenseAmount.Value:N0}₽";
+                }
+                return $"${AdditionalExpenseAmount.Value:N0}";
+            }
+
+            return "—";
+        }
+    }
+
+    public string AdditionalExpenseDescription
+    {
+        get
+        {
+            if (AdditionalExpenses != null && AdditionalExpenses.Count > 0)
+            {
+                var lines = AdditionalExpenses.Select(e =>
+                {
+                    string sym = e.Currency == PaymentCurrency.Rub ? "₽" : "$";
+                    if (e.Type == AdditionalExpenseType.Fixed)
+                    {
+                        return $"{e.Title} (Vahid): {e.AmountPerTon:N2}{sym}";
+                    }
+                    else
+                    {
+                        decimal total = e.TotalAmount > 0 ? e.TotalAmount : (WeightTon * e.AmountPerTon);
+                        return $"{e.Title} (Ton Başı): {WeightTon:N2}T × {e.AmountPerTon:N2}{sym} = {total:N2}{sym}";
+                    }
+                }).ToList();
+
+                if (HistoricalExchangeRate > 0 && AdditionalExpensesRubTotal > 0)
+                {
+                    decimal totalUsd = AdditionalExpensesUsdTotal + (AdditionalExpensesRubTotal / HistoricalExchangeRate);
+                    lines.Add("---");
+                    lines.Add($"Cəmi (USD Məzənnə ilə): ${totalUsd:N2}");
+                }
+
+                return string.Join(Environment.NewLine, lines);
+            }
+
+            if (!string.IsNullOrWhiteSpace(AdditionalExpenseDescriptionOriginal))
+                return AdditionalExpenseDescriptionOriginal;
+
+            return "Əlavə xərc yoxdur";
+        }
+        init => AdditionalExpenseDescriptionOriginal = value;
+    }
+
+    private string? AdditionalExpenseDescriptionOriginal { get; init; }
 }
 
 /// <summary>
 /// Response model for populating the transaction edit form.
-/// Mapped from Java TransactionUpdateReadDto.
 /// </summary>
 public record TransactionEditFormData
 {
@@ -285,7 +394,7 @@ public record TransactionEditFormData
     public bool IsCompleted { get; init; }
 
     // === Ödəniş Statusu və Qazanc ===
-    public PaymentStatus PaymentStatus { get; init; } = PaymentStatus.Paid;
+    public PaymentStatus PaymentStatus { get; init; } = PaymentStatus.Unpaid;
     public decimal ProfitPerTon { get; init; }
     public PaymentCurrency ProfitPerTonCurrency { get; init; } = PaymentCurrency.Usd;
 
@@ -301,7 +410,10 @@ public record TransactionEditFormData
     public DateOnly? DeliveredDate { get; init; }
     public bool IsInTransitAutoDates { get; init; } = true;
 
-    // === Əlavə Xərclər ===
+    // === Dinamik Əlavə Xərclər ===
+    public List<TransactionAdditionalExpenseDto> AdditionalExpenses { get; init; } = new();
+
+    // Legacy single expense (for old data)
     public decimal? AdditionalExpenseAmount { get; init; }
     public PaymentCurrency? AdditionalExpenseCurrency { get; init; }
     public string? AdditionalExpenseDescription { get; init; }
@@ -309,14 +421,14 @@ public record TransactionEditFormData
 
 /// <summary>
 /// Financial summary report for a date range or customer.
-/// Contains comprehensive financial metrics for the updated accounting engine.
+/// Updated with dual-stream (RUB + USD) totals.
 /// </summary>
 public record ExpenseIncomeReport
 {
-    /// <summary>Ümumi Xərc: Şirkətin çəkdiyi birbaşa xərclər (Maya + Daşıma + Əlavə xərc)</summary>
+    /// <summary>Ümumi Xərc: Şirkətin çəkdiyi birbaşa xərclər (Maya + Daşıma + Əlavə xərc) — USD ekvivalenti</summary>
     public decimal TotalExpenseUsd { get; init; }
 
-    /// <summary>Xərc + Qazanc: Müştəriyə hesablanan yekun məbləğ (TotalExpenseUsd + TotalUserProfitUsd)</summary>
+    /// <summary>Ümumi Xərc (Müştəri Hesabı): Müştəriyə hesablanan yekun məbləğ (USD ekvivalenti)</summary>
     public decimal TotalBilledUsd { get; init; }
 
     /// <summary>Şirkət Qazancı / Mənfəəti: Ton başına qazanc * Çəki (USD)</summary>
@@ -328,10 +440,10 @@ public record ExpenseIncomeReport
     /// <summary>Qalıq Balans Fərqi: TotalPaidUsd - TotalBilledUsd (mənfi = borc var)</summary>
     public decimal TotalBenefitUsd { get; init; }
 
-    /// <summary>Kassa Fərqi: TotalPaidUsd - TotalExpenseUsd (faktiki daxil olan pul - çıxan birbaşa xərc)</summary>
+    /// <summary>Kassa Fərqi: TotalPaidUsd - TotalExpenseUsd</summary>
     public decimal TotalCashFlowUsd { get; init; }
 
-    /// <summary>Müştəri Borcu: TotalBilledUsd > TotalPaidUsd olarsa fərq</summary>
+    /// <summary>Müştəri Borcu</summary>
     public decimal RemainingDebtUsd => TotalBilledUsd > TotalPaidUsd ? TotalBilledUsd - TotalPaidUsd : 0m;
 
     /// <summary>Ümumi tranzaksiya sayı</summary>
@@ -349,13 +461,20 @@ public record ExpenseIncomeReport
     /// <summary>Cəmi nəqliyyat vasitəsi sayı</summary>
     public int TotalVehicleCount { get; init; }
 
-    /// <summary>Mənfəət faizi (%): (TotalUserProfitUsd / TotalBilledUsd) * 100</summary>
+    /// <summary>Mənfəət faizi (%)</summary>
     public decimal ProfitMarginPercent => TotalBilledUsd > 0
         ? Math.Round((TotalUserProfitUsd / TotalBilledUsd) * 100m, 1)
         : 0m;
 
-    /// <summary>Ödəniş yığım faizi (%): (TotalPaidUsd / TotalBilledUsd) * 100</summary>
+    /// <summary>Ödəniş yığım faizi (%)</summary>
     public decimal CollectionRatePercent => TotalBilledUsd > 0
         ? Math.Round((TotalPaidUsd / TotalBilledUsd) * 100m, 1)
         : 0m;
+
+    // === İkili Valyuta Cəmləri ===
+    /// <summary>Cəmi RUB hesablaşması (bütün tranzaksiyalar)</summary>
+    public decimal TotalBilledRubSum { get; init; }
+
+    /// <summary>Cəmi USD hesablaşması (bütün tranzaksiyalar)</summary>
+    public decimal TotalBilledUsdSum { get; init; }
 }

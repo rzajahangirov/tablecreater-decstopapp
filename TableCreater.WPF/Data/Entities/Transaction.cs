@@ -183,6 +183,20 @@ public class Transaction
     /// </summary>
     public bool IsCompleted { get; set; }
 
+    // === İkili Valyuta Hesablaşması (Dual-Stream Billing) ===
+
+    /// <summary>
+    /// CALCULATED: Müştəriyə hesablanan cəmi RUB məbləği.
+    /// Formula: GoodsCostRub + TransportCost(RUB) + AdditionalExpenses(RUB) + Profit(RUB)
+    /// </summary>
+    public decimal TotalBilledRub { get; set; }
+
+    /// <summary>
+    /// CALCULATED: Müştəriyə hesablanan cəmi USD məbləği.
+    /// Formula: TransportCost(USD) + AdditionalExpenses(USD) + Profit(USD)
+    /// </summary>
+    public decimal TotalBilledUsd { get; set; }
+
     // === Göndərmə Statusu və İzləmə (Shipment Tracking) ===
 
     /// <summary>
@@ -227,4 +241,9 @@ public class Transaction
     /// Navigation property: custom field values for dynamic columns.
     /// </summary>
     public ICollection<CustomFieldValue> CustomFieldValues { get; set; } = new List<CustomFieldValue>();
+
+    /// <summary>
+    /// Navigation property: dinamik əlavə xərclər (ton başına).
+    /// </summary>
+    public ICollection<TransactionAdditionalExpense> AdditionalExpenses { get; set; } = new List<TransactionAdditionalExpense>();
 }

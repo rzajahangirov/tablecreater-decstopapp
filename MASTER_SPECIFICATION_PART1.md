@@ -164,7 +164,7 @@ public enum CustomerType {
 ```
 
 #### `ColumnInputType`
-```java
+```java 
 public enum ColumnInputType {
     MANUAL,      // User enters value manually
     CALCULATED   // System computes via formula

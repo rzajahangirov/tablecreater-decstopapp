@@ -108,28 +108,13 @@ Hər təklif **prioritet sırası** ilə verilir: 🔴 Kritik → 🟡 Vacib →
 **Təklif — Aşağıdakı bölmələr əlavə edilsin:**
 
 #### 4.1 — Hesab Tənzimləmələri
-- Cari istifadəçinin ad/soyadını redaktə etmə
 - Şifrə dəyişdirmə (köhnə şifrə + yeni şifrə + təsdiq)
 
-#### 4.2 — Defolt Məzənnə (Exchange Rate)
-- Defolt RUB→USD məzənnəsinin saxlanması
-- Yeni tranzaksiya yaratarkən bu məzənnə avtomatik doldurulsun
-- İstifadəçi istəsə dəyişə bilsin
 
 #### 4.3 — Məlumat Bazası Yedəkləmə (Database Backup)
 - "Yedəklə" düyməsi — `tablecreater.db` faylını `SaveFileDialog` ilə istənilən yerə kopyalasın
 - "Bərpa Et" düyməsi — `OpenFileDialog` ilə əvvəlki `.db` faylını bərpa etsin
 - Son yedəkləmə tarixi göstərilsin
-
-#### 4.4 — İstifadəçi İdarəetməsi (yalnız ADMIN rolu üçün)
-- Bütün istifadəçilərin siyahısı
-- Yeni istifadəçi yaratma
-- İstifadəçini aktiv/deaktiv etmə
-- İstifadəçinin rolunu dəyişmə (ADMIN / USER)
-
-> [!NOTE]
-> `User` entity-sində `IsActive` sahəsi artıq mövcuddur, istifadə olunmur. `Role` entity-si var amma UI-da heç bir rol idarəetməsi yoxdur.
-
 ---
 
 ### 🟡 5. Müştəri Siyahısı Səhifəsinə Əlavələr
@@ -198,11 +183,6 @@ Hər müştəri sırasında aşağıdakılar da göstərilsin:
 - Müştəri seçmədən ümumi hesabat generasiya etmə
 - Bütün müştərilərin xülasəsi: hər müştəri üçün Xərc, Gəlir, Balans bir cədvəldə
 
-#### 7.3 — Çap Funksiyası
-- Hesabat nəticəsini birbaşa çap etmə imkanı (Print)
-- Çap öncəsi baxış (Print Preview)
-
----
 
 ### 🟡 8. Excel İxracının (TransactionService.ExportCustomerTransactions) Tamamlanması
 

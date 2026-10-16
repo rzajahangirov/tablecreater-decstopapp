@@ -119,22 +119,23 @@
                         <DatePicker Grid.Column="3" x:Name="DpFilterTo" FontSize="12" Margin="0,0,12,0" 
                                     VerticalAlignment="Center" SelectedDateChanged="FilterInput_Changed"/>
 
-                        <!-- Ödəniş Statusu -->
-                        <TextBlock Grid.Column="4" Text="Ödəniş:" FontSize="12" Foreground="#475569" 
+                        <!-- Status (Göndərmə) -->
+                        <TextBlock Grid.Column="4" Text="Status:" FontSize="12" Foreground="#475569" 
                                    FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                        <ComboBox Grid.Column="5" x:Name="CmbFilterPayment" FontSize="12" Margin="0,0,12,0" 
+                        <ComboBox Grid.Column="5" x:Name="CmbFilterShipment" FontSize="12" Margin="0,0,12,0" 
                                   VerticalAlignment="Center" Padding="8,4" SelectionChanged="FilterInput_Changed">
                             <ComboBoxItem Content="Hamısı" Tag="All" IsSelected="True"/>
-                            <ComboBoxItem Content="Ödənilib" Tag="Paid"/>
-                            <ComboBoxItem Content="Kassadan Ödənilib" Tag="PaidFromBalance"/>
-                            <ComboBoxItem Content="Ödənilməyib" Tag="Unpaid"/>
+                            <ComboBoxItem Content="Gözləmədə" Tag="Pending"/>
+                            <ComboBoxItem Content="Yükləndi" Tag="Loaded"/>
+                            <ComboBoxItem Content="Yoldadır" Tag="InTransit"/>
+                            <ComboBoxItem Content="Çatdı" Tag="Delivered"/>
                         </ComboBox>
 
                         <!-- Axtarış -->
                         <TextBlock Grid.Column="6" Text="Axtarış:" FontSize="12" Foreground="#475569" 
                                    FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,6,0"/>
                         <TextBox Grid.Column="7" x:Name="TxtFilterSearch" FontSize="12" Margin="0,0,12,0" 
-                                 VerticalAlignment="Center" Padding="8,4" TextChanged="FilterSearch_TextChanged"/>
+                                  VerticalAlignment="Center" Padding="8,4" TextChanged="FilterSearch_TextChanged"/>
 
                         <!-- Təmizlə -->
                         <Button Grid.Column="9" Click="BtnClearFilter_Click"
@@ -294,7 +295,7 @@
                         </DataGridTextColumn>
 
                         <!-- Məhsul -->
-                        <DataGridTextColumn Header="Məhsul" Binding="{Binding ProductName}" Width="130" IsReadOnly="True">
+                        <DataGridTextColumn Header="Məhsul" Binding="{Binding ProductName}" Width="125" IsReadOnly="True">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="FontWeight" Value="SemiBold"/>
@@ -305,7 +306,17 @@
                         </DataGridTextColumn>
 
                         <!-- Göndərən -->
-                        <DataGridTextColumn Header="Göndərən" Binding="{Binding SendingCompany}" Width="100" IsReadOnly="True">
+                        <DataGridTextColumn Header="Göndərən" Binding="{Binding SendingCompany}" Width="95" IsReadOnly="True">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center"/>
+                                    <Setter Property="Foreground" Value="#475569"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- Qəbul Edən -->
+                        <DataGridTextColumn Header="Qəbul Edən" Binding="{Binding ReceivingCompany}" Width="95" IsReadOnly="True">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="VerticalAlignment" Value="Center"/>
@@ -315,7 +326,7 @@
                         </DataGridTextColumn>
 
                         <!-- Çəki -->
-                        <DataGridTextColumn Header="Çəki(T)" Binding="{Binding WeightTonFormatted}" Width="70" IsReadOnly="True">
+                        <DataGridTextColumn Header="Çəki (T)" Binding="{Binding WeightTonFormatted}" Width="70" IsReadOnly="True">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="VerticalAlignment" Value="Center"/>
@@ -325,58 +336,143 @@
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
 
-                        <!-- Xərc+Qazanc -->
-                        <DataGridTextColumn Header="Xərc+Qazanc" Binding="{Binding BilledUsdFormatted}" Width="100" IsReadOnly="True">
+                        <!-- Əlavə Xərc -->
+                        <DataGridTextColumn Header="Əlavə Xərc" Binding="{Binding AdditionalExpenseFormatted}" Width="220" MinWidth="180" IsReadOnly="True">
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="VerticalAlignment" Value="Center"/>
-                                    <Setter Property="HorizontalAlignment" Value="Right"/>
-                                    <Setter Property="FontWeight" Value="Bold"/>
-                                    <Setter Property="Foreground" Value="#1A237E"/>
-                                </Style>
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
-
-                        <!-- Ödəniş -->
-                        <DataGridTextColumn Header="Ödəniş" Binding="{Binding PaidUsdFormatted}" Width="90" IsReadOnly="True">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="VerticalAlignment" Value="Center"/>
-                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                    <Setter Property="HorizontalAlignment" Value="Center"/>
                                     <Setter Property="FontWeight" Value="SemiBold"/>
-                                    <Setter Property="Foreground" Value="#2E7D32"/>
+                                    <Setter Property="Foreground" Value="#D97706"/>
+                                    <Setter Property="ToolTip" Value="{Binding AdditionalExpenseDescription}"/>
                                 </Style>
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
 
-                        <!-- Ödəniş Statusu -->
-                        <DataGridTemplateColumn Header="Status" Width="100" IsReadOnly="True">
+                        <!-- Əlavə Xərc (USD) -->
+                        <DataGridTemplateColumn Header="Əlavə Xərc (USD)" Width="120" IsReadOnly="True">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border CornerRadius="6" Padding="6,2" HorizontalAlignment="Right" Background="#FFFBEB">
+                                        <TextBlock Text="{Binding AdditionalExpensesUnifiedUsdFormatted}"
+                                                   FontWeight="Bold"
+                                                   FontSize="11.5"
+                                                   Foreground="#B45309"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Balansa Təsiri RUB -->
+                        <DataGridTemplateColumn Header="Balansa Təsiri (RUB)" Width="130" IsReadOnly="True">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border CornerRadius="6" Padding="6,2" HorizontalAlignment="Right" Background="#FDF4FF">
+                                        <TextBlock Text="{Binding TotalBilledRubFormatted}"
+                                                   FontWeight="Bold"
+                                                   FontSize="11.5"
+                                                   Foreground="#A21CAF"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Balansa Təsiri USD -->
+                        <DataGridTemplateColumn Header="Balansa Təsiri (USD)" Width="130" IsReadOnly="True">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border CornerRadius="6" Padding="6,2" HorizontalAlignment="Right" Background="#EFF6FF">
+                                        <TextBlock Text="{Binding TotalBilledUsdFormatted}"
+                                                   FontWeight="Bold"
+                                                   FontSize="11.5"
+                                                   Foreground="#1D4ED8"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Ümumi Xərc (USD) -->
+                        <DataGridTemplateColumn Header="Ümumi Xərc (USD)" Width="120" IsReadOnly="True">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border CornerRadius="6" Padding="6,2" HorizontalAlignment="Right" Background="#EEF2FF">
+                                        <TextBlock Text="{Binding TotalExpenseUnifiedUsdFormatted}"
+                                                   FontWeight="Bold"
+                                                   FontSize="11.5"
+                                                   Foreground="#4338CA"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Maya Dəyəri (USD) -->
+                        <DataGridTemplateColumn Header="Maya Dəyəri (USD)" Width="120" IsReadOnly="True">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border CornerRadius="6" Padding="6,2" HorizontalAlignment="Right" Background="#FFFBEB">
+                                        <TextBlock Text="{Binding BaseCostUnifiedUsdFormatted}"
+                                                   FontWeight="Bold"
+                                                   FontSize="11.5"
+                                                   Foreground="#B45309"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Qazanc (USD) -->
+                        <DataGridTemplateColumn Header="Qazanc (USD)" Width="110" IsReadOnly="True">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border CornerRadius="6" Padding="6,2" HorizontalAlignment="Right" Background="#F0FDF4">
+                                        <TextBlock Text="{Binding ProfitUnifiedUsdFormatted}"
+                                                   FontWeight="Bold"
+                                                   FontSize="11.5"
+                                                   Foreground="#15803D"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Göndərmə Statusu -->
+                        <DataGridTemplateColumn Header="Status" Width="95" IsReadOnly="True">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Border CornerRadius="10" Padding="8,3" HorizontalAlignment="Center">
                                         <Border.Style>
                                             <Style TargetType="Border">
-                                                <Setter Property="Background" Value="#FFEBEE"/>
+                                                <Setter Property="Background" Value="#FEF3C7"/>
                                                 <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding PaymentStatusDisplay}" Value="Ödənilib">
-                                                        <Setter Property="Background" Value="#E8F5E9"/>
+                                                    <DataTrigger Binding="{Binding ShipmentStatus}" Value="Delivered">
+                                                        <Setter Property="Background" Value="#DCFCE7"/>
                                                     </DataTrigger>
-                                                    <DataTrigger Binding="{Binding PaymentStatusDisplay}" Value="Kassadan Ödənilib">
-                                                        <Setter Property="Background" Value="#E0F2FE"/>
+                                                    <DataTrigger Binding="{Binding ShipmentStatus}" Value="InTransit">
+                                                        <Setter Property="Background" Value="#F3E8FF"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding ShipmentStatus}" Value="Loaded">
+                                                        <Setter Property="Background" Value="#DBEAFE"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
                                         </Border.Style>
-                                        <TextBlock Text="{Binding PaymentStatusDisplay}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Center">
+                                        <TextBlock Text="{Binding ShipmentStatusDisplay}" FontSize="10.5" FontWeight="Bold" HorizontalAlignment="Center">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
-                                                    <Setter Property="Foreground" Value="#C62828"/>
+                                                    <Setter Property="Foreground" Value="#B45309"/>
                                                     <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding PaymentStatusDisplay}" Value="Ödənilib">
-                                                             <Setter Property="Foreground" Value="#2E7D32"/>
+                                                        <DataTrigger Binding="{Binding ShipmentStatus}" Value="Delivered">
+                                                            <Setter Property="Foreground" Value="#15803D"/>
                                                         </DataTrigger>
-                                                        <DataTrigger Binding="{Binding PaymentStatusDisplay}" Value="Kassadan Ödənilib">
-                                                             <Setter Property="Foreground" Value="#0284C7"/>
+                                                        <DataTrigger Binding="{Binding ShipmentStatus}" Value="InTransit">
+                                                            <Setter Property="Foreground" Value="#7E22CE"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding ShipmentStatus}" Value="Loaded">
+                                                            <Setter Property="Foreground" Value="#1D4ED8"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -386,22 +482,11 @@
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
-
-                        <!-- Göndərmə Statusu -->
-                        <DataGridTextColumn Header="Göndərmə" Binding="{Binding ShipmentStatusDisplay}" Width="90" IsReadOnly="True">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="VerticalAlignment" Value="Center"/>
-                                    <Setter Property="Foreground" Value="#475569"/>
-                                    <Setter Property="FontSize" Value="11"/>
-                                </Style>
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
                     </DataGrid.Columns>
                 </DataGrid>
 
                 <!-- 4. SUMMARY BAR -->
-                <Border Grid.Row="3" Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="0,1,0,0" Padding="18,8">
+                <Border Grid.Row="3" Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Padding="18,10">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -411,19 +496,19 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,20,0">
-                            <TextBlock Text="Seçilmiş Xərc+Qazanc: " FontSize="12" Foreground="#64748B" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="TxtSelectedBilled" Text="$0.00" FontSize="13" FontWeight="Bold" Foreground="#1A237E" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,24,0">
+                            <TextBlock Text="Seçilmiş Çəki: " FontSize="12" Foreground="#64748B" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtSelectedWeight" Text="0.00 T" FontSize="13" FontWeight="Bold" Foreground="#0F766E" VerticalAlignment="Center"/>
                         </StackPanel>
 
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,20,0">
-                            <TextBlock Text="Seçilmiş Ödəniş: " FontSize="12" Foreground="#64748B" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="TxtSelectedPaid" Text="$0.00" FontSize="13" FontWeight="Bold" Foreground="#2E7D32" VerticalAlignment="Center"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,24,0">
+                            <TextBlock Text="Balansa Təsiri (USD): " FontSize="12" Foreground="#64748B" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtSelectedUsd" Text="$0.00" FontSize="13" FontWeight="Bold" Foreground="#1D4ED8" VerticalAlignment="Center"/>
                         </StackPanel>
 
                         <StackPanel Grid.Column="2" Orientation="Horizontal">
-                            <TextBlock Text="Seçilmiş Çəki: " FontSize="12" Foreground="#64748B" VerticalAlignment="Center"/>
-                            <TextBlock x:Name="TxtSelectedWeight" Text="0 T" FontSize="13" FontWeight="Bold" Foreground="#E65100" VerticalAlignment="Center"/>
+                            <TextBlock Text="Balansa Təsiri (RUB): " FontSize="12" Foreground="#64748B" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="TxtSelectedRub" Text="0.00 ₽" FontSize="13" FontWeight="Bold" Foreground="#A21CAF" VerticalAlignment="Center"/>
                         </StackPanel>
 
                         <CheckBox Grid.Column="4" x:Name="ChkAutoOpen" Content="İxracdan sonra faylı aç" IsChecked="True"

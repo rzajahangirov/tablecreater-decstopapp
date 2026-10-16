@@ -305,40 +305,25 @@
                         <Grid Margin="0,0,0,10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="130"/>
+                                <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
 
                             <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                                <TextBlock Text="İlkin Balans (istəyə bağlı)" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
-                                <ui:NumberBox Value="{Binding DialogInitialBalance, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                <TextBlock Text="İlkin USD Balans" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                                <ui:NumberBox Value="{Binding DialogInitialBalanceUsd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                               SpinButtonPlacementMode="Compact"
                                               Minimum="0"
                                               HorizontalAlignment="Stretch" Padding="8,6"/>
                             </StackPanel>
 
                             <StackPanel Grid.Column="1">
-                                <TextBlock Text="Valyuta" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
-                                <ComboBox ItemsSource="{Binding PaymentCurrencies}"
-                                          SelectedItem="{Binding DialogInitialBalanceCurrency, Mode=TwoWay}"
-                                          HorizontalAlignment="Stretch"
-                                          FontSize="14" Padding="10,8"
-                                          BorderBrush="#D1D1D1">
-                                    <ComboBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding Converter={StaticResource EnumToUpperConverter}}"/>
-                                        </DataTemplate>
-                                    </ComboBox.ItemTemplate>
-                                </ComboBox>
+                                <TextBlock Text="İlkin RUB Balans" FontSize="13" FontWeight="SemiBold" Margin="0,0,0,8" Foreground="#555"/>
+                                <ui:NumberBox Value="{Binding DialogInitialBalanceRub, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                              SpinButtonPlacementMode="Compact"
+                                              Minimum="0"
+                                              HorizontalAlignment="Stretch" Padding="8,6"/>
                             </StackPanel>
                         </Grid>
-
-                        <StackPanel Visibility="{Binding DialogInitialBalanceCurrency, Converter={StaticResource EnumEqualsToVisConverter}, ConverterParameter=Rub}">
-                            <TextBlock Text="Məzənnə (1 USD = ? RUB)" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,6" Foreground="#555"/>
-                            <ui:NumberBox Value="{Binding DialogInitialBalanceExchangeRate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                          SpinButtonPlacementMode="Compact"
-                                          Minimum="0.01" SmallChange="1"
-                                          HorizontalAlignment="Stretch" Padding="8,6"/>
-                        </StackPanel>
                     </StackPanel>
 
                     <Grid>

@@ -286,7 +286,19 @@ public partial class App : Application
                 Description TEXT,
                 FOREIGN KEY (CustomerId) REFERENCES Customers(Id) ON DELETE CASCADE,
                 FOREIGN KEY (TransactionId) REFERENCES Transactions(Id) ON DELETE SET NULL
-            );"
+            );",
+            // === Dual-Stream Billing & Dynamic Additional Expenses ===
+            @"CREATE TABLE IF NOT EXISTS TransactionAdditionalExpenses (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                TransactionId INTEGER NOT NULL,
+                Title TEXT NOT NULL,
+                AmountPerTon REAL NOT NULL DEFAULT 0,
+                Currency TEXT NOT NULL DEFAULT 'Usd',
+                FOREIGN KEY (TransactionId) REFERENCES Transactions(Id) ON DELETE CASCADE
+            );",
+            "ALTER TABLE Transactions ADD COLUMN TotalBilledRub REAL NOT NULL DEFAULT 0;",
+            "ALTER TABLE Transactions ADD COLUMN TotalBilledUsd REAL NOT NULL DEFAULT 0;",
+            "ALTER TABLE TransactionAdditionalExpenses ADD COLUMN ExpenseType TEXT NOT NULL DEFAULT 'PerTon';"
         ];
 
         foreach (var sql in migrationQueries)

@@ -10,11 +10,89 @@ using TableCreater.WPF.Services;
 namespace TableCreater.WPF.ViewModels.Transactions;
 
 /// <summary>
+/// ViewModel for a single dynamic additional expense item in the transaction form.
+/// </summary>
+public partial class AdditionalExpenseItemViewModel : ObservableObject
+{
+    private readonly Action _recalculateCallback;
+
+    public AdditionalExpenseItemViewModel(Action recalculateCallback)
+    {
+        _recalculateCallback = recalculateCallback;
+    }
+
+    [ObservableProperty]
+    private string _title = string.Empty;
+
+    [ObservableProperty]
+    private AdditionalExpenseType _type = AdditionalExpenseType.PerTon;
+
+    [ObservableProperty]
+    private decimal _amountPerTon;
+
+    [ObservableProperty]
+    private PaymentCurrency _currency = PaymentCurrency.Usd;
+
+    [ObservableProperty]
+    private decimal _liveTotalAmount;
+
+    public static readonly PaymentCurrency[] AvailableCurrencies = new[] { PaymentCurrency.Usd, PaymentCurrency.Rub };
+    public PaymentCurrency[] Currencies => AvailableCurrencies;
+
+    public bool IsPerTon => Type == AdditionalExpenseType.PerTon;
+    public bool IsFixed => Type == AdditionalExpenseType.Fixed;
+
+    public bool IsUsd => Currency == PaymentCurrency.Usd;
+    public bool IsRub => Currency == PaymentCurrency.Rub;
+    public string CurrencySymbol => Currency == PaymentCurrency.Rub ? "₽" : "$";
+    public string Uid { get; } = Guid.NewGuid().ToString("N");
+
+    [RelayCommand]
+    public void SetPerTon()
+    {
+        Type = AdditionalExpenseType.PerTon;
+    }
+
+    [RelayCommand]
+    public void SetFixed()
+    {
+        Type = AdditionalExpenseType.Fixed;
+    }
+
+    [RelayCommand]
+    public void SetUsd()
+    {
+        Currency = PaymentCurrency.Usd;
+    }
+
+    [RelayCommand]
+    public void SetRub()
+    {
+        Currency = PaymentCurrency.Rub;
+    }
+
+    partial void OnTypeChanged(AdditionalExpenseType value)
+    {
+        OnPropertyChanged(nameof(IsPerTon));
+        OnPropertyChanged(nameof(IsFixed));
+        _recalculateCallback();
+    }
+
+    partial void OnAmountPerTonChanged(decimal value) => _recalculateCallback();
+
+    partial void OnCurrencyChanged(PaymentCurrency value)
+    {
+        OnPropertyChanged(nameof(IsUsd));
+        OnPropertyChanged(nameof(IsRub));
+        OnPropertyChanged(nameof(CurrencySymbol));
+        _recalculateCallback();
+    }
+}
+
+/// <summary>
 /// ViewModel for the Transaction Entry form.
-/// Implements the LIVE Calculation Engine from Section 5.1 — every input change
-/// immediately recalculates TotalExpenseUsd and RemainingDebtUsd in real-time.
-///
-/// Uses CommunityToolkit.Mvvm partial methods (OnXxxChanged) for reactive updates.
+/// Updated for dual-stream billing (RUB + USD independently) with
+/// dynamic per-ton additional expenses and no PaymentStatus selection.
 /// </summary>
 public partial class TransactionEntryViewModel : ObservableObject
 {
@@ -50,7 +128,6 @@ public partial class TransactionEntryViewModel : ObservableObject
 
     // =========================================================================
     // TRANSACTION INPUT FIELDS
-    // All fields trigger Recalculate() on change via partial OnXxxChanged methods.
     // =========================================================================
 
     [ObservableProperty]
@@ -72,11 +149,11 @@ public partial class TransactionEntryViewModel : ObservableObject
     private decimal _pricePerTonRub;
 
     [ObservableProperty]
+    private decimal _exchangeRate = 90.0m;
+
+    [ObservableProperty]
     private TransportType _transportType = TransportType.Truck;
 
-    /// <summary>
-    /// Nəqliyyat valyutası — manual seçilir, artıq avtomatik TransportType-a görə deyil.
-    /// </summary>
     [ObservableProperty]
     private PaymentCurrency _transportCurrency = PaymentCurrency.Usd;
 
@@ -86,40 +163,9 @@ public partial class TransactionEntryViewModel : ObservableObject
     [ObservableProperty]
     private decimal _pricePerVehicle;
 
-    [ObservableProperty]
-    private PaymentCurrency _paidCurrency = PaymentCurrency.Usd;
-
-    [ObservableProperty]
-    private decimal _paidAmount;
-
-    [ObservableProperty]
-    private decimal _historicalExchangeRate = 1.0m;
-
     // =========================================================================
-    // ƏLAVƏ XƏRCLƏR (Additional Expenses)
+    // TON BAŞINA QAZANC
     // =========================================================================
-
-    [ObservableProperty]
-    private decimal _additionalExpenseAmount;
-
-    [ObservableProperty]
-    private PaymentCurrency _additionalExpenseCurrency = PaymentCurrency.Usd;
-
-    [ObservableProperty]
-    private string _additionalExpenseDescription = string.Empty;
-
-    // =========================================================================
-    // ÖDƏNİŞ STATUSU VƏ TON BAŞINA QAZANC
-    // =========================================================================
-
-    [ObservableProperty]
-    private PaymentStatus _paymentStatus = PaymentStatus.Paid;
-
-    [ObservableProperty]
-    private decimal _paidFromUsdAmount;
-
-    [ObservableProperty]
-    private decimal _paidFromRubAmount;
 
     [ObservableProperty]
     private decimal _profitPerTon;
@@ -127,7 +173,11 @@ public partial class TransactionEntryViewModel : ObservableObject
     [ObservableProperty]
     private PaymentCurrency _profitPerTonCurrency = PaymentCurrency.Usd;
 
-    public PaymentStatus[] PaymentStatuses => Enum.GetValues<PaymentStatus>();
+    // =========================================================================
+    // DİNAMİK ƏLAVƏ XƏRCLƏR (ton başına, çox saylı)
+    // =========================================================================
+
+    public ObservableCollection<AdditionalExpenseItemViewModel> AdditionalExpenses { get; } = new();
 
     // =========================================================================
     // GÖNDƏRMƏ STATUSU VƏ TARİXLƏR (Shipment Tracking)
@@ -167,12 +217,60 @@ public partial class TransactionEntryViewModel : ObservableObject
     private bool _hasDocument;
 
     // =========================================================================
-    // LIVE CALCULATION OUTPUTS (Read-only, updated reactively)
+    // LIVE CALCULATION OUTPUTS — İKİLİ VALYUTA (RUB + USD müstəqil)
     // =========================================================================
 
+    // --- RUB Axını ---
     [ObservableProperty]
     private decimal _liveGoodsCostRub;
 
+    [ObservableProperty]
+    private decimal _liveTransportCostRub;
+
+    [ObservableProperty]
+    private decimal _liveAdditionalExpensesRub;
+
+    [ObservableProperty]
+    private decimal _liveProfitRub;
+
+    [ObservableProperty]
+    private decimal _liveTotalBilledRub;
+
+    // --- USD Axını ---
+    [ObservableProperty]
+    private decimal _liveTransportCostUsd;
+
+    [ObservableProperty]
+    private decimal _liveAdditionalExpensesUsd;
+
+    [ObservableProperty]
+    private decimal _liveProfitUsd;
+
+    [ObservableProperty]
+    private decimal _liveTotalBilledUsd;
+
+    public decimal LiveNewRubBalance => CustomerRubBalance - LiveTotalBilledRub;
+    public decimal LiveNewUsdBalance => CustomerUsdBalance - LiveTotalBilledUsd;
+
+    public decimal LiveAdditionalExpensesUnifiedUsd => LiveAdditionalExpensesUsd + (ExchangeRate > 0 ? LiveAdditionalExpensesRub / ExchangeRate : 0m);
+
+    // --- Vahid Hesabat (Məzənnə ilə USD Ekvivalenti) ---
+    [ObservableProperty]
+    private decimal _liveBaseCostRub;
+
+    [ObservableProperty]
+    private decimal _liveBaseCostUsd;
+
+    [ObservableProperty]
+    private decimal _liveBaseCostUnifiedUsd;
+
+    [ObservableProperty]
+    private decimal _liveProfitUnifiedUsd;
+
+    [ObservableProperty]
+    private decimal _liveTotalExpenseUnifiedUsd;
+
+    // --- Legacy (backward compat for old calculation panel references) ---
     [ObservableProperty]
     private decimal _liveGoodsCostUsd;
 
@@ -180,40 +278,13 @@ public partial class TransactionEntryViewModel : ObservableObject
     private decimal _liveTransportCostRaw;
 
     [ObservableProperty]
-    private decimal _liveTransportCostUsd;
-
-    [ObservableProperty]
-    private decimal _liveAdditionalExpenseUsd;
-
-    [ObservableProperty]
     private decimal _liveTotalExpenseUsd;
-
-    [ObservableProperty]
-    private decimal _livePaidInUsd;
-
-    [ObservableProperty]
-    private decimal _liveRemainingDebtUsd;
 
     [ObservableProperty]
     private decimal _liveUserProfitUsd;
 
     [ObservableProperty]
     private decimal _liveCustomerBilledUsd;
-
-    [ObservableProperty]
-    private decimal _liveBalanceDeltaUsd;
-
-    /// <summary>
-    /// Friendly text: "Gəlir" (positive), "Zərər" (negative), or "Balans" (zero).
-    /// </summary>
-    [ObservableProperty]
-    private string _debtStatusText = "Gəlir";
-
-    /// <summary>
-    /// Color indicator: Green for Gəlir, Red for Zərər, Gray for balanced.
-    /// </summary>
-    [ObservableProperty]
-    private string _debtStatusColor = "#2E7D32";
 
     // =========================================================================
     // UI STATE
@@ -234,132 +305,120 @@ public partial class TransactionEntryViewModel : ObservableObject
     [ObservableProperty]
     private long _editTransactionId;
 
-    /// <summary>
-    /// Pre-set customer ID when navigating from customer detail view.
-    /// </summary>
     [ObservableProperty]
     private long? _presetCustomerId;
 
     // =========================================================================
-    // ENUM SOURCES (for ComboBox binding)
+    // ENUM SOURCES
     // =========================================================================
 
-    public TransportType[] TransportTypes => Enum.GetValues<TransportType>();
-    public PaymentCurrency[] PaymentCurrencies => Enum.GetValues<PaymentCurrency>();
+    public static TransportType[] TransportTypes { get; } = Enum.GetValues<TransportType>();
+    public static PaymentCurrency[] PaymentCurrencies { get; } = Enum.GetValues<PaymentCurrency>();
 
     // =========================================================================
-    // REACTIVE RECALCULATION — partial OnXxxChanged methods
-    // CommunityToolkit.Mvvm generates these hooks automatically.
-    // Every input change triggers instant recalculation.
+    // REACTIVE RECALCULATION — partial OnXxxChanged
     // =========================================================================
 
-    partial void OnWeightTonChanged(decimal value) => Recalculate();
+    partial void OnWeightTonChanged(decimal value) { UpdateExpenseTotals(); Recalculate(); }
     partial void OnPricePerTonRubChanged(decimal value) => Recalculate();
+    partial void OnExchangeRateChanged(decimal value) => Recalculate();
     partial void OnTransportTypeChanged(TransportType value) => Recalculate();
     partial void OnTransportCurrencyChanged(PaymentCurrency value) => Recalculate();
     partial void OnVehicleCountChanged(int value) => Recalculate();
     partial void OnPricePerVehicleChanged(decimal value) => Recalculate();
-    partial void OnPaidCurrencyChanged(PaymentCurrency value) => Recalculate();
-    partial void OnPaidAmountChanged(decimal value) => Recalculate();
-    partial void OnHistoricalExchangeRateChanged(decimal value) => Recalculate();
-    partial void OnAdditionalExpenseAmountChanged(decimal value) => Recalculate();
-    partial void OnPaymentStatusChanged(PaymentStatus value) => Recalculate();
-    partial void OnPaidFromUsdAmountChanged(decimal value) => Recalculate();
-    partial void OnPaidFromRubAmountChanged(decimal value) => Recalculate();
     partial void OnProfitPerTonChanged(decimal value) => Recalculate();
     partial void OnProfitPerTonCurrencyChanged(PaymentCurrency value) => Recalculate();
-    partial void OnAdditionalExpenseCurrencyChanged(PaymentCurrency value) => Recalculate();
+
+    /// <summary>
+    /// Updates LiveTotalAmount on each expense item based on current WeightTon.
+    /// </summary>
+    private void UpdateExpenseTotals()
+    {
+        foreach (var item in AdditionalExpenses)
+        {
+            item.LiveTotalAmount = item.Type == AdditionalExpenseType.PerTon 
+                ? (WeightTon * item.AmountPerTon) 
+                : item.AmountPerTon;
+        }
+    }
 
     // =========================================================================
-    // CORE CALCULATION ENGINE — Section 5.1 (Live Preview)
-    // Identical algorithm to TransactionService.CalculateHistoricalFields(),
-    // but operates on ViewModel properties for instant UI feedback.
+    // CORE CALCULATION ENGINE — İKİLİ VALYUTA (Dual-Stream)
     //
-    // UPDATED: Transport currency is now manual. Additional expenses included.
+    // RUB Stream: GoodsCost(RUB) + Transport(RUB) + AddlExpenses(RUB) + Profit(RUB)
+    // USD Stream: Transport(USD) + AddlExpenses(USD) + Profit(USD)
+    //
+    // Heç bir valyuta konvertasiyası yoxdur! Hər axın müstəqildir.
     // =========================================================================
 
     private void Recalculate()
     {
-        decimal rate = HistoricalExchangeRate > 0 ? HistoricalExchangeRate : 1m;
+        // === RUB AXINI ===
 
-        // Step 1 & 2: Goods Cost (rate = 1 USD = X RUB, so RUB / rate = USD)
+        // Mal dəyəri — həmişə RUB-dur
         LiveGoodsCostRub = WeightTon * PricePerTonRub;
-        LiveGoodsCostUsd = LiveGoodsCostRub / rate;
 
-        // Step 3 & 4: Transport Cost — manual currency selection
+        // Nəqliyyat RUB
         LiveTransportCostRaw = PricePerVehicle * VehicleCount;
-        LiveTransportCostUsd = TransportCurrency == PaymentCurrency.Rub
-            ? LiveTransportCostRaw / rate    // RUB → USD
-            : LiveTransportCostRaw;          // Already USD
+        LiveTransportCostRub = TransportCurrency == PaymentCurrency.Rub ? LiveTransportCostRaw : 0m;
 
-        // Step 5: Additional Expense
-        LiveAdditionalExpenseUsd = AdditionalExpenseAmount > 0
-            ? (AdditionalExpenseCurrency == PaymentCurrency.Rub
-                ? AdditionalExpenseAmount / rate
-                : AdditionalExpenseAmount)
-            : 0m;
-
-        // Step 6: Total Expense
-        LiveTotalExpenseUsd = LiveGoodsCostUsd + LiveTransportCostUsd + LiveAdditionalExpenseUsd;
-
-        // Step 7: Paid in USD
-        if (PaymentStatus == PaymentStatus.Unpaid)
+        // Əlavə xərclər RUB
+        LiveAdditionalExpensesRub = 0m;
+        foreach (var item in AdditionalExpenses)
         {
-            LivePaidInUsd = 0m;
-        }
-        else if (PaymentStatus == PaymentStatus.PaidFromBalance)
-        {
-            LivePaidInUsd = PaidFromUsdAmount + (PaidFromRubAmount / rate);
-        }
-        else
-        {
-            LivePaidInUsd = PaidCurrency == PaymentCurrency.Rub
-                ? PaidAmount / rate              // RUB → USD
-                : PaidAmount;                    // Already USD
+            if (item.Currency == PaymentCurrency.Rub)
+            {
+                LiveAdditionalExpensesRub += item.Type == AdditionalExpenseType.PerTon 
+                    ? (WeightTon * item.AmountPerTon) 
+                    : item.AmountPerTon;
+            }
         }
 
-        // Step 8: Remaining Debt
-        LiveRemainingDebtUsd = LivePaidInUsd - LiveTotalExpenseUsd;
+        // Qazanc RUB
+        LiveProfitRub = ProfitPerTonCurrency == PaymentCurrency.Rub
+            ? WeightTon * ProfitPerTon : 0m;
 
-        // Step 9: User Profit (ton başına qazanc)
-        decimal profitPerTonUsd = ProfitPerTonCurrency == PaymentCurrency.Rub
-            ? ProfitPerTon / rate
-            : ProfitPerTon;
-        LiveUserProfitUsd = WeightTon * profitPerTonUsd;
+        // Maya Dəyəri və Cəmi RUB
+        LiveBaseCostRub = LiveGoodsCostRub + LiveTransportCostRub + LiveAdditionalExpensesRub;
+        LiveTotalBilledRub = LiveBaseCostRub + LiveProfitRub;
 
-        // Step 10: Customer Billed
-        LiveCustomerBilledUsd = LiveTotalExpenseUsd + LiveUserProfitUsd;
+        // === USD AXINI ===
 
-        // Step 11: Balance Delta
-        if (PaymentStatus == PaymentStatus.Unpaid)
+        // Nəqliyyat USD
+        LiveTransportCostUsd = TransportCurrency == PaymentCurrency.Usd ? LiveTransportCostRaw : 0m;
+
+        // Əlavə xərclər USD
+        LiveAdditionalExpensesUsd = 0m;
+        foreach (var item in AdditionalExpenses)
         {
-            LiveBalanceDeltaUsd = -LiveCustomerBilledUsd;
-        }
-        else if (PaymentStatus == PaymentStatus.PaidFromBalance)
-        {
-            LiveBalanceDeltaUsd = (PaidFromRubAmount / rate) - LiveCustomerBilledUsd;
-        }
-        else
-        {
-            LiveBalanceDeltaUsd = LivePaidInUsd - LiveCustomerBilledUsd;
+            if (item.Currency == PaymentCurrency.Usd)
+            {
+                LiveAdditionalExpensesUsd += item.Type == AdditionalExpenseType.PerTon 
+                    ? (WeightTon * item.AmountPerTon) 
+                    : item.AmountPerTon;
+            }
         }
 
-        // Update status indicator
-        if (LiveBalanceDeltaUsd < 0)
-        {
-            DebtStatusText = "Borc";
-            DebtStatusColor = "#C62828";  // Red
-        }
-        else if (LiveBalanceDeltaUsd > 0)
-        {
-            DebtStatusText = "Avans";
-            DebtStatusColor = "#2E7D32";  // Green
-        }
-        else
-        {
-            DebtStatusText = "Balans";
-            DebtStatusColor = "#888888";    // Gray
-        }
+        // Qazanc USD
+        LiveProfitUsd = ProfitPerTonCurrency == PaymentCurrency.Usd
+            ? WeightTon * ProfitPerTon : 0m;
+
+        // Maya Dəyəri və Cəmi USD
+        LiveBaseCostUsd = LiveTransportCostUsd + LiveAdditionalExpensesUsd;
+        LiveTotalBilledUsd = LiveBaseCostUsd + LiveProfitUsd;
+
+        // === VAHİD HESABAT (RUB -> USD MƏZƏNNƏ İLƏ KONVERTASİYA) ===
+        decimal rate = ExchangeRate > 0 ? ExchangeRate : 1.0m;
+        LiveBaseCostUnifiedUsd = LiveBaseCostUsd + (LiveBaseCostRub / rate);
+        LiveProfitUnifiedUsd = LiveProfitUsd + (LiveProfitRub / rate);
+        LiveTotalExpenseUnifiedUsd = LiveTotalBilledUsd + (LiveTotalBilledRub / rate);
+
+        OnPropertyChanged(nameof(LiveNewRubBalance));
+        OnPropertyChanged(nameof(LiveNewUsdBalance));
+        OnPropertyChanged(nameof(LiveAdditionalExpensesUnifiedUsd));
+
+        // Update each item's live total
+        UpdateExpenseTotals();
 
         // Re-evaluate save command eligibility
         SaveCommand.NotifyCanExecuteChanged();
@@ -369,9 +428,6 @@ public partial class TransactionEntryViewModel : ObservableObject
     // COMMANDS
     // =========================================================================
 
-    /// <summary>
-    /// Loads the customer list for the selection ComboBox.
-    /// </summary>
     [RelayCommand]
     private async Task LoadCustomersAsync()
     {
@@ -380,7 +436,6 @@ public partial class TransactionEntryViewModel : ObservableObject
             var customers = await _customerService.GetAllCustomers();
             Customers = new ObservableCollection<CustomerReadResponse>(customers);
 
-            // If a preset customer ID was provided, auto-select it
             if (PresetCustomerId.HasValue)
             {
                 SelectedCustomer = Customers.FirstOrDefault(c => c.Id == PresetCustomerId.Value);
@@ -392,9 +447,6 @@ public partial class TransactionEntryViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Loads existing transaction data for editing.
-    /// </summary>
     [RelayCommand]
     private async Task LoadForEditAsync(long transactionId)
     {
@@ -412,23 +464,13 @@ public partial class TransactionEntryViewModel : ObservableObject
             SendingCompany = data.SendingCompany ?? string.Empty;
             WeightTon = data.WeightTon;
             PricePerTonRub = data.PricePerTonRub;
+            ExchangeRate = data.HistoricalExchangeRate > 0 ? data.HistoricalExchangeRate : 90.0m;
             TransportType = data.TransportType;
             TransportCurrency = data.TransportCurrency;
             VehicleCount = data.VehicleCount ?? 1;
             PricePerVehicle = data.PricePerVehicle ?? 0m;
-            PaidCurrency = data.PaidCurrency;
-            PaidAmount = data.PaidAmount ?? 0m;
-            HistoricalExchangeRate = data.HistoricalExchangeRate;
 
-            // Additional Expenses
-            AdditionalExpenseAmount = data.AdditionalExpenseAmount ?? 0m;
-            AdditionalExpenseCurrency = data.AdditionalExpenseCurrency ?? PaymentCurrency.Usd;
-            AdditionalExpenseDescription = data.AdditionalExpenseDescription ?? string.Empty;
-
-            // Payment Status & Profit
-            PaymentStatus = data.PaymentStatus;
-            PaidFromUsdAmount = data.PaidFromUsdAmount ?? 0m;
-            PaidFromRubAmount = data.PaidFromRubAmount ?? 0m;
+            // Profit
             ProfitPerTon = data.ProfitPerTon;
             ProfitPerTonCurrency = data.ProfitPerTonCurrency;
 
@@ -439,6 +481,36 @@ public partial class TransactionEntryViewModel : ObservableObject
             InTransitEndDate = data.InTransitEndDate?.ToDateTime(TimeOnly.MinValue);
             DeliveredDate = data.DeliveredDate?.ToDateTime(TimeOnly.MinValue);
             IsInTransitAutoDates = data.IsInTransitAutoDates;
+
+            // Dynamic Additional Expenses
+            AdditionalExpenses.Clear();
+            foreach (var exp in data.AdditionalExpenses)
+            {
+                var item = new AdditionalExpenseItemViewModel(Recalculate)
+                {
+                    Title = exp.Title,
+                    Type = exp.Type,
+                    AmountPerTon = exp.AmountPerTon,
+                    Currency = exp.Currency,
+                    LiveTotalAmount = exp.Type == AdditionalExpenseType.PerTon 
+                        ? (WeightTon * exp.AmountPerTon) 
+                        : exp.AmountPerTon
+                };
+                AdditionalExpenses.Add(item);
+            }
+
+            // Legacy single expense — convert to dynamic if present and no dynamic expenses loaded
+            if (AdditionalExpenses.Count == 0 && data.AdditionalExpenseAmount.HasValue && data.AdditionalExpenseAmount.Value > 0)
+            {
+                var legacyItem = new AdditionalExpenseItemViewModel(Recalculate)
+                {
+                    Title = data.AdditionalExpenseDescription ?? "Əlavə xərc",
+                    AmountPerTon = data.AdditionalExpenseAmount.Value,
+                    Currency = data.AdditionalExpenseCurrency ?? PaymentCurrency.Usd,
+                    LiveTotalAmount = WeightTon * data.AdditionalExpenseAmount.Value
+                };
+                AdditionalExpenses.Add(legacyItem);
+            }
 
             if (!string.IsNullOrEmpty(data.DocumentImageUrl))
             {
@@ -459,10 +531,6 @@ public partial class TransactionEntryViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Opens a file dialog to select a document (PDF/JPG/PNG).
-    /// Replaces Java's MultipartFile upload.
-    /// </summary>
     [RelayCommand]
     private void UploadFile()
     {
@@ -481,9 +549,6 @@ public partial class TransactionEntryViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Clears the selected document.
-    /// </summary>
     [RelayCommand]
     private void ClearFile()
     {
@@ -493,9 +558,51 @@ public partial class TransactionEntryViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Saves the transaction (create or update).
-    /// Can only execute when required fields are valid.
+    /// Adds a new blank additional expense item to the list.
     /// </summary>
+    [RelayCommand]
+    private void AddAdditionalExpense()
+    {
+        var item = new AdditionalExpenseItemViewModel(Recalculate)
+        {
+            LiveTotalAmount = 0m
+        };
+        AdditionalExpenses.Add(item);
+    }
+
+    /// <summary>
+    /// Removes a specific additional expense item from the list.
+    /// </summary>
+    [RelayCommand]
+    private void RemoveAdditionalExpense(AdditionalExpenseItemViewModel item)
+    {
+        AdditionalExpenses.Remove(item);
+        Recalculate();
+    }
+
+    /// <summary>
+    /// Builds the list of additional expense DTOs from the ViewModel collection.
+    /// </summary>
+    private List<TransactionAdditionalExpenseDto> BuildAdditionalExpenseDtos()
+    {
+        var list = new List<TransactionAdditionalExpenseDto>();
+        foreach (var item in AdditionalExpenses)
+        {
+            if (item.AmountPerTon > 0)
+            {
+                list.Add(new TransactionAdditionalExpenseDto
+                {
+                    Title = string.IsNullOrWhiteSpace(item.Title) ? "Əlavə xərc" : item.Title,
+                    Type = item.Type,
+                    AmountPerTon = item.AmountPerTon,
+                    Currency = item.Currency,
+                    TotalAmount = item.LiveTotalAmount
+                });
+            }
+        }
+        return list;
+    }
+
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveAsync()
     {
@@ -504,6 +611,8 @@ public partial class TransactionEntryViewModel : ObservableObject
             IsLoading = true;
             ErrorMessage = null;
             SuccessMessage = null;
+
+            var additionalExpenses = BuildAdditionalExpenseDtos();
 
             if (IsEditMode)
             {
@@ -519,17 +628,9 @@ public partial class TransactionEntryViewModel : ObservableObject
                     TransportCurrency = TransportCurrency,
                     VehicleCount = VehicleCount,
                     PricePerVehicle = PricePerVehicle,
-                    PaidCurrency = PaidCurrency,
-                    PaidAmount = PaymentStatus == PaymentStatus.Paid ? PaidAmount : null,
-                    PaidFromUsdAmount = PaymentStatus == PaymentStatus.PaidFromBalance ? PaidFromUsdAmount : null,
-                    PaidFromRubAmount = PaymentStatus == PaymentStatus.PaidFromBalance ? PaidFromRubAmount : null,
-                    HistoricalExchangeRate = HistoricalExchangeRate,
+                    HistoricalExchangeRate = ExchangeRate > 0 ? ExchangeRate : 1.0m,
                     DocumentFilePath = DocumentFilePath,
-                    AdditionalExpenseAmount = AdditionalExpenseAmount > 0 ? AdditionalExpenseAmount : null,
-                    AdditionalExpenseCurrency = AdditionalExpenseAmount > 0 ? AdditionalExpenseCurrency : null,
-                    AdditionalExpenseDescription = string.IsNullOrWhiteSpace(AdditionalExpenseDescription)
-                        ? null : AdditionalExpenseDescription,
-                    PaymentStatus = PaymentStatus,
+                    AdditionalExpenses = additionalExpenses,
                     ProfitPerTon = ProfitPerTon,
                     ProfitPerTonCurrency = ProfitPerTonCurrency,
                     ShipmentStatus = ShipmentStatus,
@@ -538,13 +639,14 @@ public partial class TransactionEntryViewModel : ObservableObject
                     InTransitEndDate = (ShipmentStatus == ShipmentStatus.Delivered && DeliveredDate.HasValue) ? DateOnly.FromDateTime(DeliveredDate.Value) : null,
                     DeliveredDate = DeliveredDate.HasValue ? DateOnly.FromDateTime(DeliveredDate.Value) : null,
                     IsInTransitAutoDates = true,
-                    IsCompleted = ShipmentStatus == ShipmentStatus.Delivered
+                    IsCompleted = ShipmentStatus == ShipmentStatus.Delivered,
+                    PaymentStatus = PaymentStatus.Unpaid,
+                    PaidCurrency = PaymentCurrency.Usd
                 };
 
                 await _transactionService.UpdateTransaction(EditTransactionId, request);
                 SuccessMessage = "Tranzaksiya uğurla yeniləndi!";
 
-                // Redirect to Customer Details
                 var customerId = SelectedCustomer!.Id;
                 var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
                 mainWindow?.NavigateToCustomerDetails(customerId);
@@ -563,17 +665,9 @@ public partial class TransactionEntryViewModel : ObservableObject
                     TransportCurrency = TransportCurrency,
                     VehicleCount = VehicleCount,
                     PricePerVehicle = PricePerVehicle,
-                    PaidCurrency = PaidCurrency,
-                    PaidAmount = PaymentStatus == PaymentStatus.Paid ? PaidAmount : null,
-                    PaidFromUsdAmount = PaymentStatus == PaymentStatus.PaidFromBalance ? PaidFromUsdAmount : null,
-                    PaidFromRubAmount = PaymentStatus == PaymentStatus.PaidFromBalance ? PaidFromRubAmount : null,
-                    HistoricalExchangeRate = HistoricalExchangeRate,
+                    HistoricalExchangeRate = ExchangeRate > 0 ? ExchangeRate : 1.0m,
                     DocumentFilePath = DocumentFilePath,
-                    AdditionalExpenseAmount = AdditionalExpenseAmount > 0 ? AdditionalExpenseAmount : null,
-                    AdditionalExpenseCurrency = AdditionalExpenseAmount > 0 ? AdditionalExpenseCurrency : null,
-                    AdditionalExpenseDescription = string.IsNullOrWhiteSpace(AdditionalExpenseDescription)
-                        ? null : AdditionalExpenseDescription,
-                    PaymentStatus = PaymentStatus,
+                    AdditionalExpenses = additionalExpenses,
                     ProfitPerTon = ProfitPerTon,
                     ProfitPerTonCurrency = ProfitPerTonCurrency,
                     ShipmentStatus = ShipmentStatus,
@@ -581,13 +675,14 @@ public partial class TransactionEntryViewModel : ObservableObject
                     InTransitStartDate = InTransitStartDate.HasValue ? DateOnly.FromDateTime(InTransitStartDate.Value) : null,
                     InTransitEndDate = (ShipmentStatus == ShipmentStatus.Delivered && DeliveredDate.HasValue) ? DateOnly.FromDateTime(DeliveredDate.Value) : null,
                     DeliveredDate = DeliveredDate.HasValue ? DateOnly.FromDateTime(DeliveredDate.Value) : null,
-                    IsInTransitAutoDates = true
+                    IsInTransitAutoDates = true,
+                    PaymentStatus = PaymentStatus.Unpaid,
+                    PaidCurrency = PaymentCurrency.Usd
                 };
 
                 await _transactionService.CreateTransaction(request, SelectedCustomer!.Id);
                 SuccessMessage = "Tranzaksiya uğurla yaradıldı!";
 
-                // Redirect to Customer Details
                 var customerId = SelectedCustomer.Id;
                 var mainWindow = System.Windows.Application.Current.MainWindow as MainWindow;
                 mainWindow?.NavigateToCustomerDetails(customerId);
@@ -603,20 +698,15 @@ public partial class TransactionEntryViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Validation: Save is only enabled when all required fields are filled.
-    /// </summary>
     private bool CanSave()
     {
         return SelectedCustomer != null
             && !string.IsNullOrWhiteSpace(ProductName)
             && !string.IsNullOrWhiteSpace(ReceivingCompany)
             && WeightTon > 0
-            && PricePerTonRub >= 0
-            && HistoricalExchangeRate > 0;
+            && PricePerTonRub >= 0;
     }
 
-    // Notify save eligibility on these changes too
     partial void OnSelectedCustomerChanged(CustomerReadResponse? value)
     {
         if (value != null)
@@ -630,14 +720,13 @@ public partial class TransactionEntryViewModel : ObservableObject
             CustomerUsdBalance = 0m;
             CustomerRubBalance = 0m;
         }
+        OnPropertyChanged(nameof(LiveNewRubBalance));
+        OnPropertyChanged(nameof(LiveNewUsdBalance));
         SaveCommand.NotifyCanExecuteChanged();
     }
     partial void OnProductNameChanged(string value) => SaveCommand.NotifyCanExecuteChanged();
     partial void OnReceivingCompanyChanged(string value) => SaveCommand.NotifyCanExecuteChanged();
 
-    /// <summary>
-    /// Resets the form to default values for a new entry.
-    /// </summary>
     [RelayCommand]
     private void ResetForm()
     {
@@ -651,14 +740,6 @@ public partial class TransactionEntryViewModel : ObservableObject
         TransportCurrency = PaymentCurrency.Usd;
         VehicleCount = 1;
         PricePerVehicle = 0;
-        PaidCurrency = PaymentCurrency.Usd;
-        PaidAmount = 0;
-        AdditionalExpenseAmount = 0;
-        AdditionalExpenseCurrency = PaymentCurrency.Usd;
-        AdditionalExpenseDescription = string.Empty;
-        PaymentStatus = PaymentStatus.Paid;
-        PaidFromUsdAmount = 0m;
-        PaidFromRubAmount = 0m;
         ProfitPerTon = 0;
         ProfitPerTonCurrency = PaymentCurrency.Usd;
         ShipmentStatus = ShipmentStatus.Pending;
@@ -667,7 +748,7 @@ public partial class TransactionEntryViewModel : ObservableObject
         InTransitEndDate = null;
         DeliveredDate = null;
         IsInTransitAutoDates = true;
-        // Keep exchange rate — user likely needs the same rate for multiple entries
+        AdditionalExpenses.Clear();
         ClearFile();
         ErrorMessage = null;
         SuccessMessage = null;

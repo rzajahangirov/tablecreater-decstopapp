@@ -581,4 +581,71 @@ public class IsCompletedToRowBackgroundConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
 }
 
+/// <summary>
+/// Converts a numeric value to Visibility.
+/// Greater than 0 → Visible, otherwise Collapsed.
+/// If parameter is "NotZero", checks num != 0.
+/// </summary>
+public class NumericGreaterThanZeroToVisibilityConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is null)
+            return Visibility.Collapsed;
+
+        try
+        {
+            decimal num = System.Convert.ToDecimal(value, CultureInfo.InvariantCulture);
+            if (parameter is string p && string.Equals(p, "NotZero", StringComparison.OrdinalIgnoreCase))
+            {
+                return num != 0 ? Visibility.Visible : Visibility.Collapsed;
+            }
+            return num > 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+        catch
+        {
+            return Visibility.Collapsed;
+        }
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+}
+
+/// <summary>
+/// Converts TransportType enum to localized Azerbaijani display text.
+/// Full: "Yük maşını (TIR)", "Vaqon (Dəmir yolu)", "Gəmi (Dəniz yolu)"
+/// Short (parameter="Short"): "TIR", "Vaqon", "Gəmi"
+/// </summary>
+public class TransportTypeToTextConverter : IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+    {
+        if (value is TableCreater.WPF.Enums.TransportType transportType)
+        {
+            if (parameter is string param && string.Equals(param, "Short", StringComparison.OrdinalIgnoreCase))
+            {
+                return transportType switch
+                {
+                    TableCreater.WPF.Enums.TransportType.Truck => "TIR",
+                    TableCreater.WPF.Enums.TransportType.Wagon => "Vaqon",
+                    TableCreater.WPF.Enums.TransportType.Ship => "Gəmi",
+                    _ => transportType.ToString()
+                };
+            }
+
+            return transportType switch
+            {
+                TableCreater.WPF.Enums.TransportType.Truck => "Yük maşını (TIR)",
+                TableCreater.WPF.Enums.TransportType.Wagon => "Vaqon (Dəmir yolu)",
+                TableCreater.WPF.Enums.TransportType.Ship => "Gəmi (Dəniz yolu)",
+                _ => transportType.ToString()
+            };
+        }
+        return value?.ToString() ?? string.Empty;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotImplementedException();
+}
+
+
 

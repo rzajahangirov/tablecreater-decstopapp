@@ -57,21 +57,18 @@ public partial class CustomerListViewModel : ObservableObject
     private bool _isEditMode;
 
     [ObservableProperty]
-    private decimal _dialogInitialBalance;
+    private decimal _dialogInitialBalanceUsd;
 
     [ObservableProperty]
-    private PaymentCurrency _dialogInitialBalanceCurrency = PaymentCurrency.Usd;
-
-    [ObservableProperty]
-    private decimal _dialogInitialBalanceExchangeRate = 1.0m;
+    private decimal _dialogInitialBalanceRub;
 
     [ObservableProperty]
     private string _statusFilter = "All"; // "All", "Active", "Inactive"
 
     private List<CustomerReadResponse> _allLoadedCustomers = new();
 
-    public PaymentCurrency[] PaymentCurrencies => Enum.GetValues<PaymentCurrency>();
-    public CustomerType[] CustomerTypes => Enum.GetValues<CustomerType>();
+    public static PaymentCurrency[] PaymentCurrencies { get; } = Enum.GetValues<PaymentCurrency>();
+    public static CustomerType[] CustomerTypes { get; } = Enum.GetValues<CustomerType>();
 
     // =========================================================================
     // COMMANDS
@@ -163,9 +160,8 @@ public partial class CustomerListViewModel : ObservableObject
         DialogName = string.Empty;
         DialogPhone = string.Empty;
         DialogType = CustomerType.Active;
-        DialogInitialBalance = 0;
-        DialogInitialBalanceCurrency = PaymentCurrency.Usd;
-        DialogInitialBalanceExchangeRate = 1.0m;
+        DialogInitialBalanceUsd = 0;
+        DialogInitialBalanceRub = 0;
         IsEditMode = false;
         IsDialogOpen = true;
     }
@@ -214,9 +210,8 @@ public partial class CustomerListViewModel : ObservableObject
                     {
                         Name = DialogName,
                         Phone = DialogPhone,
-                        InitialBalance = DialogInitialBalance != 0 ? DialogInitialBalance : null,
-                        InitialBalanceCurrency = DialogInitialBalanceCurrency,
-                        InitialExchangeRate = DialogInitialBalanceExchangeRate > 0 ? DialogInitialBalanceExchangeRate : 1.0m
+                        InitialBalanceUsd = DialogInitialBalanceUsd,
+                        InitialBalanceRub = DialogInitialBalanceRub
                     });
             }
 
