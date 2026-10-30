@@ -233,6 +233,7 @@ public partial class BalanceHistoryExportDialog : Window
 
         AddOption("Amount", "Dəyişiklik Məbləği", "💰 Məbləğ və Balans", isDefault: true);
         AddOption("BalanceAfter", "Yekun Balans (Əməliyyatdan Sonra)", "💰 Məbləğ və Balans", isDefault: true);
+        AddOption("ExchangeRate", "Məzənnə (USD/RUB)", "💰 Məbləğ və Balans", isDefault: true);
 
         AddOption("TransactionId", "Tranzaksiya ID (Varsa)", "🔗 Əlaqə və Qeydlər", isDefault: true);
         AddOption("Description", "Təsvir / Qeyd", "🔗 Əlaqə və Qeydlər", isDefault: true);

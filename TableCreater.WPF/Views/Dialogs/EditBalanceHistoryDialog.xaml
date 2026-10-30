@@ -1,0 +1,124 @@
+<Window x:Class="TableCreater.WPF.Views.Dialogs.EditBalanceHistoryDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Balans Əməliyyatını Redaktə Et"
+        Width="500" Height="460"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Background="#F8F9FA">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Header -->
+            <RowDefinition Height="*"/>    <!-- Content -->
+            <RowDefinition Height="Auto"/> <!-- Footer Buttons -->
+        </Grid.RowDefinitions>
+
+        <!-- HEADER -->
+        <Border Grid.Row="0" Background="#005FB8" Padding="24,18">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Width="40" Height="40" Background="#1A73E8" CornerRadius="20" Margin="0,0,14,0"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock Text="&#xE70F;" FontFamily="Segoe MDL2 Assets" FontSize="18" Foreground="White"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="Balans Əməliyyatını Redaktə Et" FontSize="18" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock x:Name="TxtSummary" Text="Əməliyyat məlumatları" FontSize="12" Foreground="#D0E2FF" Margin="0,2,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- CONTENT -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24,20">
+            <StackPanel>
+
+                <!-- Information Notice -->
+                <Border Background="#EBF3FB" BorderBrush="#B9D7F2" BorderThickness="1"
+                        CornerRadius="6" Padding="12,10" Margin="0,0,0,16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="16" Foreground="#005FB8"
+                                   VerticalAlignment="Top" Margin="0,1,10,0"/>
+                        <TextBlock Grid.Column="1" Text="Yalnız əməliyyat tarixi və qeyd/təsvir sahələri redaktə oluna bilər. Balans məbləğləri və qalıqlar dəyişməz saxlanılır."
+                                   FontSize="12" Foreground="#0F4C81" TextWrapping="Wrap"/>
+                    </Grid>
+                </Border>
+
+                <!-- Error Message -->
+                <Border x:Name="BorderError" Visibility="Collapsed" Background="#FFEBEE" BorderBrush="#C62828" BorderThickness="1"
+                        CornerRadius="6" Padding="14,10" Margin="0,0,0,16">
+                    <TextBlock x:Name="TxtError" Foreground="#C62828" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                </Border>
+
+                <!-- DATE & TIME -->
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="16"/>
+                        <ColumnDefinition Width="130"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- DatePicker -->
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Əməliyyat Tarixi" FontWeight="SemiBold" FontSize="13" Foreground="#333" Margin="0,0,0,6"/>
+                        <DatePicker x:Name="DpDate" HorizontalAlignment="Stretch" Padding="8,6" BorderBrush="#D1D1D1"/>
+                    </StackPanel>
+
+                    <!-- Time -->
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Saat (HH:mm)" FontWeight="SemiBold" FontSize="13" Foreground="#333" Margin="0,0,0,6"/>
+                        <TextBox x:Name="TxtTime" HorizontalAlignment="Stretch" Padding="8,6" BorderBrush="#D1D1D1"
+                                 ToolTip="Saat və dəqiqə (məsələn, 14:30)"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- DESCRIPTION -->
+                <StackPanel Margin="0,0,0,10">
+                    <TextBlock Text="Qeyd / Təsvir" FontWeight="SemiBold" FontSize="13" Foreground="#333" Margin="0,0,0,6"/>
+                    <TextBox x:Name="TxtDescription"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             Height="100"
+                             VerticalScrollBarVisibility="Auto"
+                             Padding="10,8"
+                             BorderBrush="#D1D1D1"
+                             MaxLength="1000"/>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- FOOTER BUTTONS -->
+        <Border Grid.Row="2" Background="White" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0" Padding="24,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="1" Content="Ləğv et" Click="BtnCancel_Click"
+                        Padding="20,9" Background="Transparent" Foreground="#666" BorderBrush="#D1D1D1" Margin="0,0,12,0"/>
+
+                <Button Grid.Column="2" x:Name="BtnSave" Click="BtnSave_Click"
+                        Padding="24,9" Background="#005FB8" Foreground="White" BorderThickness="0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE74E;" FontFamily="Segoe MDL2 Assets" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Yadda saxla" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

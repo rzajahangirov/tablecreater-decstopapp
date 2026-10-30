@@ -20,10 +20,10 @@ public class TransactionService : ITransactionService
 
     /// <summary>
     /// Directory where document attachments are stored.
-    /// Uses application base directory for portable isolation.
+    /// Uses centralized AppDataDirectory so uploads persist safely across portable publish builds.
     /// </summary>
     private static readonly string UploadsDirectory =
-        Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "uploads");
+        Path.Combine(App.AppDataDirectory, "uploads");
 
     public TransactionService(AppDbContext db, IExcelService? excelService = null)
     {
@@ -36,10 +36,9 @@ public class TransactionService : ITransactionService
         try
         {
             var oldUploads = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "TableCreater", "uploads");
+                AppDomain.CurrentDomain.BaseDirectory, "uploads");
 
-            if (Directory.Exists(oldUploads))
+            if (Directory.Exists(oldUploads) && !string.Equals(oldUploads, UploadsDirectory, StringComparison.OrdinalIgnoreCase))
             {
                 foreach (var file in Directory.GetFiles(oldUploads))
                 {
@@ -149,6 +148,7 @@ public class TransactionService : ITransactionService
         await _db.SaveChangesAsync();
 
         // === BALANCE DEDUCTION: Automatic direct charge to customer accounts ===
+        var txDateTime = entity.TransactionDate.ToDateTime(TimeOnly.FromDateTime(DateTime.Now));
         if (entity.TotalBilledRub > 0)
         {
             customer.BalanceRub -= entity.TotalBilledRub;
@@ -156,13 +156,14 @@ public class TransactionService : ITransactionService
             {
                 CustomerId = customer.Id,
                 TransactionId = entity.Id,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = txDateTime,
                 Type = BalanceTransactionType.TransactionCharge,
                 Currency = PaymentCurrency.Rub,
                 Amount = -entity.TotalBilledRub,
                 BalanceAfter = customer.BalanceRub,
                 AmountUsd = 0m,
                 BalanceAfterUsd = customer.BalanceUsd,
+                ExchangeRate = rate,
                 Description = $"Tranzaksiya #{entity.Id} — {entity.ProductName} (RUB xərci: -{entity.TotalBilledRub:N2} ₽)"
             });
         }
@@ -174,13 +175,14 @@ public class TransactionService : ITransactionService
             {
                 CustomerId = customer.Id,
                 TransactionId = entity.Id,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = txDateTime,
                 Type = BalanceTransactionType.TransactionCharge,
                 Currency = PaymentCurrency.Usd,
                 Amount = -entity.TotalBilledUsd,
                 BalanceAfter = customer.BalanceUsd,
                 AmountUsd = -entity.TotalBilledUsd,
                 BalanceAfterUsd = customer.BalanceUsd,
+                ExchangeRate = rate,
                 Description = $"Tranzaksiya #{entity.Id} — {entity.ProductName} (USD xərci: -${entity.TotalBilledUsd:N2})"
             });
         }
@@ -369,6 +371,18 @@ public class TransactionService : ITransactionService
         customer.BalanceRub -= entity.TotalBilledRub;
         customer.BalanceUsd -= entity.TotalBilledUsd;
 
+        var txDateTime = entity.TransactionDate.ToDateTime(TimeOnly.FromDateTime(DateTime.Now));
+
+        // Əgər tranzaksiya tarixi yenilənibsə, əlaqəli əvvəlki tarixçələrin də tarixini sinxronlaşdır
+        var relatedHistories = await _db.Set<CustomerBalanceHistory>()
+            .Where(h => h.TransactionId == entity.Id)
+            .ToListAsync();
+
+        foreach (var h in relatedHistories)
+        {
+            h.CreatedAt = entity.TransactionDate.ToDateTime(TimeOnly.FromTimeSpan(h.CreatedAt.TimeOfDay));
+        }
+
         decimal netRubDiff = oldBilledRub - entity.TotalBilledRub;
         if (netRubDiff != 0)
         {
@@ -376,13 +390,14 @@ public class TransactionService : ITransactionService
             {
                 CustomerId = customer.Id,
                 TransactionId = entity.Id,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = txDateTime,
                 Type = BalanceTransactionType.TransactionUpdate,
                 Currency = PaymentCurrency.Rub,
                 Amount = netRubDiff,
                 BalanceAfter = customer.BalanceRub,
                 AmountUsd = 0m,
                 BalanceAfterUsd = customer.BalanceUsd,
+                ExchangeRate = rate,
                 Description = $"Tranzaksiya #{entity.Id} yeniləndi (RUB balansı dəyişimi: {netRubDiff:+#,##0.00;-#,##0.00;0.00} ₽)"
             });
         }
@@ -394,13 +409,14 @@ public class TransactionService : ITransactionService
             {
                 CustomerId = customer.Id,
                 TransactionId = entity.Id,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = txDateTime,
                 Type = BalanceTransactionType.TransactionUpdate,
                 Currency = PaymentCurrency.Usd,
                 Amount = netUsdDiff,
                 BalanceAfter = customer.BalanceUsd,
                 AmountUsd = netUsdDiff,
                 BalanceAfterUsd = customer.BalanceUsd,
+                ExchangeRate = rate,
                 Description = $"Tranzaksiya #{entity.Id} yeniləndi (USD balansı dəyişimi: {netUsdDiff:+#,##0.00;-#,##0.00;0.00} $)"
             });
         }
@@ -508,40 +524,26 @@ public class TransactionService : ITransactionService
 
         var customer = entity.Customer;
 
-        if (entity.TotalBilledRub > 0)
+        // Balansları bərpa et (hesablanmış məbləğləri müştəriyə geri qaytar)
+        if (entity.TotalBilledRub != 0)
         {
             customer.BalanceRub += entity.TotalBilledRub;
-            _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
-            {
-                CustomerId = customer.Id,
-                TransactionId = entity.Id,
-                CreatedAt = DateTime.UtcNow,
-                Type = BalanceTransactionType.TransactionRollback,
-                Currency = PaymentCurrency.Rub,
-                Amount = entity.TotalBilledRub,
-                BalanceAfter = customer.BalanceRub,
-                AmountUsd = 0m,
-                BalanceAfterUsd = customer.BalanceUsd,
-                Description = $"Tranzaksiya #{entity.Id} silindi — RUB bərpa edildi (+{entity.TotalBilledRub:N2} ₽)"
-            });
         }
 
-        if (entity.TotalBilledUsd > 0)
+        if (entity.TotalBilledUsd != 0)
         {
             customer.BalanceUsd += entity.TotalBilledUsd;
-            _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
-            {
-                CustomerId = customer.Id,
-                TransactionId = entity.Id,
-                CreatedAt = DateTime.UtcNow,
-                Type = BalanceTransactionType.TransactionRollback,
-                Currency = PaymentCurrency.Usd,
-                Amount = entity.TotalBilledUsd,
-                BalanceAfter = customer.BalanceUsd,
-                AmountUsd = entity.TotalBilledUsd,
-                BalanceAfterUsd = customer.BalanceUsd,
-                Description = $"Tranzaksiya #{entity.Id} silindi — USD bərpa edildi (+${entity.TotalBilledUsd:N2})"
-            });
+        }
+
+        // Tranzaksiya silinəndə "dala qaytarıldı" qeydi əlavə EDİLMİR;
+        // Əvəzində həmin tranzaksiyaya aid tarixçədəki bütün qeydlər birbaşa silinir.
+        var relatedHistories = await _db.Set<CustomerBalanceHistory>()
+            .Where(h => h.TransactionId == entity.Id)
+            .ToListAsync();
+
+        if (relatedHistories.Count > 0)
+        {
+            _db.Set<CustomerBalanceHistory>().RemoveRange(relatedHistories);
         }
 
         _db.TransactionAdditionalExpenses.RemoveRange(entity.AdditionalExpenses);

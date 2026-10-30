@@ -50,7 +50,7 @@ public class CustomerService : ICustomerService
             _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
             {
                 CustomerId = entity.Id,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 Type = BalanceTransactionType.Initial,
                 Currency = PaymentCurrency.Usd,
                 Amount = initialBalanceUsd,
@@ -67,7 +67,7 @@ public class CustomerService : ICustomerService
             _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
             {
                 CustomerId = entity.Id,
-                CreatedAt = DateTime.UtcNow,
+                CreatedAt = DateTime.Now,
                 Type = BalanceTransactionType.Initial,
                 Currency = PaymentCurrency.Rub,
                 Amount = initialBalanceRub,
@@ -230,6 +230,17 @@ public class CustomerService : ICustomerService
 
         decimal amount = request.Amount;
         var currency = request.Currency;
+        DateTime operationDate;
+        if (request.OperationDate.HasValue)
+        {
+            var d = request.OperationDate.Value.Date;
+            var now = DateTime.Now;
+            operationDate = new DateTime(d.Year, d.Month, d.Day, now.Hour, now.Minute, now.Second);
+        }
+        else
+        {
+            operationDate = DateTime.Now;
+        }
 
         if (request.Type == BalanceTransactionType.Transfer)
         {
@@ -252,26 +263,28 @@ public class CustomerService : ICustomerService
                 var histUsd = new CustomerBalanceHistory
                 {
                     CustomerId = entity.Id,
-                    CreatedAt = DateTime.UtcNow,
+                    CreatedAt = operationDate,
                     Type = BalanceTransactionType.Transfer,
                     Currency = PaymentCurrency.Usd,
                     Amount = -usdOut,
                     BalanceAfter = entity.BalanceUsd,
                     AmountUsd = -usdOut,
                     BalanceAfterUsd = entity.BalanceUsd,
+                    ExchangeRate = rate,
                     Description = desc
                 };
 
                 var histRub = new CustomerBalanceHistory
                 {
                     CustomerId = entity.Id,
-                    CreatedAt = DateTime.UtcNow,
+                    CreatedAt = operationDate,
                     Type = BalanceTransactionType.Transfer,
                     Currency = PaymentCurrency.Rub,
                     Amount = rubIn,
                     BalanceAfter = entity.BalanceRub,
                     AmountUsd = 0m,
                     BalanceAfterUsd = entity.BalanceUsd,
+                    ExchangeRate = rate,
                     Description = desc
                 };
 
@@ -300,26 +313,28 @@ public class CustomerService : ICustomerService
                 var histRub = new CustomerBalanceHistory
                 {
                     CustomerId = entity.Id,
-                    CreatedAt = DateTime.UtcNow,
+                    CreatedAt = operationDate,
                     Type = BalanceTransactionType.Transfer,
                     Currency = PaymentCurrency.Rub,
                     Amount = -rubOut,
                     BalanceAfter = entity.BalanceRub,
                     AmountUsd = 0m,
                     BalanceAfterUsd = entity.BalanceUsd,
+                    ExchangeRate = rate,
                     Description = desc
                 };
 
                 var histUsd = new CustomerBalanceHistory
                 {
                     CustomerId = entity.Id,
-                    CreatedAt = DateTime.UtcNow,
+                    CreatedAt = operationDate,
                     Type = BalanceTransactionType.Transfer,
                     Currency = PaymentCurrency.Usd,
                     Amount = usdIn,
                     BalanceAfter = entity.BalanceUsd,
                     AmountUsd = usdIn,
                     BalanceAfterUsd = entity.BalanceUsd,
+                    ExchangeRate = rate,
                     Description = desc
                 };
 
@@ -390,7 +405,7 @@ public class CustomerService : ICustomerService
         _db.Set<CustomerBalanceHistory>().Add(new CustomerBalanceHistory
         {
             CustomerId = entity.Id,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = operationDate,
             Type = request.Type,
             Currency = currency,
             Amount = delta,
@@ -447,12 +462,26 @@ public class CustomerService : ICustomerService
             decimal effectiveAmount = h.Amount != 0 ? h.Amount : h.AmountUsd;
             decimal effectiveBalanceAfter = h.BalanceAfter != 0 ? h.BalanceAfter : h.BalanceAfterUsd;
 
+            decimal? exchangeRate = h.ExchangeRate;
+            if (!exchangeRate.HasValue && h.Transaction != null && h.Transaction.HistoricalExchangeRate > 0)
+            {
+                exchangeRate = h.Transaction.HistoricalExchangeRate;
+            }
+            else if (!exchangeRate.HasValue && h.Type == BalanceTransactionType.Transfer && !string.IsNullOrEmpty(h.Description))
+            {
+                var match = System.Text.RegularExpressions.Regex.Match(h.Description, @"Məzənnə:\s*([0-9]+[.,]?[0-9]*)");
+                if (match.Success && decimal.TryParse(match.Groups[1].Value.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var parsedRate))
+                {
+                    exchangeRate = parsedRate;
+                }
+            }
+
             return new CustomerBalanceHistoryResponse
             {
                 Id = h.Id,
                 CustomerId = h.CustomerId,
                 TransactionId = h.TransactionId,
-                CreatedAt = h.CreatedAt,
+                CreatedAt = h.CreatedAt.Kind == DateTimeKind.Utc ? h.CreatedAt.ToLocalTime() : h.CreatedAt,
                 Type = h.Type,
                 Currency = h.Currency,
                 Amount = effectiveAmount,
@@ -461,7 +490,8 @@ public class CustomerService : ICustomerService
                 BalanceAfterUsd = h.BalanceAfterUsd,
                 RelatedHistoryId = h.RelatedHistoryId,
                 Description = h.Description,
-                TransactionPaidAmountUsd = paidUsd
+                TransactionPaidAmountUsd = paidUsd,
+                ExchangeRate = exchangeRate
             };
         }).ToList();
     }
@@ -526,5 +556,35 @@ public class CustomerService : ICustomerService
         {
             customer.BalanceUsd -= amt;
         }
+    }
+
+    // =========================================================================
+    // C11 — UPDATE BALANCE HISTORY (Only CreatedAt and Description)
+    // =========================================================================
+
+    /// <inheritdoc />
+    public async Task UpdateBalanceHistory(UpdateBalanceHistoryRequest request)
+    {
+        var history = await _db.Set<CustomerBalanceHistory>().FindAsync(request.HistoryId)
+            ?? throw new InvalidOperationException("Balans əməliyyatı tapılmadı.");
+
+        DateTime operationDate = request.CreatedAt.Kind == DateTimeKind.Utc
+            ? request.CreatedAt.ToLocalTime()
+            : request.CreatedAt;
+
+        history.CreatedAt = operationDate;
+        history.Description = request.Description?.Trim();
+
+        // Əgər valyuta köçürməsidirsə, əlaqəli qarşı tərəfin qeydinin də tarixini eyni vaxta yenilə
+        if (history.Type == BalanceTransactionType.Transfer && history.RelatedHistoryId.HasValue)
+        {
+            var related = await _db.Set<CustomerBalanceHistory>().FindAsync(history.RelatedHistoryId.Value);
+            if (related != null)
+            {
+                related.CreatedAt = operationDate;
+            }
+        }
+
+        await _db.SaveChangesAsync();
     }
 }

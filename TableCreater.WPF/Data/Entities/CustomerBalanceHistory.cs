@@ -70,6 +70,11 @@ public class CustomerBalanceHistory
     public long? RelatedHistoryId { get; set; }
 
     /// <summary>
+    /// Əməliyyat zamanı istifadə olunan məzənnə (məs. Valyuta köçürməsi zamanı USD/RUB məzənnəsi).
+    /// </summary>
+    public decimal? ExchangeRate { get; set; }
+
+    /// <summary>
     /// Əməliyyat haqqında izahat və ya istifadəçi qeydi.
     /// </summary>
     [MaxLength(1000)]

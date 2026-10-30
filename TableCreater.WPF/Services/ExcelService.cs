@@ -301,20 +301,38 @@ public class ExcelService : IExcelService
                 .OrderByDescending(h => h.CreatedAt)
                 .ToListAsync();
 
-            list = entities.Select(e => new CustomerBalanceHistoryResponse
+            list = entities.Select(e =>
             {
-                Id = e.Id,
-                CustomerId = e.CustomerId,
-                TransactionId = e.TransactionId,
-                CreatedAt = e.CreatedAt,
-                Type = e.Type,
-                Currency = e.Currency,
-                Amount = e.Amount != 0 ? e.Amount : e.AmountUsd,
-                BalanceAfter = e.BalanceAfter != 0 ? e.BalanceAfter : e.BalanceAfterUsd,
-                AmountUsd = e.AmountUsd,
-                BalanceAfterUsd = e.BalanceAfterUsd,
-                RelatedHistoryId = e.RelatedHistoryId,
-                Description = e.Description
+                decimal? exchangeRate = e.ExchangeRate;
+                if (!exchangeRate.HasValue && e.Transaction != null && e.Transaction.HistoricalExchangeRate > 0)
+                {
+                    exchangeRate = e.Transaction.HistoricalExchangeRate;
+                }
+                else if (!exchangeRate.HasValue && e.Type == BalanceTransactionType.Transfer && !string.IsNullOrEmpty(e.Description))
+                {
+                    var match = System.Text.RegularExpressions.Regex.Match(e.Description, @"Məzənnə:\s*([0-9]+[.,]?[0-9]*)");
+                    if (match.Success && decimal.TryParse(match.Groups[1].Value.Replace(',', '.'), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var parsedRate))
+                    {
+                        exchangeRate = parsedRate;
+                    }
+                }
+
+                return new CustomerBalanceHistoryResponse
+                {
+                    Id = e.Id,
+                    CustomerId = e.CustomerId,
+                    TransactionId = e.TransactionId,
+                    CreatedAt = e.CreatedAt,
+                    Type = e.Type,
+                    Currency = e.Currency,
+                    Amount = e.Amount != 0 ? e.Amount : e.AmountUsd,
+                    BalanceAfter = e.BalanceAfter != 0 ? e.BalanceAfter : e.BalanceAfterUsd,
+                    AmountUsd = e.AmountUsd,
+                    BalanceAfterUsd = e.BalanceAfterUsd,
+                    RelatedHistoryId = e.RelatedHistoryId,
+                    ExchangeRate = exchangeRate,
+                    Description = e.Description
+                };
             }).ToList();
         }
 
@@ -466,6 +484,7 @@ public class ExcelService : IExcelService
             new() { Id = "Type", Header = "Əməliyyat Növü", Group = "Əsas", IsDefault = true, GetValue = (h, i) => FormatBalanceType(h.Type), Alignment = XLAlignmentHorizontalValues.Left },
             new() { Id = "Amount", Header = "Dəyişiklik Məbləği", Group = "Məbləğlər", IsDefault = true, GetValue = (h, i) => (double)(h.Amount != 0 ? h.Amount : h.AmountUsd), NumberFormat = "#,##0.00", Alignment = XLAlignmentHorizontalValues.Right },
             new() { Id = "BalanceAfter", Header = "Yekun Balans", Group = "Məbləğlər", IsDefault = true, GetValue = (h, i) => (double)(h.BalanceAfter != 0 ? h.BalanceAfter : h.BalanceAfterUsd), NumberFormat = "#,##0.00", Alignment = XLAlignmentHorizontalValues.Right },
+            new() { Id = "ExchangeRate", Header = "Məzənnə", Group = "Məbləğlər", IsDefault = true, GetValue = (h, i) => h.ExchangeRate.HasValue && h.ExchangeRate.Value > 0 ? (double)h.ExchangeRate.Value : (object)"—", NumberFormat = "#,##0.00", Alignment = XLAlignmentHorizontalValues.Right },
             new() { Id = "TransactionId", Header = "Tranzaksiya ID", Group = "Əlaqə", IsDefault = true, GetValue = (h, i) => h.TransactionId.HasValue ? $"#{h.TransactionId.Value}" : "—", Alignment = XLAlignmentHorizontalValues.Center },
             new() { Id = "Description", Header = "Təsvir / Qeyd", Group = "Əlaqə", IsDefault = true, GetValue = (h, i) => string.IsNullOrWhiteSpace(h.Description) ? "—" : h.Description, Alignment = XLAlignmentHorizontalValues.Left }
         };

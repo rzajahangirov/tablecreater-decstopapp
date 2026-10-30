@@ -32,8 +32,48 @@ public partial class App : Application
     /// </summary>
     public static ISecurityService Security { get; private set; } = null!;
 
-    private static string DbFilePath => Path.Combine(
-        AppDomain.CurrentDomain.BaseDirectory, "tablecreater.db");
+    /// <summary>
+    /// Permanent centralized data directory in LocalApplicationData.
+    /// Ensures database, credentials, and attachments persist safely across portable publish builds.
+    /// </summary>
+    public static string AppDataDirectory
+    {
+        get
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "TableCreater");
+            if (!Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+            return dir;
+        }
+    }
+
+    public static string DbFilePath
+    {
+        get
+        {
+            var localDb = Path.Combine(AppDataDirectory, "tablecreater.db");
+
+            // Migration: If LocalAppData DB does not exist, but app directory DB exists, copy it
+            if (!File.Exists(localDb))
+            {
+                var appDirDb = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tablecreater.db");
+                if (File.Exists(appDirDb))
+                {
+                    try
+                    {
+                        File.Copy(appDirDb, localDb, overwrite: false);
+                    }
+                    catch { }
+                }
+            }
+
+            return localDb;
+        }
+    }
 
     public App()
     {
@@ -51,8 +91,8 @@ public partial class App : Application
         TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
     }
 
-    private static readonly string CrashLogPath = Path.Combine(
-        AppDomain.CurrentDomain.BaseDirectory, "crash.log");
+    private static string CrashLogPath => Path.Combine(
+        AppDataDirectory, "crash.log");
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -298,7 +338,8 @@ public partial class App : Application
             );",
             "ALTER TABLE Transactions ADD COLUMN TotalBilledRub REAL NOT NULL DEFAULT 0;",
             "ALTER TABLE Transactions ADD COLUMN TotalBilledUsd REAL NOT NULL DEFAULT 0;",
-            "ALTER TABLE TransactionAdditionalExpenses ADD COLUMN ExpenseType TEXT NOT NULL DEFAULT 'PerTon';"
+            "ALTER TABLE TransactionAdditionalExpenses ADD COLUMN ExpenseType TEXT NOT NULL DEFAULT 'PerTon';",
+            "ALTER TABLE CustomerBalanceHistories ADD COLUMN ExchangeRate REAL;"
         ];
 
         foreach (var sql in migrationQueries)

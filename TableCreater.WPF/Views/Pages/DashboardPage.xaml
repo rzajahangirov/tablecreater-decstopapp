@@ -245,7 +245,7 @@
 
                             <DataGrid.RowStyle>
                                 <Style TargetType="DataGridRow">
-                                    <Setter Property="Height" Value="42"/>
+                                    <Setter Property="MinHeight" Value="42"/>
                                     <Setter Property="Background" Value="Transparent"/>
                                     <Setter Property="BorderBrush" Value="#F1F5F9"/>
                                     <Setter Property="BorderThickness" Value="0,0,0,1"/>
@@ -287,7 +287,7 @@
                                             <Setter Property="FontWeight" Value="SemiBold"/>
                                             <Setter Property="Foreground" Value="#0F172A"/>
                                             <Setter Property="VerticalAlignment" Value="Center"/>
-                                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                            <Setter Property="TextWrapping" Value="Wrap"/>
                                         </Style>
                                     </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>
@@ -298,7 +298,7 @@
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Foreground" Value="#475569"/>
                                             <Setter Property="VerticalAlignment" Value="Center"/>
-                                            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                            <Setter Property="TextWrapping" Value="Wrap"/>
                                         </Style>
                                     </DataGridTextColumn.ElementStyle>
                                 </DataGridTextColumn>

@@ -489,7 +489,7 @@
                                       HorizontalGridLinesBrush="#F1F5F9"
                                       BorderThickness="1"
                                       BorderBrush="#E2E8F0"
-                                      RowHeight="36"
+                                      MinRowHeight="36"
                                       FontSize="12"
                                       MaxHeight="400"
                                       Background="White">
@@ -508,7 +508,7 @@
 
                                 <DataGrid.RowStyle>
                                     <Style TargetType="DataGridRow">
-                                        <Setter Property="Height" Value="36"/>
+                                        <Setter Property="MinHeight" Value="36"/>
                                         <Setter Property="Background" Value="Transparent"/>
                                         <Setter Property="BorderBrush" Value="#F1F5F9"/>
                                         <Setter Property="BorderThickness" Value="0,0,0,1"/>
@@ -523,8 +523,22 @@
                                 <DataGrid.Columns>
                                     <DataGridTextColumn Header="#" Binding="{Binding Id}" Width="50"/>
                                     <DataGridTextColumn Header="Tarix" Binding="{Binding TransactionDate, StringFormat='dd.MM.yyyy'}" Width="85"/>
-                                    <DataGridTextColumn Header="Müştəri" Binding="{Binding CustomerName}" Width="130"/>
-                                    <DataGridTextColumn Header="Məhsul" Binding="{Binding ProductName}" Width="120"/>
+                                    <DataGridTextColumn Header="Müştəri" Binding="{Binding CustomerName}" Width="130">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                                <Setter Property="TextWrapping" Value="Wrap"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
+                                    <DataGridTextColumn Header="Məhsul" Binding="{Binding ProductName}" Width="130">
+                                        <DataGridTextColumn.ElementStyle>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="VerticalAlignment" Value="Center"/>
+                                                <Setter Property="TextWrapping" Value="Wrap"/>
+                                            </Style>
+                                        </DataGridTextColumn.ElementStyle>
+                                    </DataGridTextColumn>
                                     <DataGridTextColumn Header="Çəki" Binding="{Binding WeightTonFormatted}" Width="80"/>
                                     <DataGridTextColumn Header="Məzənnə" Binding="{Binding HistoricalExchangeRateFormatted}" Width="80"/>
                                     <DataGridTextColumn Header="Maya Dəyəri" Binding="{Binding BaseCostUnifiedUsdFormatted}" Width="105"/>
@@ -536,6 +550,7 @@
                                                 <Setter Property="Foreground" Value="#1E1B4B"/>
                                                 <Setter Property="VerticalAlignment" Value="Center"/>
                                                 <Setter Property="Padding" Value="6,0"/>
+                                                <Setter Property="TextWrapping" Value="Wrap"/>
                                             </Style>
                                         </DataGridTextColumn.ElementStyle>
                                     </DataGridTextColumn>

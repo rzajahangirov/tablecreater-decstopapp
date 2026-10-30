@@ -40,32 +40,30 @@ public class SecurityService : ISecurityService
 
     public SecurityService()
     {
+        var localAppDataDir = App.AppDataDirectory;
+        var localAppDataFile = Path.Combine(localAppDataDir, "security.json");
         var appDirFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "security.json");
-        var localAppDataFile = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "TableCreater", "security.json");
 
-        // Prefer portable app directory
-        if (File.Exists(appDirFile))
+        // Prefer persistent LocalAppData file so publishing / moving the app doesn't reset PIN
+        if (File.Exists(localAppDataFile))
         {
-            _securityFilePath = appDirFile;
+            _securityFilePath = localAppDataFile;
         }
-        // If it exists in LocalApplicationData from previous runs, migrate it to app directory
-        else if (File.Exists(localAppDataFile))
+        else if (File.Exists(appDirFile))
         {
             try
             {
-                File.Copy(localAppDataFile, appDirFile, overwrite: true);
-                _securityFilePath = appDirFile;
+                File.Copy(appDirFile, localAppDataFile, overwrite: false);
+                _securityFilePath = localAppDataFile;
             }
             catch
             {
-                _securityFilePath = localAppDataFile;
+                _securityFilePath = appDirFile;
             }
         }
         else
         {
-            _securityFilePath = appDirFile;
+            _securityFilePath = localAppDataFile;
         }
 
         EnsureEnvelopeInitialized();

@@ -82,6 +82,26 @@ public partial class CustomerDetailsPage : UserControl
     }
 
     /// <summary>
+    /// Open the balance history entry edit dialog (date and description only).
+    /// </summary>
+    private async void BtnEditBalanceHistory_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is CustomerBalanceHistoryResponse history && ViewModel != null)
+        {
+            var dialog = new Dialogs.EditBalanceHistoryDialog(history, ViewModel.CustomerService)
+            {
+                Owner = Window.GetWindow(this)
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                ViewModel.SuccessMessage = "Balans əməliyyatının tarixi və təsviri uğurla yeniləndi.";
+                await ViewModel.LoadBalanceHistoryAsync();
+            }
+        }
+    }
+
+    /// <summary>
     /// Open the shipment status update dialog for the selected transaction.
     /// </summary>
     private void BtnChangeStatus_Click(object sender, RoutedEventArgs e)

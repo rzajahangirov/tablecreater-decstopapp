@@ -181,6 +181,7 @@ public class AppDbContext : DbContext
             entity.Property(h => h.BalanceAfter).HasColumnType("REAL").HasDefaultValue(0m);
             entity.Property(h => h.AmountUsd).HasColumnType("REAL");
             entity.Property(h => h.BalanceAfterUsd).HasColumnType("REAL");
+            entity.Property(h => h.ExchangeRate).HasColumnType("REAL");
 
             entity.HasOne(h => h.Customer)
                   .WithMany(c => c.BalanceHistories)

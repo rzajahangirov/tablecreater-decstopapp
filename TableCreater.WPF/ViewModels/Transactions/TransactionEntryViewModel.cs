@@ -131,7 +131,7 @@ public partial class TransactionEntryViewModel : ObservableObject
     // =========================================================================
 
     [ObservableProperty]
-    private DateOnly _transactionDate = DateOnly.FromDateTime(DateTime.Today);
+    private DateTime? _transactionDate = DateTime.Today;
 
     [ObservableProperty]
     private string _productName = string.Empty;
@@ -458,7 +458,7 @@ public partial class TransactionEntryViewModel : ObservableObject
 
             var data = await _transactionService.GetTransactionForUpdate(transactionId);
 
-            TransactionDate = data.TransactionDate;
+            TransactionDate = data.TransactionDate.ToDateTime(TimeOnly.MinValue);
             ProductName = data.ProductName;
             ReceivingCompany = data.ReceivingCompany;
             SendingCompany = data.SendingCompany ?? string.Empty;
@@ -618,7 +618,7 @@ public partial class TransactionEntryViewModel : ObservableObject
             {
                 var request = new TransactionUpdateRequest
                 {
-                    TransactionDate = TransactionDate,
+                    TransactionDate = DateOnly.FromDateTime(TransactionDate ?? DateTime.Today),
                     ProductName = ProductName,
                     ReceivingCompany = ReceivingCompany,
                     SendingCompany = string.IsNullOrWhiteSpace(SendingCompany) ? null : SendingCompany,
@@ -655,7 +655,7 @@ public partial class TransactionEntryViewModel : ObservableObject
             {
                 var request = new TransactionCreateRequest
                 {
-                    TransactionDate = TransactionDate,
+                    TransactionDate = DateOnly.FromDateTime(TransactionDate ?? DateTime.Today),
                     ProductName = ProductName,
                     ReceivingCompany = ReceivingCompany,
                     SendingCompany = string.IsNullOrWhiteSpace(SendingCompany) ? null : SendingCompany,
@@ -730,7 +730,7 @@ public partial class TransactionEntryViewModel : ObservableObject
     [RelayCommand]
     private void ResetForm()
     {
-        TransactionDate = DateOnly.FromDateTime(DateTime.Today);
+        TransactionDate = DateTime.Today;
         ProductName = string.Empty;
         ReceivingCompany = string.Empty;
         SendingCompany = string.Empty;

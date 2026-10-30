@@ -56,6 +56,21 @@ public record CustomerBalanceAdjustmentRequest
     public PaymentCurrency TargetCurrency { get; init; } = PaymentCurrency.Rub;
     public decimal ExchangeRate { get; init; } = 1.0m;
     public string? Description { get; init; }
+    /// <summary>
+    /// Əməliyyat tarixi. Null olduqda cari vaxt istifadə olunur.
+    /// </summary>
+    public DateTime? OperationDate { get; init; }
+}
+
+/// <summary>
+/// Balans tarixçəsində yalnız tarix və təsvirin redaktə edilməsi üçün sorğu modeli.
+/// Maliyyə dəyərləri və qalıqlar toxunulmaz qalır.
+/// </summary>
+public record UpdateBalanceHistoryRequest
+{
+    public long HistoryId { get; init; }
+    public DateTime CreatedAt { get; init; }
+    public string? Description { get; init; }
 }
 
 /// <summary>
@@ -78,6 +93,18 @@ public record CustomerBalanceHistoryResponse
     public decimal? TransactionPaidAmountUsd { get; init; }
 
     /// <summary>
+    /// Əməliyyat zamanı istifadə olunan məzənnə (məs. Valyuta köçürməsi zamanı USD/RUB məzənnəsi).
+    /// </summary>
+    public decimal? ExchangeRate { get; init; }
+
+    /// <summary>
+    /// Məzənnənin formatlanmış mətni (məsələn: "95.50 ₽" və ya "—").
+    /// </summary>
+    public string ExchangeRateFormatted => ExchangeRate.HasValue && ExchangeRate.Value > 0
+        ? $"{ExchangeRate.Value:N2} ₽"
+        : "—";
+
+    /// <summary>
     /// Əməliyyatın manual olub-olmadığını və silinə biləcəyini göstərir.
     /// Tranzaksiyalara bağlı olmayan əməliyyatlar silinə bilər.
     /// </summary>
@@ -85,6 +112,11 @@ public record CustomerBalanceHistoryResponse
                              Type != BalanceTransactionType.TransactionUpdate &&
                              Type != BalanceTransactionType.TransactionRollback &&
                              TransactionId == null;
+
+    /// <summary>
+    /// Əməliyyatın tarix və təsvirinin redaktə edilə biləcəyini göstərir.
+    /// </summary>
+    public bool CanEdit => true;
 
     public string KassaName => Currency == PaymentCurrency.Rub ? "RUB Kassası" : "USD Kassası";
 

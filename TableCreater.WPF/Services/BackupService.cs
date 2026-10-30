@@ -13,22 +13,20 @@ public class BackupService : IBackupService
 
     public BackupService()
     {
-        _dbFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tablecreater.db");
-        _backupDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups");
+        _dbFilePath = App.DbFilePath;
+        _backupDirectory = Path.Combine(App.AppDataDirectory, "Backups");
 
         if (!Directory.Exists(_backupDirectory))
         {
             Directory.CreateDirectory(_backupDirectory);
         }
 
-        // Migrate any existing backups from LocalApplicationData
+        // Migrate any existing backups from old base directory
         try
         {
-            var oldBackups = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "TableCreater", "Backups");
+            var oldBackups = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "backups");
 
-            if (Directory.Exists(oldBackups))
+            if (Directory.Exists(oldBackups) && !string.Equals(oldBackups, _backupDirectory, StringComparison.OrdinalIgnoreCase))
             {
                 foreach (var file in Directory.GetFiles(oldBackups))
                 {
@@ -71,13 +69,11 @@ public class BackupService : IBackupService
         // Copy file with sharing enabled
         File.Copy(_dbFilePath, targetFilePath, overwrite: true);
 
-        // Also back up security.json companion (check app dir first, then AppData)
-        var securityFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "security.json");
+        // Also back up security.json companion (check AppData first, then app dir)
+        var securityFile = Path.Combine(App.AppDataDirectory, "security.json");
         if (!File.Exists(securityFile))
         {
-            securityFile = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "TableCreater", "security.json");
+            securityFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "security.json");
         }
 
         if (File.Exists(securityFile))
@@ -110,7 +106,7 @@ public class BackupService : IBackupService
         string companionSecurity = Path.ChangeExtension(sourceFilePath, ".security.json");
         if (File.Exists(companionSecurity))
         {
-            var targetSecurity = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "security.json");
+            var targetSecurity = Path.Combine(App.AppDataDirectory, "security.json");
             File.Copy(companionSecurity, targetSecurity, overwrite: true);
         }
 

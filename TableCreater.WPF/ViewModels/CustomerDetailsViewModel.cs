@@ -173,6 +173,9 @@ public partial class CustomerDetailsViewModel : ObservableObject
     private string _adjustmentDescription = string.Empty;
 
     [ObservableProperty]
+    private DateTime _adjustmentDate = DateTime.Today;
+
+    [ObservableProperty]
     private BalanceTransactionType _adjustmentType = BalanceTransactionType.ManualDeposit;
 
     [ObservableProperty]
@@ -271,6 +274,7 @@ public partial class CustomerDetailsViewModel : ObservableObject
             SuccessMessage = "Tranzaksiya uğurla silindi.";
 
             await RefreshTransactionsAndCards();
+            await LoadBalanceHistoryAsync();
         }
         catch (Exception ex)
         {
@@ -312,6 +316,7 @@ public partial class CustomerDetailsViewModel : ObservableObject
     }
 
     public ITransactionService TransactionService => _transactionService;
+    public ICustomerService CustomerService => _customerService;
     public List<CustomerBalanceHistoryResponse> AllBalanceHistories => _allBalanceHistories;
 
     [RelayCommand]
@@ -335,7 +340,8 @@ public partial class CustomerDetailsViewModel : ObservableObject
                 Currency = AdjustmentCurrency,
                 ExchangeRate = AdjustmentExchangeRate,
                 Description = string.IsNullOrWhiteSpace(AdjustmentDescription)
-                    ? null : AdjustmentDescription
+                    ? null : AdjustmentDescription,
+                OperationDate = AdjustmentDate
             };
 
             var updated = await _customerService.AdjustBalance(CustomerId, request);
@@ -346,6 +352,7 @@ public partial class CustomerDetailsViewModel : ObservableObject
             // Reset fields
             AdjustmentAmount = 0;
             AdjustmentDescription = string.Empty;
+            AdjustmentDate = DateTime.Today;
             UpdateTransferPreview();
 
             SuccessMessage = "Balans uğurla yeniləndi!";
@@ -359,7 +366,7 @@ public partial class CustomerDetailsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task LoadBalanceHistoryAsync()
+    public async Task LoadBalanceHistoryAsync()
     {
         try
         {

@@ -19,5 +19,6 @@ public interface ICustomerService
     Task<CustomerReadResponse> AdjustBalance(long id, CustomerBalanceAdjustmentRequest request);
     Task<List<CustomerBalanceHistoryResponse>> GetBalanceHistory(long customerId);
     Task<CustomerReadResponse> DeleteBalanceHistory(long historyId);
+    Task UpdateBalanceHistory(UpdateBalanceHistoryRequest request);
 }
 
